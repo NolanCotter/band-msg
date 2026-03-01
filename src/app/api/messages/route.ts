@@ -33,40 +33,48 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const user = requireApprovedUser(request);
-  if (user instanceof NextResponse) {
-    return user;
+  try {
+    const user = requireApprovedUser(request);
+    if (user instanceof NextResponse) {
+      return user;
+    }
+
+    const body = await request.json().catch(() => ({} as Record<string, unknown>));
+    const content = typeof body.content === "string" ? body.content.trim() : "";
+    const channelId = typeof body.channel_id === "string" ? body.channel_id : "";
+    const replyToId = typeof body.reply_to_id === "string" ? body.reply_to_id : undefined;
+
+    if (!content || !channelId) {
+      return NextResponse.json(
+        { error: "content and channel_id are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!channelExists(channelId)) {
+      return NextResponse.json(
+        { error: "channel not found" },
+        { status: 404 }
+      );
+    }
+
+    if (!canAccessChannel(channelId, user.username, user.role)) {
+      return NextResponse.json({ error: "access denied" }, { status: 403 });
+    }
+
+    const msg = addMessage(content, channelId, user.username, undefined, replyToId);
+    trackUser(user.username);
+
+    // Send push notifications in background (non-blocking)
+    const chName = getChannelName(channelId) ?? channelId;
+    sendPushNotifications(user.username, chName, content, channelId).catch(() => {});
+
+    return NextResponse.json(msg, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/messages failed:", error);
+    const message = error instanceof Error ? error.message : "Failed to send message";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const body = await request.json();
-  const { content, channel_id, reply_to_id } = body;
-
-  if (!content || !channel_id) {
-    return NextResponse.json(
-      { error: "content and channel_id are required" },
-      { status: 400 }
-    );
-  }
-
-  if (!channelExists(channel_id)) {
-    return NextResponse.json(
-      { error: "channel not found" },
-      { status: 404 }
-    );
-  }
-
-  if (!canAccessChannel(channel_id, user.username, user.role)) {
-    return NextResponse.json({ error: "access denied" }, { status: 403 });
-  }
-
-  const msg = addMessage(content, channel_id, user.username, undefined, reply_to_id);
-  trackUser(user.username);
-
-  // Send push notifications in background (non-blocking)
-  const chName = getChannelName(channel_id) ?? channel_id;
-  sendPushNotifications(user.username, chName, content, channel_id).catch(() => {});
-
-  return NextResponse.json(msg, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {

@@ -130,6 +130,10 @@ jobs:
 
           echo "Deploying ref as deploy user: $DEPLOY_REF"
 
+          # Cleanup legacy websocket tunnel process from pre-SSE deployments
+          pm2 stop band-msg-ws-cloudflared || true
+          pm2 delete band-msg-ws-cloudflared || true
+
           pm2_count_by_name() {
             local process_name="$1"
             pm2 jlist | node -e '
@@ -296,6 +300,8 @@ jobs:
             # Stop PM2 tunnel processes to avoid conflicts with service mode
             pm2 stop band-msg-cloudflared || true
             pm2 delete band-msg-cloudflared || true
+            pm2 stop band-msg-ws-cloudflared || true
+            pm2 delete band-msg-ws-cloudflared || true
 
             CLOUDFLARED_PM2_COUNT="$(pm2_count_by_name "band-msg-cloudflared")"
             if [ "$CLOUDFLARED_PM2_COUNT" != "0" ]; then
@@ -326,6 +332,8 @@ jobs:
             # Main tunnel
             pm2 stop band-msg-cloudflared || true
             pm2 delete band-msg-cloudflared || true
+            pm2 stop band-msg-ws-cloudflared || true
+            pm2 delete band-msg-ws-cloudflared || true
             pm2 start "$CLOUDFLARED_BIN" --name "band-msg-cloudflared" -- tunnel run --token "$CLOUDFLARE_TUNNEL_TOKEN"
             if ! pm2 describe band-msg-cloudflared >/dev/null 2>&1; then
               echo "Cloudflared PM2 process was not created."
