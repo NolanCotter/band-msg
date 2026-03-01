@@ -4,10 +4,12 @@ import path from "node:path";
 import { getDb } from "./db";
 import { signJwt } from "./jwt";
 import {
+  AuditLog,
   AuthUser,
   CalendarEvent,
   Channel,
   Message,
+  NotificationPrefs,
   Reaction,
   StreamEvent,
   TypingEvent,
@@ -17,6 +19,21 @@ import {
 const db = getDb();
 const AUTH_WINDOW_MS = 10 * 60 * 1000;
 const AUTH_MAX_ATTEMPTS = 15;
+const _tableColumnCache = new Map<string, Set<string>>();
+
+function hasColumn(table: string, column: string): boolean {
+  const cached = _tableColumnCache.get(table);
+  if (cached) return cached.has(column);
+
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  const cols = new Set(rows.map((r) => r.name));
+  _tableColumnCache.set(table, cols);
+  return cols.has(column);
+}
+
+function channelsSoftDeleteEnabled(): boolean {
+  return hasColumn("channels", "deleted_at");
+}
 
 export function trackUser(profileId: string): void {
   db.prepare(
@@ -334,10 +351,21 @@ export function demoteAdminToMember(usernameInput: string):
 }
 
 export function getChannels(): Channel[] {
+  if (!channelsSoftDeleteEnabled()) {
+    return db
+      .prepare(
+        `SELECT id, name, description, visibility, created, thread_parent_id
+         FROM channels
+         ORDER BY created ASC, name ASC`
+      )
+      .all() as Channel[];
+  }
+
   return db
     .prepare(
       `SELECT id, name, description, visibility, created, thread_parent_id
        FROM channels
+       WHERE deleted_at IS NULL
        ORDER BY created ASC, name ASC`
     )
     .all() as Channel[];
@@ -346,12 +374,26 @@ export function getChannels(): Channel[] {
 export function getChannelsForUser(username: string, role: string): Channel[] {
   if (role === "admin") return getChannels();
 
+  if (!channelsSoftDeleteEnabled()) {
+    return db
+      .prepare(
+        `SELECT c.id, c.name, c.description, c.visibility, c.created, c.thread_parent_id
+         FROM channels c
+         WHERE c.visibility = 'public'
+            OR EXISTS (SELECT 1 FROM channel_members cm WHERE cm.channel_id = c.id AND cm.username = ?)
+         ORDER BY c.created ASC, c.name ASC`
+      )
+      .all(username) as Channel[];
+  }
+
   return db
     .prepare(
       `SELECT c.id, c.name, c.description, c.visibility, c.created, c.thread_parent_id
        FROM channels c
-       WHERE c.visibility = 'public'
+       WHERE c.deleted_at IS NULL
+         AND (c.visibility = 'public'
           OR EXISTS (SELECT 1 FROM channel_members cm WHERE cm.channel_id = c.id AND cm.username = ?)
+         )
        ORDER BY c.created ASC, c.name ASC`
     )
     .all(username) as Channel[];
@@ -359,9 +401,10 @@ export function getChannelsForUser(username: string, role: string): Channel[] {
 
 export function canAccessChannel(channelId: string, username: string, role: string): boolean {
   if (role === "admin") return true;
-  const ch = db
-    .prepare("SELECT visibility FROM channels WHERE id = ?")
-    .get(channelId) as { visibility: string } | undefined;
+  const ch = (channelsSoftDeleteEnabled()
+    ? db.prepare("SELECT visibility FROM channels WHERE id = ? AND deleted_at IS NULL")
+    : db.prepare("SELECT visibility FROM channels WHERE id = ?")
+  ).get(channelId) as { visibility: string } | undefined;
   if (!ch) return false;
   if (ch.visibility === "public") return true;
   const member = db
@@ -371,17 +414,34 @@ export function canAccessChannel(channelId: string, username: string, role: stri
 }
 
 export function channelExists(channelId: string): boolean {
-  const row = db
-    .prepare("SELECT 1 FROM channels WHERE id = ?")
-    .get(channelId) as { 1: number } | undefined;
+  const row = (channelsSoftDeleteEnabled()
+    ? db.prepare("SELECT 1 FROM channels WHERE id = ? AND deleted_at IS NULL")
+    : db.prepare("SELECT 1 FROM channels WHERE id = ?")
+  ).get(channelId) as { 1: number } | undefined;
   return Boolean(row);
 }
 
 export function getChannelName(channelId: string): string | null {
-  const row = db
-    .prepare("SELECT name FROM channels WHERE id = ?")
-    .get(channelId) as { name: string } | undefined;
+  const row = (channelsSoftDeleteEnabled()
+    ? db.prepare("SELECT name FROM channels WHERE id = ? AND deleted_at IS NULL")
+    : db.prepare("SELECT name FROM channels WHERE id = ?")
+  ).get(channelId) as { name: string } | undefined;
   return row?.name ?? null;
+}
+
+export function getDeletedChannels(): Channel[] {
+  if (!channelsSoftDeleteEnabled()) {
+    return [];
+  }
+
+  return db
+    .prepare(
+      `SELECT id, name, description, visibility, created, thread_parent_id, deleted_at
+       FROM channels
+       WHERE deleted_at IS NOT NULL
+       ORDER BY deleted_at DESC`
+    )
+    .all() as Channel[];
 }
 
 export function addChannel(
@@ -449,8 +509,16 @@ export function getChannelMembers(channelId: string): string[] {
 }
 
 export function deleteChannel(channelId: string): boolean {
-  const exists = db.prepare("SELECT 1 FROM channels WHERE id = ?").get(channelId);
+  const exists = (channelsSoftDeleteEnabled()
+    ? db.prepare("SELECT 1 FROM channels WHERE id = ? AND deleted_at IS NULL")
+    : db.prepare("SELECT 1 FROM channels WHERE id = ?")
+  ).get(channelId);
   if (!exists) return false;
+
+  if (channelsSoftDeleteEnabled()) {
+    db.prepare("UPDATE channels SET deleted_at = ? WHERE id = ?").run(new Date().toISOString(), channelId);
+    return true;
+  }
 
   const attachments = db
     .prepare(
@@ -483,7 +551,50 @@ export function deleteChannel(channelId: string): boolean {
   return true;
 }
 
-export function getMessagesByChannel(channelId: string): Message[] {
+export function restoreChannel(channelId: string): boolean {
+  if (!channelsSoftDeleteEnabled()) return false;
+
+  const exists = db.prepare("SELECT 1 FROM channels WHERE id = ? AND deleted_at IS NOT NULL").get(channelId);
+  if (!exists) return false;
+  db.prepare("UPDATE channels SET deleted_at = NULL WHERE id = ?").run(channelId);
+  return true;
+}
+
+export function getMessagesByChannel(
+  channelId: string,
+  options?: {
+    query?: string;
+    profileId?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+  }
+): Message[] {
+  const where: string[] = ["m.channel_id = ?"];
+  const params: Array<string | number> = [channelId];
+
+  if (options?.query) {
+    where.push("LOWER(m.content) LIKE LOWER(?)");
+    params.push(`%${options.query}%`);
+  }
+
+  if (options?.profileId) {
+    where.push("m.profile_id = ?");
+    params.push(options.profileId.toLowerCase());
+  }
+
+  if (options?.from) {
+    where.push("m.created >= ?");
+    params.push(options.from);
+  }
+
+  if (options?.to) {
+    where.push("m.created <= ?");
+    params.push(options.to);
+  }
+
+  const limit = Math.max(1, Math.min(options?.limit ?? 500, 2000));
+
   return db
     .prepare(
       `SELECT m.id, m.content, m.profile_id, m.channel_id, m.created, m.reply_to_id,
@@ -492,10 +603,11 @@ export function getMessagesByChannel(channelId: string): Message[] {
        FROM messages m
        LEFT JOIN attachments a ON a.message_id = m.id
        LEFT JOIN messages rm ON rm.id = m.reply_to_id
-       WHERE m.channel_id = ?
-       ORDER BY m.created ASC`
+       WHERE ${where.join(" AND ")}
+       ORDER BY m.created ASC
+       LIMIT ?`
     )
-    .all(channelId)
+    .all(...params, limit)
     .map((row) => {
       const r = row as Record<string, unknown>;
       const msg: Message = {
@@ -798,36 +910,132 @@ export function getApprovedUsers(): { username: string; role: string }[] {
 
 export function getNotificationPrefs(username: string): { enabled: boolean; muted_channels: string[] } {
   const row = db
-    .prepare("SELECT enabled, muted_channels FROM notification_prefs WHERE username = ?")
-    .get(username) as { enabled: number; muted_channels: string } | undefined;
+    .prepare("SELECT enabled, muted_channels, mentions_only, quiet_start_hour, quiet_end_hour FROM notification_prefs WHERE username = ?")
+    .get(username) as {
+    enabled: number;
+    muted_channels: string;
+    mentions_only: number;
+    quiet_start_hour: number | null;
+    quiet_end_hour: number | null;
+  } | undefined;
 
-  if (!row) return { enabled: true, muted_channels: [] };
+  if (!row) {
+    return {
+      enabled: true,
+      muted_channels: [],
+      mentions_only: false,
+      quiet_start_hour: null,
+      quiet_end_hour: null,
+    };
+  }
 
   return {
     enabled: Boolean(row.enabled),
     muted_channels: row.muted_channels ? row.muted_channels.split(",").filter(Boolean) : [],
+    mentions_only: Boolean(row.mentions_only),
+    quiet_start_hour: row.quiet_start_hour,
+    quiet_end_hour: row.quiet_end_hour,
   };
 }
 
 export function setNotificationPrefs(
   username: string,
   enabled: boolean,
-  mutedChannels: string[]
+  mutedChannels: string[],
+  mentionsOnly = false,
+  quietStartHour: number | null = null,
+  quietEndHour: number | null = null
 ): void {
   db.prepare(
-    `INSERT INTO notification_prefs (username, enabled, muted_channels)
-     VALUES (?, ?, ?)
+    `INSERT INTO notification_prefs (username, enabled, muted_channels, mentions_only, quiet_start_hour, quiet_end_hour)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(username) DO UPDATE SET
        enabled = excluded.enabled,
-       muted_channels = excluded.muted_channels`
-  ).run(username, enabled ? 1 : 0, mutedChannels.join(","));
+       muted_channels = excluded.muted_channels,
+       mentions_only = excluded.mentions_only,
+       quiet_start_hour = excluded.quiet_start_hour,
+       quiet_end_hour = excluded.quiet_end_hour`
+  ).run(
+    username,
+    enabled ? 1 : 0,
+    mutedChannels.join(","),
+    mentionsOnly ? 1 : 0,
+    quietStartHour,
+    quietEndHour
+  );
 }
 
-export function shouldNotifyUser(username: string, channelId: string): boolean {
+function isWithinQuietHours(hour: number, start: number, end: number): boolean {
+  if (start === end) return false;
+  if (start < end) return hour >= start && hour < end;
+  return hour >= start || hour < end;
+}
+
+export function shouldNotifyUser(
+  username: string,
+  channelId: string,
+  messageContent = ""
+): boolean {
   const prefs = getNotificationPrefs(username);
   if (!prefs.enabled) return false;
   if (prefs.muted_channels.includes(channelId)) return false;
+
+  if (
+    Number.isInteger(prefs.quiet_start_hour) &&
+    Number.isInteger(prefs.quiet_end_hour) &&
+    prefs.quiet_start_hour !== null &&
+    prefs.quiet_end_hour !== null
+  ) {
+    const hour = new Date().getHours();
+    if (isWithinQuietHours(hour, prefs.quiet_start_hour, prefs.quiet_end_hour)) {
+      return false;
+    }
+  }
+
+  if (prefs.mentions_only) {
+    const escaped = username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const mentionRegex = new RegExp(`(^|\\s)@${escaped}(\\b|\\s|$)`, "i");
+    return mentionRegex.test(messageContent);
+  }
+
   return true;
+}
+
+export function addAuditLog(
+  actor: string,
+  action: string,
+  targetType: string,
+  targetId: string,
+  details = ""
+): AuditLog {
+  const log: AuditLog = {
+    id: `audit_${crypto.randomUUID()}`,
+    actor,
+    action,
+    target_type: targetType,
+    target_id: targetId,
+    details,
+    created: new Date().toISOString(),
+  };
+
+  db.prepare(
+    `INSERT INTO audit_logs (id, actor, action, target_type, target_id, details, created)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(log.id, log.actor, log.action, log.target_type, log.target_id, log.details, log.created);
+
+  return log;
+}
+
+export function getAuditLogs(limit = 50): AuditLog[] {
+  const safeLimit = Math.max(1, Math.min(limit, 500));
+  return db
+    .prepare(
+      `SELECT id, actor, action, target_type, target_id, details, created
+       FROM audit_logs
+       ORDER BY created DESC
+       LIMIT ?`
+    )
+    .all(safeLimit) as AuditLog[];
 }
 
 // ───── Practice Days ─────

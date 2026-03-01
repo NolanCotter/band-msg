@@ -6,6 +6,7 @@ export interface Channel {
   visibility?: "public" | "private";
   allowed_users?: string[];
   thread_parent_id?: string | null;
+  deleted_at?: string | null;
 }
 
 export interface PracticeDay {
@@ -89,4 +90,17 @@ export interface PushSubscriptionData {
 export interface NotificationPrefs {
   enabled: boolean;
   muted_channels: string[];
+  mentions_only: boolean;
+  quiet_start_hour: number | null;
+  quiet_end_hour: number | null;
+}
+
+export interface AuditLog {
+  id: string;
+  actor: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details: string;
+  created: string;
 }

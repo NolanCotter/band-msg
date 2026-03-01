@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS channels (
   name TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL,
   visibility TEXT NOT NULL DEFAULT 'public',
+  deleted_at TEXT DEFAULT NULL,
   created TEXT NOT NULL
 );
 
@@ -108,6 +109,25 @@ CREATE TABLE IF NOT EXISTS auth_attempts (
   reset_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  reset_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id TEXT PRIMARY KEY,
+  actor TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  details TEXT NOT NULL DEFAULT '',
+  created TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created
+ON audit_logs(created DESC);
+
 CREATE TABLE IF NOT EXISTS active_users (
   profile_id TEXT PRIMARY KEY,
   last_seen INTEGER NOT NULL
@@ -125,6 +145,13 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 // Migrate: add visibility column to existing channels table if missing
 try {
   db.exec("ALTER TABLE channels ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public'");
+} catch {
+  // Column already exists
+}
+
+// Migrate: add deleted_at column to channels table
+try {
+  db.exec("ALTER TABLE channels ADD COLUMN deleted_at TEXT DEFAULT NULL");
 } catch {
   // Column already exists
 }
@@ -181,9 +208,30 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS notification_prefs (
   username TEXT PRIMARY KEY,
   enabled INTEGER NOT NULL DEFAULT 1,
-  muted_channels TEXT NOT NULL DEFAULT ''
+  muted_channels TEXT NOT NULL DEFAULT '',
+  mentions_only INTEGER NOT NULL DEFAULT 0,
+  quiet_start_hour INTEGER DEFAULT NULL,
+  quiet_end_hour INTEGER DEFAULT NULL
 );
 `);
+
+try {
+  db.exec("ALTER TABLE notification_prefs ADD COLUMN mentions_only INTEGER NOT NULL DEFAULT 0");
+} catch {
+  // Column already exists
+}
+
+try {
+  db.exec("ALTER TABLE notification_prefs ADD COLUMN quiet_start_hour INTEGER DEFAULT NULL");
+} catch {
+  // Column already exists
+}
+
+try {
+  db.exec("ALTER TABLE notification_prefs ADD COLUMN quiet_end_hour INTEGER DEFAULT NULL");
+} catch {
+  // Column already exists
+}
 
 const insertChannel = db.prepare(
   "INSERT OR IGNORE INTO channels (id, name, description, visibility, created) VALUES (?, ?, ?, 'public', ?)"
