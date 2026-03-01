@@ -201,6 +201,27 @@ export default function MessageArea({
     navigator.clipboard.writeText(text).catch(() => {});
   }, []);
 
+  const handleUnsendMessage = useCallback(async (messageId: string) => {
+    const ok = window.confirm("Unsend this message?");
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`/api/messages/${messageId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as { error?: string }));
+        throw new Error(data.error ?? "Failed to unsend message.");
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      setReactions((prev) => {
+        const next = new Map(prev);
+        next.delete(messageId);
+        return next;
+      });
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : "Failed to unsend message.");
+    }
+  }, []);
+
   // ── Reply from context menu / swipe ──
   const handleReply = useCallback((msgId: string, content: string) => {
     // Find the message to get its author
@@ -354,6 +375,16 @@ export default function MessageArea({
           }
           return next;
         });
+      } else if (streamEvent.type === "message_deleted") {
+        const deleted = streamEvent.payload as { id: string; channel_id: string };
+        if (deleted.channel_id === channelId) {
+          setMessages((prev) => prev.filter((m) => m.id !== deleted.id));
+          setReactions((prev) => {
+            const next = new Map(prev);
+            next.delete(deleted.id);
+            return next;
+          });
+        }
       }
     };
 
@@ -942,6 +973,7 @@ export default function MessageArea({
           onCopy={handleCopyMessage}
           onReply={handleReply}
           onCreateThread={handleCreateThread}
+          onUnsend={handleUnsendMessage}
           onClose={() => setContextMenu(null)}
         />
       )}
