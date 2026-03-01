@@ -176,7 +176,8 @@ export default function MessageArea({
   }, []);
 
   // ── Create thread from context menu ──
-  const handleCreateThread = useCallback(async (msgId: string, _content: string) => {
+  const handleCreateThread = useCallback(async (msgId: string, content: string) => {
+    void content;
     try {
       const res = await fetch("/api/threads", {
         method: "POST",

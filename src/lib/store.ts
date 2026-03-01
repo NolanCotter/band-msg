@@ -908,7 +908,7 @@ export function getApprovedUsers(): { username: string; role: string }[] {
 
 // ───── Notification Preferences ─────
 
-export function getNotificationPrefs(username: string): { enabled: boolean; muted_channels: string[] } {
+export function getNotificationPrefs(username: string): NotificationPrefs {
   const row = db
     .prepare("SELECT enabled, muted_channels, mentions_only, quiet_start_hour, quiet_end_hour FROM notification_prefs WHERE username = ?")
     .get(username) as {
