@@ -6,7 +6,7 @@ A Discord-style real-time chat application for bands, built with Next.js, Bun, a
 
 - **Discord-like layout** — Three-column design with server sidebar, channel list, message area, and online members panel
 - **Username system** — Welcome modal with display name persistence via localStorage, color-coded avatars per user
-- **Real-time messaging** — Instant message delivery via WebSocket (Bun.serve)
+- **Real-time messaging** — Instant message delivery via Server-Sent Events (SSE)
 - **Channel management** — Create custom channels with names and descriptions via an in-app modal
 - **Message grouping** — Consecutive messages from the same user are compacted, just like Discord
 - **Typing indicators** — See when other users are typing with animated dots
@@ -66,14 +66,13 @@ Register an account to get started, then sign in. Non-admin accounts require adm
 - All subsequent registrations are created as pending and must be approved by the admin in-app.
 - Authentication uses JWT tokens stored in an HTTP-only cookie.
 - User/channel/message data is stored in SQLite (via `better-sqlite3`) and persists across restarts.
-- Real-time events are delivered over WebSocket (port `WS_PORT`, default 3001).
+- Real-time events are delivered over SSE via `/api/messages/stream`.
 
 ### Configuration
 
 - JWT secret: set `JWT_SECRET` in your environment (auto-generated during CI deploy if unset).
 - Database location: set `DATABASE_PATH` (default: `./data/band-chat.db`).
 - Cookie security: set `AUTH_COOKIE_SECURE` to `auto` (default), `true`, or `false`.
-- WebSocket port: set `WS_PORT` and `NEXT_PUBLIC_WS_PORT` (default: `3001`).
 - For local network HTTP testing (e.g., `http://10.x.x.x:3000`), set `AUTH_COOKIE_SECURE=false`.
 
 ## CI/CD
