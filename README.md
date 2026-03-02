@@ -76,6 +76,13 @@ Register an account to get started, then sign in. Non-admin accounts require adm
 - HTTPS enforcement: production redirects HTTP to HTTPS by default; set `FORCE_HTTPS=false` only for temporary troubleshooting.
 - For local network HTTP testing (e.g., `http://10.x.x.x:3000`), set `AUTH_COOKIE_SECURE=false`.
 
+### Sign-in Security
+
+- Login has username-scoped throttling plus IP-scoped rate limiting to reduce brute-force attempts.
+- Failed login responses include a small uniform delay to make credential stuffing harder.
+- Session cookie is `HttpOnly`, `Secure` (on HTTPS), `SameSite=Strict`, and high priority.
+- In production, login is blocked if `JWT_SECRET` is not configured.
+
 ## CI/CD
 
 - On pull requests and pushes to `main`, GitHub Actions runs static code analysis (`eslint` + `tsc --noEmit`) and production build validation.

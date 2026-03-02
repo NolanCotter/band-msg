@@ -18,7 +18,8 @@ import {
 
 const db = getDb();
 const AUTH_WINDOW_MS = 10 * 60 * 1000;
-const AUTH_MAX_ATTEMPTS = 15;
+const AUTH_MAX_ATTEMPTS = 8;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const _tableColumnCache = new Map<string, Set<string>>();
 
 function hasColumn(table: string, column: string): boolean {
@@ -102,6 +103,33 @@ function clearAuthAttempts(key: string): void {
   db.prepare("DELETE FROM auth_attempts WHERE key = ?").run(key);
 }
 
+export function consumeRateLimit(key: string, maxAttempts: number, windowMs = RATE_LIMIT_WINDOW_MS): boolean {
+  const now = Date.now();
+  const existing = db
+    .prepare("SELECT count, reset_at FROM rate_limits WHERE key = ?")
+    .get(key) as { count: number; reset_at: number } | undefined;
+
+  if (!existing || existing.reset_at < now) {
+    db.prepare(
+      `INSERT INTO rate_limits (key, count, reset_at)
+       VALUES (?, 1, ?)
+       ON CONFLICT(key) DO UPDATE SET count = excluded.count, reset_at = excluded.reset_at`
+    ).run(key, now + windowMs);
+    return true;
+  }
+
+  if (existing.count >= maxAttempts) {
+    return false;
+  }
+
+  db.prepare("UPDATE rate_limits SET count = count + 1 WHERE key = ?").run(key);
+  return true;
+}
+
+export function clearRateLimit(key: string): void {
+  db.prepare("DELETE FROM rate_limits WHERE key = ?").run(key);
+}
+
 function toAuthUser(account: UserAccount): AuthUser {
   return {
     username: account.username,
@@ -170,11 +198,11 @@ export function registerUser(usernameInput: string, password: string):
   return { ok: true, user: toAuthUser(account) };
 }
 
-export function loginUser(usernameInput: string, password: string):
+export function loginUser(usernameInput: string, password: string, scope = "global"):
   | { ok: true; token: string; user: AuthUser }
   | { ok: false; error: string; code: number } {
   const username = usernameInput.trim().toLowerCase();
-  const key = `login:${username}`;
+  const key = `login:${scope}:${username}`;
 
   if (!consumeAuthAttempt(key)) {
     return { ok: false, error: "Too many login attempts, try again later", code: 429 };

@@ -40,6 +40,47 @@ const EMOJI_LIBRARY: Record<string, string[]> = {
   ],
 };
 
+const EMOJI_KEYWORDS: Record<string, string[]> = {
+  "😀": ["grin", "happy", "smile", "face"],
+  "😂": ["laugh", "lol", "tears", "funny"],
+  "🤣": ["rofl", "laugh", "funny"],
+  "😍": ["love", "heart", "eyes"],
+  "😢": ["sad", "cry", "tears"],
+  "😮": ["surprised", "wow", "shock"],
+  "😡": ["angry", "mad"],
+  "😎": ["cool", "sunglasses"],
+  "👍": ["thumbs", "up", "yes", "approve"],
+  "👎": ["thumbs", "down", "no", "dislike"],
+  "👏": ["clap", "applause"],
+  "🙏": ["pray", "thanks", "please"],
+  "🔥": ["fire", "lit", "hot"],
+  "✨": ["sparkles", "shine", "magic"],
+  "⭐": ["star", "favorite"],
+  "🌟": ["star", "glow"],
+  "🎵": ["music", "note", "song"],
+  "🎶": ["music", "notes"],
+  "🎤": ["microphone", "sing", "vocal"],
+  "🎧": ["headphones", "listen", "audio"],
+  "🎹": ["piano", "keyboard", "music"],
+  "🥁": ["drum", "drums", "music"],
+  "🎷": ["sax", "saxophone", "music"],
+  "🎺": ["trumpet", "brass", "music"],
+  "🎸": ["guitar", "music", "band"],
+  "❤️": ["heart", "love", "red"],
+  "💔": ["heartbreak", "broken", "sad"],
+  "💯": ["100", "perfect", "score"],
+  "✅": ["check", "done", "yes"],
+  "❌": ["x", "no", "cancel"],
+};
+
+function normalizeSearch(input: string): string[] {
+  return input
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
 export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
   const categories = Object.keys(EMOJI_LIBRARY);
   const [activeCategory, setActiveCategory] = useState(categories[0]);
@@ -47,9 +88,20 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
 
   const visibleEmojis = useMemo(() => {
     if (query.trim()) {
-      const all = categories.flatMap((category) => EMOJI_LIBRARY[category]);
-      const q = query.toLowerCase();
-      return all.filter((emoji) => emoji.includes(q));
+      const terms = normalizeSearch(query);
+      const allWithCategory = categories.flatMap((category) =>
+        (EMOJI_LIBRARY[category] ?? []).map((emoji) => ({ emoji, category }))
+      );
+
+      return allWithCategory
+        .filter(({ emoji, category }) => {
+          const searchable = [
+            category.toLowerCase(),
+            ...(EMOJI_KEYWORDS[emoji] ?? []),
+          ].join(" ");
+          return terms.every((term) => searchable.includes(term));
+        })
+        .map(({ emoji }) => emoji);
     }
 
     return EMOJI_LIBRARY[activeCategory] ?? [];
