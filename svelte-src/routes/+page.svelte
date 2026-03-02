@@ -6,7 +6,7 @@
   type Message = { id: string; author: string; content: string; createdAt: number };
   type PendingUser = { username: string; status: string };
 
-  const GROUP_THRESHOLD_MS = 7 * 60 * 1000; // group consecutive messages within 7 minutes
+  const GROUP_THRESHOLD_MS = 7 * 60 * 1000;
 
   let me: User | null = null;
   let channels: Channel[] = [];
@@ -94,7 +94,7 @@
       return;
     }
     registerUsername = ""; registerPassword = "";
-    showNotification("Account created! The first user is auto-approved as admin.", "success");
+    showNotification("Account created. The first user is auto-approved as admin.", "success");
   }
 
   async function login() {
@@ -149,13 +149,6 @@
     showNotification(`${username} approved.`, "success");
   }
 
-  function avatarColor(name: string): string {
-    const palette = ["#5865f2","#eb459e","#ed4245","#fee75c","#57f287","#1abc9c","#e67e22","#9b59b6"];
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
-    return palette[Math.abs(h) % palette.length];
-  }
-
   function initials(name: string): string {
     return name.slice(0, 2).toUpperCase();
   }
@@ -180,7 +173,9 @@
     return msgs.map((msg, i) => {
       const prev = msgs[i - 1];
       const grouped = !!prev && prev.author === msg.author && msg.createdAt - prev.createdAt < GROUP_THRESHOLD_MS;
-      const dateSeparator = prev && formatDate(prev.createdAt) !== formatDate(msg.createdAt) ? formatDate(msg.createdAt) : (!prev ? formatDate(msg.createdAt) : undefined);
+      const dateSeparator = prev && formatDate(prev.createdAt) !== formatDate(msg.createdAt)
+        ? formatDate(msg.createdAt)
+        : (!prev ? formatDate(msg.createdAt) : undefined);
       return { ...msg, grouped, dateSeparator };
     });
   }
@@ -203,116 +198,118 @@
   });
 </script>
 
-<!-- ───────────────────── AUTH SCREEN ───────────────────── -->
+<!-- ───────── AUTH ───────── -->
 {#if !isAuthenticated}
   <div class="auth-screen">
     <div class="auth-card">
+
+      <!-- Logo mark -->
       <div class="auth-logo">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
       </div>
 
+      <h1 class="auth-title">Band Messaging</h1>
+      <p class="auth-subtitle">Sign in to continue</p>
+
       {#if notification}
-        <div class="auth-alert" class:auth-alert-success={notificationType === "success"}>
+        <div class="auth-toast" class:auth-toast-success={notificationType === "success"} role="alert">
           {notification}
         </div>
       {/if}
 
-      <div class="auth-tabs-body">
-        <!-- Sign In -->
-        <div class="auth-section">
-          <h2>Welcome back!</h2>
-          <p class="auth-sub">We're so excited to see you again!</p>
-          <label class="field-label" for="login-username">USERNAME</label>
-          <input id="login-username" class="dc-input" bind:value={loginUsername} placeholder="Enter your username" autocomplete="username" />
-          <label class="field-label" for="login-password">PASSWORD</label>
-          <input id="login-password" class="dc-input" bind:value={loginPassword} type="password" placeholder="Enter your password" autocomplete="current-password"
-            on:keydown={(e) => { if (e.key === "Enter") { e.preventDefault(); login(); } }} />
-          <button class="dc-btn dc-btn-primary" on:click={login}>Log In</button>
-          <p class="auth-fine">
-            Need an account? <button class="auth-link" on:click={() => document.getElementById('register-section')?.scrollIntoView({behavior:'smooth'})}>Register</button>
-          </p>
-        </div>
-
-        <div class="auth-divider"><span>or</span></div>
-
-        <!-- Register -->
-        <div class="auth-section" id="register-section">
-          <h2>Create an account</h2>
-          <p class="auth-sub">The first account automatically becomes admin.</p>
-          <label class="field-label" for="reg-username">USERNAME</label>
-          <input id="reg-username" class="dc-input" bind:value={registerUsername} placeholder="Choose a username" autocomplete="username" />
-          <label class="field-label" for="reg-password">PASSWORD</label>
-          <input id="reg-password" class="dc-input" bind:value={registerPassword} type="password" placeholder="At least 12 characters" autocomplete="new-password"
-            on:keydown={(e) => { if (e.key === "Enter") { e.preventDefault(); register(); } }} />
-          <button class="dc-btn dc-btn-secondary" on:click={register}>Register</button>
-        </div>
+      <!-- Sign In -->
+      <div class="auth-form-group">
+        <label class="auth-label" for="login-username">Username</label>
+        <input id="login-username" class="auth-input" bind:value={loginUsername}
+          placeholder="Your username" autocomplete="username" />
+        <label class="auth-label" for="login-password">Password</label>
+        <input id="login-password" class="auth-input" type="password" bind:value={loginPassword}
+          placeholder="Your password" autocomplete="current-password"
+          on:keydown={(e) => { if (e.key === "Enter") { e.preventDefault(); login(); } }} />
+        <button class="auth-btn" on:click={login}>Sign in</button>
       </div>
+
+      <div class="auth-sep"><span>New here?</span></div>
+
+      <!-- Register -->
+      <div class="auth-form-group" id="register-section">
+        <label class="auth-label" for="reg-username">Username</label>
+        <input id="reg-username" class="auth-input" bind:value={registerUsername}
+          placeholder="Choose a username" autocomplete="username" />
+        <label class="auth-label" for="reg-password">Password</label>
+        <input id="reg-password" class="auth-input" type="password" bind:value={registerPassword}
+          placeholder="At least 12 characters" autocomplete="new-password"
+          on:keydown={(e) => { if (e.key === "Enter") { e.preventDefault(); register(); } }} />
+        <button class="auth-btn auth-btn-secondary" on:click={register}>Create account</button>
+        <p class="auth-note">The first account is automatically promoted to admin.</p>
+      </div>
+
     </div>
   </div>
 
-<!-- ───────────────────── APP ───────────────────── -->
+<!-- ───────── APP ───────── -->
 {:else}
   <div class="app" class:sidebar-open={sidebarOpen}>
 
-    <!-- ── SIDEBAR ── -->
+    <!-- ── Sidebar ── -->
     <nav class="sidebar">
-      <!-- Server Header -->
-      <div class="server-header">
-        <span class="server-name">Band Messaging</span>
-        <div class="server-header-icons">
-          {#if isAdmin}
-            <button class="icon-btn" title="New channel" on:click={() => (showCreateChannel = !showCreateChannel)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-          {/if}
-        </div>
+
+      <div class="sidebar-header">
+        <span class="sidebar-title">Band</span>
+        {#if isAdmin}
+          <button class="icon-btn" aria-label="New channel" title="New channel"
+            on:click={() => (showCreateChannel = !showCreateChannel)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        {/if}
       </div>
 
-      <!-- Create Channel Form (admin) -->
+      <!-- Create channel panel -->
       {#if showCreateChannel && isAdmin}
-        <div class="create-channel-popover">
-          <p class="create-channel-title">Create Text Channel</p>
-          <label class="field-label-sm" for="ch-name">CHANNEL NAME</label>
+        <div class="create-panel">
+          <p class="create-panel-title">New Channel</p>
+          <label class="panel-label" for="ch-name">Name</label>
           <div class="channel-input-wrap">
-            <span class="channel-input-hash">#</span>
-            <input id="ch-name" class="dc-input dc-input-sm channel-name-input" bind:value={newChannel} placeholder="new-channel"
+            <span class="channel-hash">#</span>
+            <input id="ch-name" class="panel-input channel-name-input" bind:value={newChannel}
+              placeholder="channel-name"
               on:keydown={(e) => { if (e.key === "Enter") { e.preventDefault(); createChannel(); } }} />
           </div>
-          <label class="field-label-sm" for="ch-desc">DESCRIPTION <span class="optional">(optional)</span></label>
-          <input id="ch-desc" class="dc-input dc-input-sm" bind:value={newChannelDescription} placeholder="What's this channel about?" />
-          <div class="create-channel-actions">
-            <button class="dc-btn dc-btn-ghost dc-btn-sm" on:click={() => (showCreateChannel = false)}>Cancel</button>
-            <button class="dc-btn dc-btn-primary dc-btn-sm" on:click={createChannel}>Create Channel</button>
+          <label class="panel-label" for="ch-desc">
+            Description <span class="optional-tag">optional</span>
+          </label>
+          <input id="ch-desc" class="panel-input" bind:value={newChannelDescription}
+            placeholder="What's this channel about?" />
+          <div class="create-panel-actions">
+            <button class="panel-btn panel-btn-ghost" on:click={() => (showCreateChannel = false)}>Cancel</button>
+            <button class="panel-btn" on:click={createChannel}>Create</button>
           </div>
         </div>
       {/if}
 
-      <!-- Channels -->
       <div class="channels-scroll">
-        <!-- Pending Users (admin) -->
+        <!-- Pending users -->
         {#if isAdmin && pendingUsers.length > 0}
-          <div class="channel-category">
-            <span>Pending Approval</span>
-            <span class="category-badge">{pendingUsers.length}</span>
-          </div>
+          <p class="section-label">
+            Pending
+            <span class="badge-count">{pendingUsers.length}</span>
+          </p>
           {#each pendingUsers as user}
             <div class="pending-row">
-              <div class="avatar avatar-xs" style="background:{avatarColor(user.username)}">{initials(user.username)}</div>
+              <div class="avatar-mono">{initials(user.username)}</div>
               <span class="pending-name">{user.username}</span>
-              <button class="dc-btn dc-btn-green dc-btn-xs" on:click={() => approveUser(user.username)}>✓</button>
+              <button class="approve-btn" on:click={() => approveUser(user.username)}>Approve</button>
             </div>
           {/each}
         {/if}
 
-        <!-- Text Channels -->
-        <div class="channel-category">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="category-arrow"><path d="M8 5l8 7-8 7"/></svg>
-          <span>Text Channels</span>
-        </div>
+        <!-- Channels -->
+        <p class="section-label">Channels</p>
+
         {#if channels.length === 0}
-          <p class="no-channels">No channels yet.{isAdmin ? " Create one above." : ""}</p>
+          <p class="empty-hint">{isAdmin ? "Create the first channel above." : "No channels yet."}</p>
         {:else}
           {#each channels as ch}
             <button
@@ -320,60 +317,65 @@
               class:channel-row-active={ch.id === selectedChannelId}
               on:click={() => selectChannel(ch)}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="channel-icon">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span class="channel-row-name">{ch.name}</span>
+              <span class="channel-hash-label">#</span>
+              <span class="channel-name-label">{ch.name}</span>
             </button>
           {/each}
         {/if}
       </div>
 
-      <!-- User Area -->
-      <div class="user-area">
-        <div class="user-area-avatar">
-          <div class="avatar avatar-sm" style="background:{avatarColor(me?.username ?? '')}">{initials(me?.username ?? '')}</div>
-          <div class="status-dot"></div>
+      <!-- User panel -->
+      <div class="user-panel">
+        <div class="user-panel-avatar">{initials(me?.username ?? "")}</div>
+        <div class="user-panel-info">
+          <p class="user-panel-name">{me?.username}</p>
+          <p class="user-panel-role">{me?.role === "admin" ? "Admin" : "Member"}</p>
         </div>
-        <div class="user-area-info">
-          <p class="user-area-name">{me?.username}</p>
-          <p class="user-area-tag">{me?.role === "admin" ? "Admin" : "Member"}</p>
-        </div>
-        <button class="icon-btn icon-btn-danger" title="Log out" on:click={logout}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <button class="icon-btn" aria-label="Sign out" title="Sign out" on:click={logout}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
         </button>
       </div>
     </nav>
 
-    <!-- ── MAIN ── -->
-    <div class="main">
+    <!-- ── Main ── -->
+    <main class="main">
 
-      <!-- Channel Header -->
+      <!-- Header -->
       <header class="channel-header">
         <button class="hamburger" aria-label="Toggle sidebar" on:click={() => (sidebarOpen = !sidebarOpen)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
         </button>
         {#if selectedChannelName}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2.2" stroke-linecap="round" class="header-hash-icon">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span class="header-channel-name">{selectedChannelName}</span>
+          <span class="header-hash">#</span>
+          <span class="header-name">{selectedChannelName}</span>
           {#if selectedChannelDescription}
-            <div class="header-divider"></div>
-            <span class="header-channel-desc">{selectedChannelDescription}</span>
+            <span class="header-sep"></span>
+            <span class="header-desc">{selectedChannelDescription}</span>
           {/if}
         {:else}
-          <span class="header-channel-name muted-name">Select a channel</span>
+          <span class="header-name header-name-empty">Band Messaging</span>
         {/if}
       </header>
 
-      <!-- Toast -->
+      <!-- Notification toast -->
       {#if notification}
         <div class="toast" class:toast-success={notificationType === "success"} role="alert">
           {#if notificationType === "error"}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
           {:else}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
           {/if}
           {notification}
         </div>
@@ -383,55 +385,45 @@
       <div class="messages-area" bind:this={messagesEl}>
         {#if !selectedChannelId}
           <div class="empty-state">
-            <div class="empty-icon">
-              <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
-            <h3>Select a channel to start chatting</h3>
-            <p>Pick a channel from the sidebar on the left.</p>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" class="empty-icon">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <p>Select a channel to start chatting</p>
           </div>
         {:else}
-          <!-- Channel welcome message at top -->
-          <div class="channel-welcome">
-            <div class="welcome-icon" style="background:{avatarColor(selectedChannelName)}">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
-            <h2>Welcome to #{selectedChannelName}!</h2>
-            {#if selectedChannelDescription}
-              <p>{selectedChannelDescription}</p>
-            {:else}
-              <p>This is the beginning of the <strong>#{selectedChannelName}</strong> channel.</p>
-            {/if}
+          <!-- Channel header welcome -->
+          <div class="welcome">
+            <h2 class="welcome-title">#{selectedChannelName}</h2>
+            <p class="welcome-sub">
+              {selectedChannelDescription || `The beginning of #${selectedChannelName}.`}
+            </p>
           </div>
 
           {#if messages.length === 0}
-            <div class="no-messages">
-              <p>Be the first to send a message in <strong>#{selectedChannelName}</strong> 👋</p>
-            </div>
+            <p class="no-messages">No messages yet.</p>
           {:else}
             {#each groupedMessages as msg}
-              <!-- Date separator -->
               {#if msg.dateSeparator}
                 <div class="date-sep">
-                  <div class="date-sep-line"></div>
+                  <span class="date-sep-line"></span>
                   <span class="date-sep-label">{msg.dateSeparator}</span>
-                  <div class="date-sep-line"></div>
+                  <span class="date-sep-line"></span>
                 </div>
               {/if}
 
-              <!-- Message row -->
-              <div class="msg-row" class:msg-row-grouped={msg.grouped}>
+              <div class="msg-row" class:msg-grouped={msg.grouped}>
                 {#if !msg.grouped}
-                  <div class="msg-avatar avatar" style="background:{avatarColor(msg.author)}">{initials(msg.author)}</div>
+                  <div class="msg-avatar">{initials(msg.author)}</div>
                 {:else}
                   <div class="msg-avatar-gap">
-                    <span class="msg-hover-time">{formatTime(msg.createdAt)}</span>
+                    <span class="msg-time-ghost">{formatTime(msg.createdAt)}</span>
                   </div>
                 {/if}
-                <div class="msg-content">
+                <div class="msg-body">
                   {#if !msg.grouped}
-                    <div class="msg-header">
-                      <span class="msg-author" style="color:{avatarColor(msg.author)}">{msg.author}</span>
-                      <span class="msg-timestamp" title={formatFullDate(msg.createdAt)}>
+                    <div class="msg-meta">
+                      <span class="msg-author">{msg.author}</span>
+                      <span class="msg-time" title={formatFullDate(msg.createdAt)}>
                         {formatDate(msg.createdAt) !== "Today" ? formatDate(msg.createdAt) + " at " : ""}{formatTime(msg.createdAt)}
                       </span>
                     </div>
@@ -448,9 +440,6 @@
       {#if selectedChannelId}
         <div class="composer-wrap">
           <div class="composer">
-            <button class="composer-icon-btn" title="Attach file" disabled>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </button>
             <input
               class="composer-input"
               bind:value={newMessage}
@@ -460,17 +449,19 @@
             />
             <button
               class="composer-send"
-              class:composer-send-active={!!newMessage.trim()}
+              class:composer-send-ready={!!newMessage.trim()}
               on:click={sendMessage}
               disabled={!newMessage.trim()}
-              title="Send message"
+              aria-label="Send message"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
             </button>
           </div>
         </div>
       {/if}
-    </div>
+    </main>
 
     <!-- Mobile overlay -->
     {#if sidebarOpen}
@@ -482,113 +473,154 @@
 {/if}
 
 <style>
-  /* ── AUTH ────────────────────────────────────────────── */
+  /* ════════════════════════════════════════
+     AUTH
+  ════════════════════════════════════════ */
   .auth-screen {
-    min-height: 100vh;
+    min-height: 100vh;         /* fallback for browsers without svh support */
+    min-height: 100svh;        /* accounts for mobile browser chrome */
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #313338;
-    padding: 1rem;
+    background: var(--bg-0);
+    padding: 1.5rem;
   }
 
   .auth-card {
-    background: #2b2d31;
-    border-radius: 4px;
-    padding: 2rem 2rem 1.5rem;
-    width: min(480px, 100%);
-    box-shadow: 0 2px 10px 0 rgba(0,0,0,.2), 0 0 0 1px rgba(255,255,255,.04);
-  }
-
-  .auth-logo {
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    background: var(--accent);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1.25rem;
-    box-shadow: 0 8px 24px rgba(88,101,242,.4);
-  }
-
-  .auth-alert {
-    background: rgba(242,63,67,.15);
-    border: 1px solid rgba(242,63,67,.4);
-    color: #f23f43;
-    border-radius: 4px;
-    padding: 0.7rem 1rem;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
-  }
-  .auth-alert-success {
-    background: rgba(35,165,90,.15);
-    border-color: rgba(35,165,90,.4);
-    color: #23a55a;
-  }
-
-  .auth-tabs-body {
+    width: min(400px, 100%);
     display: flex;
     flex-direction: column;
     gap: 0;
   }
 
-  .auth-section {
+  .auth-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    background: var(--bg-2);
+    border: 1px solid var(--separator);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    margin: 0 auto 1.75rem;
+  }
+
+  .auth-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-subtitle {
+    margin: 0 0 2rem;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    text-align: center;
+  }
+
+  .auth-toast {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 69, 58, 0.1);
+    border: 1px solid rgba(255, 69, 58, 0.3);
+    color: var(--color-error);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.875rem;
+    font-size: 0.825rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.4;
+  }
+  .auth-toast-success {
+    background: rgba(48, 209, 88, 0.1);
+    border-color: rgba(48, 209, 88, 0.3);
+    color: var(--color-success);
+  }
+
+  .auth-form-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  .auth-section h2 {
-    margin: 0 0 0.15rem;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-1);
-    text-align: center;
+  .auth-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    letter-spacing: 0.005em;
+    margin-top: 0.25rem;
   }
 
-  .auth-sub {
-    margin: 0 0 1rem;
-    color: var(--text-3);
-    font-size: 0.9rem;
-    text-align: center;
+  .auth-input {
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 0.65rem 0.875rem;
+    font-size: 0.9375rem;
+    outline: none;
+    transition: border-color 0.15s;
   }
+  .auth-input::placeholder { color: var(--text-placeholder); }
+  .auth-input:focus { border-color: rgba(255, 255, 255, 0.4); }
 
-  .auth-fine {
-    margin: 0.5rem 0 0;
-    font-size: 0.82rem;
-    color: var(--text-3);
-    text-align: center;
-  }
-
-  .auth-link {
-    background: none;
+  .auth-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.7rem 1rem;
+    background: var(--text-primary);
+    color: var(--bg-0);
     border: none;
-    color: var(--accent);
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+    font-weight: 600;
     cursor: pointer;
-    padding: 0;
-    font-size: inherit;
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    transition: opacity 0.15s;
+    letter-spacing: -0.01em;
   }
-  .auth-link:hover { color: #7289da; }
+  .auth-btn:hover { opacity: 0.88; }
+  .auth-btn:active { opacity: 0.76; }
 
-  .auth-divider {
+  .auth-btn-secondary {
+    background: var(--bg-2);
+    color: var(--text-secondary);
+    border: 1px solid var(--separator);
+  }
+  .auth-btn-secondary:hover { background: var(--bg-3); opacity: 1; }
+
+  .auth-note {
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .auth-sep {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin: 1.25rem 0;
-    color: var(--text-muted);
+    margin: 1.75rem 0;
+    color: var(--text-tertiary);
     font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
   }
-  .auth-divider::before,
-  .auth-divider::after {
+  .auth-sep::before,
+  .auth-sep::after {
     content: "";
     flex: 1;
     height: 1px;
-    background: rgba(255,255,255,0.08);
+    background: var(--separator);
   }
 
-  /* ── APP LAYOUT ────────────────────────────────────────────── */
+  /* ════════════════════════════════════════
+     APP SHELL
+  ════════════════════════════════════════ */
   .app {
     display: flex;
     height: 100vh;
@@ -596,52 +628,70 @@
     overflow: hidden;
   }
 
-  /* ── SIDEBAR ────────────────────────────────────────────── */
+  /* ════════════════════════════════════════
+     SIDEBAR
+  ════════════════════════════════════════ */
   .sidebar {
-    width: 240px;
+    width: 220px;
     flex-shrink: 0;
-    background: var(--sidebar-bg);
+    background: var(--bg-1);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border-right: 1px solid var(--separator);
   }
 
-  .server-header {
-    height: 48px;
+  .sidebar-header {
+    height: 52px;
     padding: 0 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid rgba(0,0,0,.2);
-    box-shadow: 0 1px 0 rgba(4,4,5,.2), 0 1.5px 0 rgba(6,6,7,.05), 0 2px 0 rgba(4,4,5,.05);
+    border-bottom: 1px solid var(--separator);
     flex-shrink: 0;
   }
 
-  .server-name {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .sidebar-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
 
-  .create-channel-popover {
-    background: var(--sidebar-channel-bg);
+  /* Create channel panel */
+  .create-panel {
+    background: var(--bg-2);
     padding: 1rem;
+    border-bottom: 1px solid var(--separator);
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    border-bottom: 1px solid rgba(0,0,0,.2);
+    gap: 0.45rem;
+    flex-shrink: 0;
   }
 
-  .create-channel-title {
-    margin: 0;
-    font-size: 0.875rem;
+  .create-panel-title {
+    margin: 0 0 0.25rem;
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--text-1);
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+  }
+
+  .panel-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+  }
+
+  .optional-tag {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    opacity: 0.6;
+    font-weight: 400;
   }
 
   .channel-input-wrap {
@@ -650,117 +700,110 @@
     align-items: center;
   }
 
-  .channel-input-hash {
+  .channel-hash {
     position: absolute;
     left: 0.6rem;
-    color: var(--text-3);
-    font-weight: 600;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
     pointer-events: none;
+    line-height: 1;
   }
 
-  .channel-name-input { padding-left: 1.5rem; }
+  .channel-name-input { padding-left: 1.4rem; }
 
-  .create-channel-actions {
+  .panel-input {
+    width: 100%;
+    background: var(--bg-0);
+    border: 1px solid var(--separator);
+    border-radius: 6px;
+    color: var(--text-primary);
+    padding: 0.5rem 0.65rem;
+    font-size: 0.8125rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .panel-input::placeholder { color: var(--text-placeholder); }
+  .panel-input:focus { border-color: rgba(255, 255, 255, 0.35); }
+
+  .create-panel-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
     justify-content: flex-end;
-    margin-top: 0.25rem;
+    margin-top: 0.15rem;
   }
 
+  .panel-btn {
+    background: var(--text-primary);
+    color: var(--bg-0);
+    border: none;
+    border-radius: 6px;
+    padding: 0.42rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .panel-btn:hover { opacity: 0.85; }
+
+  .panel-btn-ghost {
+    background: transparent;
+    color: var(--text-tertiary);
+    border: 1px solid var(--separator);
+  }
+  .panel-btn-ghost:hover { opacity: 1; color: var(--text-secondary); background: var(--bg-3); }
+
+  /* Channel list */
   .channels-scroll {
     flex: 1;
     overflow-y: auto;
-    padding: 0.5rem 0 0.5rem;
+    padding: 0.75rem 0 0.75rem;
   }
 
-  .channel-category {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 1rem 0.5rem 0.25rem 1rem;
-    font-size: 0.72rem;
-    font-weight: 700;
+  .section-label {
+    margin: 0;
+    padding: 0.6rem 1rem 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: var(--text-3);
-    cursor: default;
-    user-select: none;
-  }
-
-  .category-arrow {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .category-badge {
-    margin-left: auto;
-    background: var(--red);
-    color: white;
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 0.1rem 0.4rem;
-    border-radius: 999px;
-  }
-
-  .channel-row {
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    width: 100%;
-    padding: 0.35rem 0.5rem 0.35rem 1rem;
-    margin: 0 0.5rem;
-    width: calc(100% - 1rem);
-    border-radius: 4px;
-    border: none;
-    background: none;
-    color: var(--text-3);
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.1s, color 0.1s;
-    font-size: 0.9rem;
-    font-weight: 500;
   }
 
-  .channel-icon {
-    flex-shrink: 0;
-    opacity: 0.7;
-  }
-
-  .channel-row-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .channel-row:hover {
-    background: rgba(255,255,255,.06);
-    color: var(--text-2);
-  }
-  .channel-row:hover .channel-icon { opacity: 1; }
-
-  .channel-row-active {
-    background: rgba(255,255,255,.1) !important;
-    color: var(--text-1) !important;
-  }
-  .channel-row-active .channel-icon { opacity: 1; }
-
-  .no-channels {
-    padding: 0.25rem 1rem;
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    margin: 0;
+  .badge-count {
+    background: var(--color-error);
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.1rem 0.35rem;
+    border-radius: 999px;
+    letter-spacing: 0;
   }
 
   .pending-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.3rem 0.5rem 0.3rem 1rem;
-    font-size: 0.85rem;
-    color: var(--text-2);
+    padding: 0.3rem 0.75rem 0.3rem 1rem;
+    font-size: 0.825rem;
+  }
+
+  .avatar-mono {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-3);
+    border: 1px solid var(--separator);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    text-transform: uppercase;
   }
 
   .pending-name {
@@ -768,77 +811,146 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--text-secondary);
   }
 
-  /* ── USER AREA ────────────────────────────────────────────── */
-  .user-area {
-    height: 52px;
-    background: #232428;
+  .approve-btn {
+    background: transparent;
+    border: 1px solid var(--separator);
+    border-radius: 4px;
+    color: var(--color-success);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .approve-btn:hover {
+    background: rgba(48, 209, 88, 0.1);
+    border-color: rgba(48, 209, 88, 0.4);
+  }
+
+  .channel-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0 0.5rem;
-    flex-shrink: 0;
-  }
-
-  .user-area-avatar {
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  .status-dot {
-    position: absolute;
-    bottom: -1px; right: -1px;
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--green);
-    border: 2px solid #232428;
-  }
-
-  .user-area-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .user-area-name {
-    margin: 0;
+    gap: 0.3rem;
+    width: calc(100% - 0.75rem);
+    margin: 0 0 0 0.375rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    text-align: left;
     font-size: 0.875rem;
+    font-weight: 400;
+    transition: background 0.1s, color 0.12s;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .channel-hash-label {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .channel-name-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .channel-row:hover {
+    background: var(--tint);
+    color: var(--text-secondary);
+  }
+  .channel-row:hover .channel-hash-label { opacity: 0.8; }
+
+  .channel-row-active {
+    background: var(--tint-strong) !important;
+    color: var(--text-primary) !important;
+  }
+  .channel-row-active .channel-hash-label { opacity: 1; color: var(--text-primary); }
+
+  .empty-hint {
+    padding: 0.25rem 1rem;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin: 0;
+  }
+
+  /* User panel */
+  .user-panel {
+    height: 52px;
+    padding: 0 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-top: 1px solid var(--separator);
+    flex-shrink: 0;
+  }
+
+  .user-panel-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-3);
+    border: 1px solid var(--separator);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .user-panel-info { flex: 1; min-width: 0; }
+
+  .user-panel-name {
+    margin: 0;
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--text-1);
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
   }
 
-  .user-area-tag {
+  .user-panel-role {
     margin: 0;
-    font-size: 0.72rem;
-    color: var(--text-3);
-    line-height: 1.2;
+    font-size: 0.69rem;
+    color: var(--text-tertiary);
+    line-height: 1.3;
   }
 
-  /* ── MAIN ────────────────────────────────────────────── */
+  /* ════════════════════════════════════════
+     MAIN
+  ════════════════════════════════════════ */
   .main {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--main-bg);
+    background: var(--bg-0);
     min-width: 0;
   }
 
-  /* ── CHANNEL HEADER ────────────────────────────────────────────── */
+  /* Header */
   .channel-header {
-    height: 48px;
-    padding: 0 1rem;
+    height: 52px;
+    padding: 0 1.25rem;
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    border-bottom: 1px solid rgba(0,0,0,.2);
-    box-shadow: 0 1px 0 rgba(4,4,5,.2), 0 1.5px 0 rgba(6,6,7,.05), 0 2px 0 rgba(4,4,5,.05);
+    border-bottom: 1px solid var(--separator);
     flex-shrink: 0;
-    background: var(--main-bg);
     overflow: hidden;
   }
 
@@ -846,70 +958,82 @@
     display: none;
     background: none;
     border: none;
-    color: var(--text-3);
+    color: var(--text-tertiary);
     cursor: pointer;
     padding: 0.3rem;
-    border-radius: var(--radius);
+    border-radius: 6px;
     line-height: 0;
     flex-shrink: 0;
+    transition: color 0.1s, background 0.1s;
   }
-  .hamburger:hover { color: var(--text-1); background: rgba(255,255,255,.06); }
+  .hamburger:hover { color: var(--text-primary); background: var(--tint); }
 
-  .header-hash-icon { flex-shrink: 0; }
+  .header-hash {
+    font-size: 1rem;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
 
-  .header-channel-name {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-1);
+  .header-name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex-shrink: 0;
+    letter-spacing: -0.01em;
   }
 
-  .muted-name { color: var(--text-3); font-weight: 500; }
+  .header-name-empty {
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
 
-  .header-divider {
+  .header-sep {
     width: 1px;
-    height: 20px;
-    background: rgba(255,255,255,.12);
+    height: 16px;
+    background: var(--separator);
     flex-shrink: 0;
   }
 
-  .header-channel-desc {
-    font-size: 0.875rem;
-    color: var(--text-3);
+  .header-desc {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  /* ── TOAST ────────────────────────────────────────────── */
+  /* Toast notification — only colored elements in the app */
   .toast {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(242,63,67,.15);
-    border-top: 2px solid #f23f43;
-    color: #f23f43;
-    padding: 0.55rem 1rem;
-    font-size: 0.875rem;
+    background: rgba(255, 69, 58, 0.08);
+    border-bottom: 1px solid rgba(255, 69, 58, 0.2);
+    color: var(--color-error);
+    padding: 0.5rem 1.25rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     flex-shrink: 0;
+    line-height: 1.4;
   }
   .toast-success {
-    background: rgba(35,165,90,.15);
-    border-top-color: #23a55a;
-    color: #23a55a;
+    background: rgba(48, 209, 88, 0.08);
+    border-bottom-color: rgba(48, 209, 88, 0.2);
+    color: var(--color-success);
   }
 
-  /* ── MESSAGES ────────────────────────────────────────────── */
+  /* Messages area */
   .messages-area {
     flex: 1;
     overflow-y: auto;
-    padding: 0 0 1rem;
     display: flex;
     flex-direction: column;
+    padding-bottom: 0.5rem;
   }
 
   .empty-state {
@@ -919,313 +1043,216 @@
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    color: var(--text-3);
+    color: var(--text-tertiary);
     padding: 2rem;
     text-align: center;
   }
 
-  .empty-icon { opacity: 0.25; }
+  .empty-icon { opacity: 0.2; }
 
-  .empty-state h3 {
+  .empty-state p {
     margin: 0;
-    font-size: 1.1rem;
-    color: var(--text-2);
+    font-size: 0.875rem;
   }
-  .empty-state p { margin: 0; font-size: 0.9rem; }
 
-  .channel-welcome {
-    padding: 4rem 1rem 1.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+  /* Channel welcome */
+  .welcome {
+    padding: 3rem 1.5rem 1.5rem;
+    border-bottom: 1px solid var(--separator);
     margin-bottom: 1rem;
   }
 
-  .welcome-icon {
-    width: 68px; height: 68px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 1rem;
-  }
-
-  .channel-welcome h2 {
-    margin: 0 0 0.3rem;
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--text-1);
+  .welcome-title {
+    margin: 0 0 0.35rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.025em;
     line-height: 1.2;
   }
 
-  .channel-welcome p {
+  .welcome-sub {
     margin: 0;
-    color: var(--text-3);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    line-height: 1.5;
   }
 
   .no-messages {
-    padding: 0 1rem;
-    color: var(--text-3);
-    font-size: 0.875rem;
+    padding: 0 1.5rem;
+    font-size: 0.825rem;
+    color: var(--text-tertiary);
+    margin: 0;
   }
-  .no-messages p { margin: 0; }
 
   /* Date separator */
   .date-sep {
     display: flex;
     align-items: center;
-    margin: 1.5rem 1rem 0.75rem;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    margin: 1.5rem 1.5rem 0.75rem;
   }
-  .date-sep-line { flex: 1; height: 1px; background: rgba(255,255,255,.08); }
+
+  .date-sep-line {
+    flex: 1;
+    height: 1px;
+    background: var(--separator);
+  }
+
   .date-sep-label {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    color: var(--text-3);
+    color: var(--text-tertiary);
     white-space: nowrap;
+    letter-spacing: 0.02em;
   }
 
   /* Message rows */
   .msg-row {
     display: flex;
-    gap: 1rem;
-    padding: 0.125rem 1rem 0.125rem 1rem;
-    transition: background 0.05s;
-    position: relative;
+    gap: 0.875rem;
+    padding: 0.15rem 1.5rem;
+    transition: background 0.06s;
   }
-  .msg-row:hover { background: var(--msg-hover); }
+  .msg-row:hover { background: rgba(255, 255, 255, 0.025); }
 
-  .msg-row-grouped { padding-top: 0.05rem; }
+  .msg-grouped { padding-top: 0.04rem; }
 
   .msg-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-2);
+    border: 1px solid var(--separator);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
     flex-shrink: 0;
-    margin-top: 0.125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-top: 0.1rem;
   }
 
   .msg-avatar-gap {
-    width: 40px;
+    width: 36px;
     flex-shrink: 0;
     display: flex;
     align-items: flex-start;
     justify-content: flex-end;
-    padding-top: 0.3rem;
+    padding-top: 0.28rem;
   }
 
-  .msg-hover-time {
-    font-size: 0.65rem;
+  .msg-time-ghost {
+    font-size: 0.62rem;
     color: transparent;
     transition: color 0.1s;
     user-select: none;
     white-space: nowrap;
-    line-height: 1;
   }
-  .msg-row:hover .msg-hover-time { color: var(--text-muted); }
+  .msg-row:hover .msg-time-ghost { color: var(--text-tertiary); }
 
-  .msg-content { flex: 1; min-width: 0; }
+  .msg-body { flex: 1; min-width: 0; }
 
-  .msg-header {
+  .msg-meta {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.1rem;
   }
 
   .msg-author {
-    font-size: 0.9375rem;
-    font-weight: 500;
-    line-height: 1.375;
-    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.4;
   }
-  .msg-author:hover { text-decoration: underline; }
 
-  .msg-timestamp {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    line-height: 1.375;
+  .msg-time {
+    font-size: 0.69rem;
+    color: var(--text-tertiary);
+    line-height: 1.4;
   }
 
   .msg-text {
     margin: 0;
     font-size: 0.9375rem;
-    color: var(--text-2);
-    line-height: 1.375;
+    color: var(--text-secondary);
+    line-height: 1.5;
     word-break: break-word;
   }
 
-  /* ── COMPOSER ────────────────────────────────────────────── */
+  /* Composer */
   .composer-wrap {
-    padding: 0 1rem 1.5rem;
+    padding: 0 1rem 1.25rem;
     flex-shrink: 0;
   }
 
   .composer {
-    background: var(--input-bg);
-    border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: 0;
+    background: var(--bg-2);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-md);
     padding: 0 0.75rem;
+    transition: border-color 0.15s;
   }
-
-  .composer-icon-btn {
-    background: none;
-    border: none;
-    color: var(--text-3);
-    cursor: pointer;
-    padding: 0.7rem 0.35rem;
-    border-radius: 4px;
-    line-height: 0;
-    flex-shrink: 0;
-    transition: color 0.1s;
-  }
-  .composer-icon-btn:hover:not(:disabled) { color: var(--text-2); }
-  .composer-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .composer:focus-within { border-color: rgba(255, 255, 255, 0.3); }
 
   .composer-input {
     flex: 1;
     background: none;
     border: none;
     outline: none;
-    color: var(--text-1);
+    color: var(--text-primary);
     font-size: 0.9375rem;
-    padding: 0.7rem 0.5rem;
-    line-height: 1.375;
+    padding: 0.75rem 0.5rem;
+    line-height: 1.4;
     min-width: 0;
   }
-  .composer-input::placeholder { color: var(--text-muted); }
+  .composer-input::placeholder { color: var(--text-placeholder); }
 
   .composer-send {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.7rem 0.35rem;
-    border-radius: 4px;
+    padding: 0.5rem;
+    border-radius: 6px;
     line-height: 0;
     flex-shrink: 0;
-    color: var(--text-muted);
-    transition: color 0.1s;
+    color: var(--text-tertiary);
+    transition: color 0.12s, background 0.12s;
   }
-  .composer-send:disabled { cursor: not-allowed; }
-  .composer-send-active { color: var(--accent) !important; }
-  .composer-send-active:hover { color: var(--accent-hover) !important; }
+  .composer-send:disabled { cursor: default; opacity: 0.4; }
+  .composer-send-ready { color: var(--text-primary) !important; }
+  .composer-send-ready:hover { background: var(--tint); }
 
-  /* ── AVATARS ────────────────────────────────────────────── */
-  .avatar {
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    color: white;
-    flex-shrink: 0;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.02em;
-  }
-  .avatar-sm { width: 32px; height: 32px; }
-  .avatar-xs { width: 24px; height: 24px; font-size: 0.62rem; }
-  .msg-avatar.avatar { width: 40px; height: 40px; font-size: 0.8rem; }
-
-  /* ── SHARED COMPONENTS ────────────────────────────────────────────── */
-  .field-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: var(--text-3);
-    margin: 0.5rem 0 0.3rem;
-  }
-
-  .field-label-sm {
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: var(--text-3);
-    margin-bottom: 0.25rem;
-    display: block;
-  }
-
-  .optional {
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: 0;
-    color: var(--text-muted);
-    font-size: 0.68rem;
-  }
-
-  .dc-input {
-    width: 100%;
-    background: #1e1f22;
-    border: none;
-    outline: none;
-    border-radius: 3px;
-    color: var(--text-1);
-    padding: 0.6rem 0.75rem;
-    font-size: 0.9375rem;
-    transition: box-shadow 0.15s;
-  }
-  .dc-input::placeholder { color: var(--text-muted); }
-  .dc-input:focus { box-shadow: 0 0 0 2px var(--accent); }
-
-  .dc-input-sm {
-    padding: 0.42rem 0.6rem;
-    font-size: 0.85rem;
-  }
-
-  .dc-btn {
-    border: none;
-    border-radius: 3px;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 0.7rem 1rem;
-    font-size: 0.9375rem;
-    transition: background 0.1s, transform 0.1s;
-    width: 100%;
-    text-align: center;
-    line-height: 1;
-  }
-  .dc-btn:active { transform: scale(0.98); }
-  .dc-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  .dc-btn-primary { background: var(--accent); color: white; }
-  .dc-btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-
-  .dc-btn-secondary { background: #4e5058; color: white; }
-  .dc-btn-secondary:hover:not(:disabled) { background: #5c6069; }
-
-  .dc-btn-ghost {
-    background: transparent;
-    color: var(--text-2);
-    border: 1px solid rgba(255,255,255,.1);
-    width: auto;
-  }
-  .dc-btn-ghost:hover:not(:disabled) { text-decoration: underline; }
-
-  .dc-btn-green { background: var(--green); color: white; width: auto; }
-  .dc-btn-green:hover:not(:disabled) { filter: brightness(1.1); }
-
-  .dc-btn-sm { padding: 0.42rem 0.75rem; font-size: 0.85rem; }
-  .dc-btn-xs { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
-
+  /* Shared icon button */
   .icon-btn {
     background: none;
     border: none;
-    color: var(--text-3);
+    color: var(--text-tertiary);
     cursor: pointer;
     padding: 0.3rem;
-    border-radius: 4px;
+    border-radius: 6px;
     line-height: 0;
     flex-shrink: 0;
-    transition: color 0.1s;
+    transition: color 0.1s, background 0.1s;
   }
-  .icon-btn:hover { color: var(--text-1); }
-  .icon-btn-danger:hover { color: var(--red); }
+  .icon-btn:hover { color: var(--text-primary); background: var(--tint); }
 
-  /* ── MOBILE SIDEBAR ────────────────────────────────────────────── */
+  /* Mobile sidebar */
   .sidebar-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.7);
+    background: rgba(0, 0, 0, 0.6);
     z-index: 9;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
 
   @media (max-width: 660px) {
@@ -1236,17 +1263,15 @@
       left: 0; top: 0; bottom: 0;
       z-index: 10;
       transform: translateX(-100%);
-      transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+      transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .app.sidebar-open .sidebar { transform: translateX(0); }
     .app.sidebar-open .sidebar-overlay { display: block; }
 
-    .channel-header { gap: 0.5rem; }
+    .msg-row { padding: 0.15rem 1rem; }
+    .welcome { padding: 2rem 1rem 1rem; }
+    .date-sep { margin: 1.25rem 1rem 0.5rem; }
     .composer-wrap { padding: 0 0.75rem 1rem; }
-    .messages-area { padding: 0 0 0.5rem; }
-    .channel-welcome { padding: 2rem 0.75rem 1rem; }
-    .date-sep { margin: 1rem 0.75rem 0.5rem; }
-    .msg-row { padding: 0.125rem 0.75rem; }
   }
 </style>
