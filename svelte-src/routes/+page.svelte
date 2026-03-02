@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate, tick } from "svelte";
+  import { env } from "$env/dynamic/public";
 
   type User = { username: string; role: "admin" | "member"; status: "approved" | "pending" };
   type Channel = { id: string; name: string; description: string };
@@ -223,9 +224,10 @@
   async function loadGifs(query: string) {
     gifLoading = true; gifs = [];
     try {
-      // LIVDSRZULELA is Tenor's public demo key. Replace with your own key
+      // Use PUBLIC_TENOR_KEY from your environment (.env.local or Vercel).
+      // Falls back to Tenor's public demo key when unset; set your own key
       // from https://developers.google.com/tenor/guides/quickstart for production.
-      const key = "LIVDSRZULELA";
+      const key = env.PUBLIC_TENOR_KEY || "LIVDSRZULELA";
       const ep = query
         ? `https://api.tenor.com/v1/search?q=${encodeURIComponent(query)}&key=${key}&limit=16&contentfilter=medium&media_filter=minimal`
         : `https://api.tenor.com/v1/trending?key=${key}&limit=16&contentfilter=medium&media_filter=minimal`;

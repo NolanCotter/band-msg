@@ -38,6 +38,7 @@ This is for variables your **SvelteKit server** (the `svelte-src/` code) needs �
 |---|---|---|---|
 | `CONVEX_URL` | `https://happy-animal-123.convex.cloud` | ✅ Yes | The URL of your Convex deployment. Get it from the Convex dashboard or by running `npx convex deploy`. |
 | `AUTH_COOKIE_SECURE` | `true` | ✅ Yes (production) | Set to `true` on Vercel so session cookies use the `Secure` flag. Use `false` for local HTTP dev. |
+| `PUBLIC_TENOR_KEY` | `AIza...` | ☑ Optional | Your [Tenor API key](https://developers.google.com/tenor/guides/quickstart) for GIF search. Falls back to the public demo key when unset (shared rate limits — not for production). |
 
 > `NODE_ENV` and `VERCEL` are injected automatically by Vercel — do **not** add them yourself.
 
@@ -68,6 +69,7 @@ Edit `.env.local`:
 ```
 CONVEX_URL=https://your-deployment.convex.cloud   # printed by `npx convex dev`
 AUTH_COOKIE_SECURE=false                           # false for local HTTP dev
+PUBLIC_TENOR_KEY=                                  # optional — leave blank to use the shared demo key
 ```
 
 4. Start the SvelteKit app (in a second terminal):
@@ -108,6 +110,7 @@ npm run dev
 |---|---|---|
 | `CONVEX_URL` | `https://your-deployment.convex.cloud` | **Required.** From `npx convex deploy` output or the Convex dashboard. |
 | `AUTH_COOKIE_SECURE` | `true` | **Required.** Enforces `Secure` cookie flag in production. |
+| `PUBLIC_TENOR_KEY` | `AIza...` | **Recommended.** Your [Tenor API key](https://developers.google.com/tenor/guides/quickstart) for GIF search. Falls back to the shared demo key if unset. |
 
 > `NODE_ENV` and `VERCEL` are set automatically by Vercel — do **not** add them manually.
 
