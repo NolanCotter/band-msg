@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback, FormEvent } from "react";
 import { Message, StreamEvent, TypingEvent, Reaction } from "@/lib/types";
 import { getAvatarColor, formatTimestamp } from "@/lib/utils";
 import GiphyPicker from "@/components/GiphyPicker";
+import EmojiPicker from "@/components/EmojiPicker";
 import MessageContextMenu from "@/components/MessageContextMenu";
 
 const MESSAGE_GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -123,6 +124,8 @@ export default function MessageArea({
   const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const [mentionMatch, setMentionMatch] = useState<MentionMatch | null>(null);
   const [showGiphy, setShowGiphy] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerTarget, setEmojiPickerTarget] = useState<string | null>(null);
   const [giphyTarget, setGiphyTarget] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Map<string, Reaction[]>>(new Map());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; content: string; canUnsend: boolean } | null>(null);
@@ -661,6 +664,11 @@ export default function MessageArea({
     setShowGiphy(true);
   };
 
+  const openEmojiPickerForReaction = useCallback((messageId: string) => {
+    setEmojiPickerTarget(messageId);
+    setShowEmojiPicker(true);
+  }, []);
+
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     const content = newMessage.trim();
@@ -1029,6 +1037,21 @@ export default function MessageArea({
             onClose={() => setShowGiphy(false)}
           />
         )}
+        {showEmojiPicker && (
+          <EmojiPicker
+            onSelect={(emoji) => {
+              if (emojiPickerTarget) {
+                handleEmojiReact(emojiPickerTarget, emoji);
+              }
+              setShowEmojiPicker(false);
+              setEmojiPickerTarget(null);
+            }}
+            onClose={() => {
+              setShowEmojiPicker(false);
+              setEmojiPickerTarget(null);
+            }}
+          />
+        )}
         {/* Reply preview bar */}
         {replyTo && (
           <div className="mx-3 flex items-center gap-2 rounded-t-lg border-l-2 border-[#5865f2] bg-[#2b2d31] px-3 py-2 md:mx-4">
@@ -1137,6 +1160,7 @@ export default function MessageArea({
           messageId={contextMenu.msgId}
           canUnsend={contextMenu.canUnsend}
           onEmojiReact={handleEmojiReact}
+          onOpenEmojiPicker={openEmojiPickerForReaction}
           onGifReact={(msgId) => { openGiphyForReaction(msgId); }}
           onCopy={handleCopyMessage}
           onReply={handleReply}

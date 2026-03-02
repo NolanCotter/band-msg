@@ -11,6 +11,7 @@ interface MessageContextMenuProps {
   messageId: string;
   canUnsend?: boolean;
   onEmojiReact: (messageId: string, emoji: string) => void;
+  onOpenEmojiPicker: (messageId: string) => void;
   onGifReact: (messageId: string) => void;
   onCopy: (text: string) => void;
   onReply: (messageId: string, content: string) => void;
@@ -26,6 +27,7 @@ export default function MessageContextMenu({
   messageId,
   canUnsend = false,
   onEmojiReact,
+  onOpenEmojiPicker,
   onGifReact,
   onCopy,
   onReply,
@@ -101,6 +103,15 @@ export default function MessageContextMenu({
       </div>
 
       <div className="mx-2 h-px bg-[#3f4147]" />
+
+      <div className="px-2 py-1">
+        <button
+          onClick={() => { onOpenEmojiPicker(messageId); onClose(); }}
+          className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm text-gray-300 hover:bg-[#404249]"
+        >
+          More Emojis
+        </button>
+      </div>
 
       {/* Actions */}
       <div className="flex flex-col p-1">
