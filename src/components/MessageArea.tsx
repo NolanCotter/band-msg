@@ -350,7 +350,8 @@ export default function MessageArea({
   const lastTypingSentRef = useRef(0);
 
   useEffect(() => {
-    fetch("/api/users/mentionable")
+    const query = channelId ? `?channelId=${encodeURIComponent(channelId)}` : "";
+    fetch(`/api/users/mentionable${query}`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data: unknown) => {
         if (Array.isArray(data)) {
@@ -358,7 +359,7 @@ export default function MessageArea({
         }
       })
       .catch(() => {});
-  }, []);
+  }, [channelId]);
 
   useEffect(() => {
     shouldSnapToBottomRef.current = true;

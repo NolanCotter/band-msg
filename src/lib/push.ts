@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { shouldNotifyUser } from "./store";
+import { canAccessChannel, shouldNotifyUser } from "./store";
 
 /**
  * Send push notifications to all subscribed users except the sender.
@@ -27,12 +27,18 @@ export async function sendPushNotifications(
 
     const db = getDb();
     const allSubscriptions = db
-      .prepare("SELECT endpoint, username, p256dh, auth FROM push_subscriptions WHERE username != ?")
-      .all(senderUsername) as { endpoint: string; username: string; p256dh: string; auth: string }[];
+      .prepare(
+        `SELECT ps.endpoint, ps.username, ps.p256dh, ps.auth, u.role
+         FROM push_subscriptions ps
+         JOIN users u ON u.username = ps.username
+         WHERE ps.username != ? AND u.status = 'approved'`
+      )
+      .all(senderUsername) as { endpoint: string; username: string; p256dh: string; auth: string; role: string }[];
 
     // Filter by notification preferences
     const subscriptions = allSubscriptions.filter((sub) => {
       if (!channelId) return true;
+      if (!canAccessChannel(channelId, sub.username, sub.role)) return false;
       return shouldNotifyUser(sub.username, channelId, messageContent);
     });
 

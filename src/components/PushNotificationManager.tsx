@@ -9,13 +9,14 @@ interface Channel {
 
 interface PushNotificationManagerProps {
   channels?: Channel[];
+  onOpenPwaSetup?: () => void;
 }
 
 /**
  * Handles push notification registration on mount.
  * Also renders a notification settings modal when `showSettings` is triggered.
  */
-export default function PushNotificationManager({ channels = [] }: PushNotificationManagerProps) {
+export default function PushNotificationManager({ channels = [], onOpenPwaSetup }: PushNotificationManagerProps) {
   const registeredRef = useRef(false);
   const [showSettings, setShowSettings] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -283,6 +284,21 @@ export default function PushNotificationManager({ channels = [] }: PushNotificat
                       Unsubscribe from all notifications
                     </button>
                   )}
+                </>
+              )}
+
+              {onOpenPwaSetup && (
+                <>
+                  <div className="mx-0 my-3 h-px bg-[#3f4147]" />
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      onOpenPwaSetup();
+                    }}
+                    className="w-full rounded-lg bg-[#5865f2]/15 px-3 py-2 text-sm text-[#9aa4ff] hover:bg-[#5865f2]/25"
+                  >
+                    PWA Setup Guide
+                  </button>
                 </>
               )}
             </div>

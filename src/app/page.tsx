@@ -12,9 +12,11 @@ import AdminApprovalModal from "@/components/AdminApprovalModal";
 import ChannelManagementModal from "@/components/ChannelManagementModal";
 import ActivityLogModal from "@/components/ActivityLogModal";
 import PushNotificationManager from "@/components/PushNotificationManager";
+import PwaIntroModal from "@/components/PwaIntroModal";
 
 const HEARTBEAT_INTERVAL_MS = 120000; // 2 minutes
 const MOBILE_BREAKPOINT = 768; // md
+const INTRO_CHOICE_KEY = "band-msg:intro-choice";
 
 type MobileView = "channels" | "chat";
 
@@ -39,6 +41,7 @@ export default function ChatPage() {
   const [showApprovals, setShowApprovals] = useState(false);
   const [showChannelManager, setShowChannelManager] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
+  const [showPwaIntro, setShowPwaIntro] = useState(false);
   const [showMembers, setShowMembers] = useState(true);
   const [mobileView, setMobileView] = useState<MobileView>("channels");
 
@@ -62,6 +65,25 @@ export default function ChatPage() {
     };
 
     loadCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    const savedChoice = localStorage.getItem(INTRO_CHOICE_KEY);
+    setShowPwaIntro(!savedChoice);
+  }, []);
+
+  const handleUseWebOnly = useCallback(() => {
+    localStorage.setItem(INTRO_CHOICE_KEY, "web");
+    setShowPwaIntro(false);
+  }, []);
+
+  const handleCompletePwaIntro = useCallback((platform: "android" | "iphone") => {
+    localStorage.setItem(INTRO_CHOICE_KEY, `pwa:${platform}`);
+    setShowPwaIntro(false);
+  }, []);
+
+  const handleOpenPwaSetup = useCallback(() => {
+    setShowPwaIntro(true);
   }, []);
 
   // Register user as active on login
@@ -229,6 +251,10 @@ export default function ChatPage() {
     );
   }
 
+  if (showPwaIntro) {
+    return <PwaIntroModal onUseWebOnly={handleUseWebOnly} onCompletePwa={handleCompletePwaIntro} />;
+  }
+
   if (!authUser) {
     return <UsernameModal onAuthenticated={handleAuthenticated} />;
   }
@@ -250,7 +276,7 @@ export default function ChatPage() {
               <span className="text-lg font-semibold text-white">Band Chat</span>
             </div>
             <div className="flex items-center gap-1">
-              <PushNotificationManager channels={channels} />
+              <PushNotificationManager channels={channels} onOpenPwaSetup={handleOpenPwaSetup} />
               <button
                 onClick={() => router.push("/dashboard")}
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400"
@@ -373,7 +399,7 @@ export default function ChatPage() {
         </div>
         <div className="mx-auto h-0.5 w-8 rounded bg-[#35373c]" />
         <div className="mt-auto flex flex-col gap-2 pb-2">
-          <PushNotificationManager channels={channels} />
+          <PushNotificationManager channels={channels} onOpenPwaSetup={handleOpenPwaSetup} />
           <button
             onClick={() => router.push("/dashboard")}
             className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#3f4147] text-gray-200 hover:bg-[#5865f2]"
