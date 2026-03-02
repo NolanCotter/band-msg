@@ -85,7 +85,7 @@ export default function MessageArea({
   const [showGiphy, setShowGiphy] = useState(false);
   const [giphyTarget, setGiphyTarget] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Map<string, Reaction[]>>(new Map());
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; content: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; content: string; canUnsend: boolean } | null>(null);
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; user: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const longPressRef = useRef<{ timer: ReturnType<typeof setTimeout>; msgId: string; content: string } | null>(null);
@@ -136,7 +136,7 @@ export default function MessageArea({
   }, [onBack, onSwipeProgress]);
 
   // ── Long-press to open context menu ──
-  const handleMsgPointerDown = useCallback((e: React.PointerEvent, msgId: string, content: string) => {
+  const handleMsgPointerDown = useCallback((e: React.PointerEvent, msgId: string, content: string, canUnsend: boolean) => {
     // Only for touch or right-click contexts; ignore left-click on desktop
     if (e.pointerType === "mouse" && e.button !== 2) return;
     const startX = e.clientX;
@@ -144,7 +144,7 @@ export default function MessageArea({
     const timer = setTimeout(() => {
       // Vibrate for tactile feedback if available
       if (navigator.vibrate) navigator.vibrate(30);
-      setContextMenu({ x: startX, y: startY, msgId, content });
+      setContextMenu({ x: startX, y: startY, msgId, content, canUnsend });
       longPressRef.current = null;
     }, 500);
     longPressRef.current = { timer, msgId, content };
@@ -166,9 +166,9 @@ export default function MessageArea({
   }, []);
 
   // Desktop right-click
-  const handleMsgContextMenu = useCallback((e: React.MouseEvent, msgId: string, content: string) => {
+  const handleMsgContextMenu = useCallback((e: React.MouseEvent, msgId: string, content: string, canUnsend: boolean) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, msgId, content });
+    setContextMenu({ x: e.clientX, y: e.clientY, msgId, content, canUnsend });
   }, []);
 
   // Double-tap to react with ❤️
@@ -731,11 +731,11 @@ export default function MessageArea({
 
               // Touch/pointer props for long-press + swipe-to-reply
               const interactionProps = {
-                onPointerDown: (e: React.PointerEvent) => handleMsgPointerDown(e, msg.id, displayContent),
+                onPointerDown: (e: React.PointerEvent) => handleMsgPointerDown(e, msg.id, displayContent, msg.profile_id === username),
                 onPointerUp: handleMsgPointerUp,
                 onPointerMove: handleMsgPointerMove,
                 onPointerCancel: handleMsgPointerUp,
-                onContextMenu: (e: React.MouseEvent) => handleMsgContextMenu(e, msg.id, displayContent),
+                onContextMenu: (e: React.MouseEvent) => handleMsgContextMenu(e, msg.id, displayContent, msg.profile_id === username),
                 onTouchStart: (e: React.TouchEvent) => handleMsgTouchStart(e, msg.id, displayContent, msg.profile_id),
                 onTouchMove: handleMsgTouchMove,
                 onTouchEnd: handleMsgTouchEnd,
@@ -975,6 +975,7 @@ export default function MessageArea({
           y={contextMenu.y}
           messageContent={contextMenu.content}
           messageId={contextMenu.msgId}
+          canUnsend={contextMenu.canUnsend}
           onEmojiReact={handleEmojiReact}
           onGifReact={(msgId) => { openGiphyForReaction(msgId); }}
           onCopy={handleCopyMessage}

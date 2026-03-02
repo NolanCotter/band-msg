@@ -706,8 +706,7 @@ export function broadcastTyping(channelId: string, profileId: string): void {
 
 export function deleteMessage(
   messageId: string,
-  actorUsername: string,
-  actorRole: string
+  actorUsername: string
 ):
   | { ok: true; channel_id: string }
   | { ok: false; error: string; code: number } {
@@ -720,8 +719,7 @@ export function deleteMessage(
   }
 
   const isOwner = msg.profile_id === actorUsername;
-  const isAdmin = actorRole === "admin";
-  if (!isOwner && !isAdmin) {
+  if (!isOwner) {
     return { ok: false, error: "You can only unsend your own messages", code: 403 };
   }
 

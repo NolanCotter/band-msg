@@ -9,6 +9,7 @@ interface MessageContextMenuProps {
   y: number;
   messageContent: string;
   messageId: string;
+  canUnsend?: boolean;
   onEmojiReact: (messageId: string, emoji: string) => void;
   onGifReact: (messageId: string) => void;
   onCopy: (text: string) => void;
@@ -23,6 +24,7 @@ export default function MessageContextMenu({
   y,
   messageContent,
   messageId,
+  canUnsend = false,
   onEmojiReact,
   onGifReact,
   onCopy,
@@ -138,15 +140,17 @@ export default function MessageContextMenu({
             <span>Copy Message</span>
           </button>
         )}
-        <button
-          onClick={() => { onUnsend(messageId); onClose(); }}
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-[#404249]"
-        >
-          <svg className="h-4 w-4 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          <span>Unsend Message</span>
-        </button>
+        {canUnsend && (
+          <button
+            onClick={() => { onUnsend(messageId); onClose(); }}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-[#404249]"
+          >
+            <svg className="h-4 w-4 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <span>Unsend Message</span>
+          </button>
+        )}
       </div>
     </div>
   );

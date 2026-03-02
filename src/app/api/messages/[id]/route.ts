@@ -16,7 +16,7 @@ export async function DELETE(
     return NextResponse.json({ error: "message id is required" }, { status: 400 });
   }
 
-  const result = deleteMessage(id, user.username, user.role);
+  const result = deleteMessage(id, user.username);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.code });
   }
