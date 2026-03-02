@@ -64,6 +64,42 @@ interface MessageAreaProps {
   onNavigateToChannel?: (channelId: string) => void;
 }
 
+interface MentionMatch {
+  start: number;
+  end: number;
+  query: string;
+}
+
+function getMentionMatch(text: string, cursor: number): MentionMatch | null {
+  const uptoCursor = text.slice(0, cursor);
+  const match = uptoCursor.match(/(^|\s)@([a-zA-Z0-9._-]*)$/);
+  if (!match || match.index === undefined) return null;
+
+  const leading = match[1] ?? "";
+  const query = match[2] ?? "";
+  const start = match.index + leading.length;
+
+  return { start, end: cursor, query };
+}
+
+function renderWithMentions(content: string, knownUsers: Set<string>) {
+  const parts = content.split(/(\s+)/);
+  return parts.map((part, idx) => {
+    if (/^@[a-zA-Z0-9._-]+$/.test(part)) {
+      const mentioned = part.slice(1);
+      const isKnown = knownUsers.has(mentioned.toLowerCase());
+      if (isKnown) {
+        return (
+          <span key={`${part}-${idx}`} className="rounded bg-[#5865f2]/20 px-1 text-[#9aa4ff]">
+            {part}
+          </span>
+        );
+      }
+    }
+    return <span key={`${part}-${idx}`}>{part}</span>;
+  });
+}
+
 export default function MessageArea({
   channelId,
   channelName,
@@ -82,6 +118,10 @@ export default function MessageArea({
   const [isLoading, setIsLoading] = useState(false);
   const [sendError, setSendError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [mentionableUsers, setMentionableUsers] = useState<string[]>([]);
+  const [mentionSuggestions, setMentionSuggestions] = useState<string[]>([]);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
+  const [mentionMatch, setMentionMatch] = useState<MentionMatch | null>(null);
   const [showGiphy, setShowGiphy] = useState(false);
   const [giphyTarget, setGiphyTarget] = useState<string | null>(null);
   const [reactions, setReactions] = useState<Map<string, Reaction[]>>(new Map());
@@ -307,6 +347,17 @@ export default function MessageArea({
   const lastTypingSentRef = useRef(0);
 
   useEffect(() => {
+    fetch("/api/users/mentionable")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setMentionableUsers(data.filter((value): value is string => typeof value === "string"));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     shouldSnapToBottomRef.current = true;
   }, [channelId]);
 
@@ -477,15 +528,85 @@ export default function MessageArea({
     });
   }, [channelId]);
 
+  const applyMentionSuggestion = useCallback((selectedUsername: string) => {
+    if (!mentionMatch) return;
+    const before = newMessage.slice(0, mentionMatch.start);
+    const after = newMessage.slice(mentionMatch.end);
+    const replacement = `@${selectedUsername} `;
+    const nextValue = `${before}${replacement}${after}`;
+    setNewMessage(nextValue);
+    setMentionSuggestions([]);
+    setMentionMatch(null);
+    setActiveMentionIndex(0);
+
+    requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      const cursor = before.length + replacement.length;
+      input.focus();
+      input.setSelectionRange(cursor, cursor);
+    });
+  }, [mentionMatch, newMessage]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
+    const value = e.target.value;
+    setNewMessage(value);
     if (sendError) {
       setSendError("");
     }
-    if (e.target.value.trim()) {
+    const cursor = e.target.selectionStart ?? value.length;
+    const match = getMentionMatch(value, cursor);
+
+    if (match) {
+      const queryLower = match.query.toLowerCase();
+      const candidates = mentionableUsers
+        .filter((u) => u.toLowerCase().startsWith(queryLower))
+        .slice(0, 6);
+      setMentionMatch(match);
+      setMentionSuggestions(candidates);
+      setActiveMentionIndex(0);
+    } else {
+      setMentionMatch(null);
+      setMentionSuggestions([]);
+      setActiveMentionIndex(0);
+    }
+
+    if (value.trim()) {
       sendTypingIndicator();
     }
   };
+
+  const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (mentionSuggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveMentionIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
+      return;
+    }
+
+    if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      const selected = mentionSuggestions[activeMentionIndex] ?? mentionSuggestions[0];
+      if (selected) {
+        applyMentionSuggestion(selected);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setMentionSuggestions([]);
+      setMentionMatch(null);
+      setActiveMentionIndex(0);
+    }
+  }, [activeMentionIndex, applyMentionSuggestion, mentionSuggestions]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -546,6 +667,9 @@ export default function MessageArea({
     if (!content || !channelId) return;
 
     setNewMessage("");
+    setMentionSuggestions([]);
+    setMentionMatch(null);
+    setActiveMentionIndex(0);
     const currentReply = replyTo;
     setReplyTo(null);
 
@@ -573,6 +697,7 @@ export default function MessageArea({
   };
 
   const typingUsersList = Array.from(typingUsers.keys());
+  const mentionableSet = new Set(mentionableUsers.map((u) => u.toLowerCase()));
 
   if (!channelId) {
     return (
@@ -799,7 +924,7 @@ export default function MessageArea({
                         />
                       )
                     ) : (
-                      displayContent && <p className="text-sm leading-snug text-gray-300">{displayContent}</p>
+                      displayContent && <p className="text-sm leading-snug text-gray-300">{renderWithMentions(displayContent, mentionableSet)}</p>
                     )}
                     {attachmentEl}
                     {reactionRow}
@@ -854,7 +979,7 @@ export default function MessageArea({
                         />
                       )
                     ) : (
-                      displayContent && <p className="text-sm leading-snug text-gray-300">{displayContent}</p>
+                      displayContent && <p className="text-sm leading-snug text-gray-300">{renderWithMentions(displayContent, mentionableSet)}</p>
                     )}
                     {attachmentEl}
                     {reactionRow}
@@ -927,7 +1052,22 @@ export default function MessageArea({
             </button>
           </div>
         )}
-        <form onSubmit={handleSend} className="px-3 pb-[env(safe-area-inset-bottom,6px)] pt-1 md:px-4 md:pb-6">
+        <form onSubmit={handleSend} className="relative px-3 pb-[env(safe-area-inset-bottom,6px)] pt-1 md:px-4 md:pb-6">
+          {mentionSuggestions.length > 0 && (
+            <div className="absolute bottom-[100%] left-3 right-3 z-20 mb-1 max-h-44 overflow-auto rounded-lg border border-[#3f4147] bg-[#2b2d31] shadow-lg md:left-4 md:right-4">
+              {mentionSuggestions.map((candidate, index) => (
+                <button
+                  key={candidate}
+                  type="button"
+                  onClick={() => applyMentionSuggestion(candidate)}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${index === activeMentionIndex ? "bg-[#404249] text-white" : "text-gray-300 hover:bg-[#35373c]"}`}
+                >
+                  <span className="text-gray-500">@</span>
+                  <span>{candidate}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {sendError && (
             <p className="mb-2 text-xs text-red-400">{sendError}</p>
           )}
@@ -960,6 +1100,7 @@ export default function MessageArea({
               type="text"
               value={newMessage}
               onChange={handleInputChange}
+              onKeyDown={handleInputKeyDown}
               placeholder={replyTo ? `Reply to ${replyTo.user}...` : `Message #${channelName}`}
               className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder-gray-400 outline-none"
               enterKeyHint="send"
