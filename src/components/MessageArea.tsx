@@ -3,13 +3,11 @@
 import { useEffect, useRef, useState, useCallback, FormEvent } from "react";
 import { Message, StreamEvent, TypingEvent, Reaction } from "@/lib/types";
 import { getAvatarColor, formatTimestamp } from "@/lib/utils";
-import { decryptForChannel, encryptForChannel, isEncryptedPayload } from "@/lib/e2ee";
 import GiphyPicker from "@/components/GiphyPicker";
 import MessageContextMenu from "@/components/MessageContextMenu";
 
 const MESSAGE_GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
-const E2EE_PASSPHRASE_KEY = "band-msg:e2ee:passphrase";
 const ALLOWED_MEDIA_TYPES = [
   "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
   "video/mp4", "video/webm", "video/quicktime",
@@ -86,11 +84,6 @@ export default function MessageArea({
   const [uploading, setUploading] = useState(false);
   const [showGiphy, setShowGiphy] = useState(false);
   const [giphyTarget, setGiphyTarget] = useState<string | null>(null);
-  const [passphrase, setPassphrase] = useState("");
-  const [passphraseInput, setPassphraseInput] = useState("");
-  const [decryptedMessages, setDecryptedMessages] = useState<Map<string, string>>(new Map());
-  const [decryptedReplies, setDecryptedReplies] = useState<Map<string, string>>(new Map());
-  const [failedDecryptIds, setFailedDecryptIds] = useState<Set<string>>(new Set());
   const [reactions, setReactions] = useState<Map<string, Reaction[]>>(new Map());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; content: string } | null>(null);
   const [replyTo, setReplyTo] = useState<{ id: string; content: string; user: string } | null>(null);
@@ -311,131 +304,16 @@ export default function MessageArea({
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSentRef = useRef(0);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(E2EE_PASSPHRASE_KEY) ?? "";
-    setPassphrase(stored);
-    setPassphraseInput(stored);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const decryptVisibleMessages = async () => {
-      if (!channelId) {
-        if (!cancelled) {
-          setDecryptedMessages(new Map());
-          setDecryptedReplies(new Map());
-          setFailedDecryptIds(new Set());
-        }
-        return;
-      }
-
-      const messageEntries = await Promise.all(
-        messages.map(async (msg) => {
-          if (!isEncryptedPayload(msg.content)) {
-            return [msg.id, msg.content] as const;
-          }
-          if (!passphrase) {
-            return [msg.id, null] as const;
-          }
-          const decrypted = await decryptForChannel(msg.content, passphrase, channelId);
-          return [msg.id, decrypted] as const;
-        })
-      );
-
-      const replyEntries = await Promise.all(
-        messages.map(async (msg) => {
-          const replyRaw = msg.reply_to_content ?? "";
-          if (!msg.reply_to_id || !replyRaw) {
-            return [msg.id, ""] as const;
-          }
-          if (!isEncryptedPayload(replyRaw)) {
-            return [msg.id, replyRaw] as const;
-          }
-          if (!passphrase) {
-            return [msg.id, null] as const;
-          }
-          const decrypted = await decryptForChannel(replyRaw, passphrase, channelId);
-          return [msg.id, decrypted] as const;
-        })
-      );
-
-      if (cancelled) return;
-
-      const msgMap = new Map<string, string>();
-      const replyMap = new Map<string, string>();
-      const failed = new Set<string>();
-
-      for (const [id, value] of messageEntries) {
-        if (typeof value === "string") {
-          msgMap.set(id, value);
-        } else {
-          failed.add(id);
-        }
-      }
-
-      for (const [id, value] of replyEntries) {
-        if (typeof value === "string") {
-          replyMap.set(id, value);
-        } else {
-          failed.add(id);
-        }
-      }
-
-      setDecryptedMessages(msgMap);
-      setDecryptedReplies(replyMap);
-      setFailedDecryptIds(failed);
-    };
-
-    void decryptVisibleMessages();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [messages, channelId, passphrase]);
-
-  const persistPassphrase = useCallback(() => {
-    const normalized = passphraseInput.trim();
-    setPassphrase(normalized);
-    localStorage.setItem(E2EE_PASSPHRASE_KEY, normalized);
-  }, [passphraseInput]);
-
-  const clearPassphrase = useCallback(() => {
-    setPassphrase("");
-    setPassphraseInput("");
-    localStorage.removeItem(E2EE_PASSPHRASE_KEY);
-  }, []);
-
-  const getMessageText = useCallback((msg: Message): string => {
-    if (failedDecryptIds.has(msg.id)) {
-      return "[Unable to decrypt message]";
-    }
-    return decryptedMessages.get(msg.id) ?? msg.content;
-  }, [decryptedMessages, failedDecryptIds]);
-
-  const getReplyText = useCallback((msg: Message): string => {
-    if (!msg.reply_to_id) return "";
-    if (failedDecryptIds.has(msg.id)) {
-      return "[Unable to decrypt reply]";
-    }
-    return decryptedReplies.get(msg.id) ?? (msg.reply_to_content ?? "");
-  }, [decryptedReplies, failedDecryptIds]);
-
-  const sendEncryptedMessage = useCallback(async (content: string, replyToId?: string) => {
+  const sendMessage = useCallback(async (content: string, replyToId?: string) => {
     if (!channelId) {
       throw new Error("No channel selected.");
     }
-    if (!passphrase) {
-      throw new Error("Set your channel encryption passphrase first.");
-    }
-
-    const encryptedContent = await encryptForChannel(content, passphrase, channelId);
 
     const res = await fetch("/api/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        content: encryptedContent,
+        content,
         channel_id: channelId,
         reply_to_id: replyToId,
       }),
@@ -452,7 +330,7 @@ export default function MessageArea({
     }
 
     return res.json() as Promise<Message>;
-  }, [channelId, passphrase]);
+  }, [channelId]);
 
   useEffect(() => {
     if (!channelId) return;
@@ -657,7 +535,7 @@ export default function MessageArea({
     }
 
     try {
-      const sent = await sendEncryptedMessage(content, currentReply?.id);
+      const sent = await sendMessage(content, currentReply?.id);
       setMessages((prev) => prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]);
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -713,9 +591,6 @@ export default function MessageArea({
         )}
         <span className="mr-1 text-xl text-gray-500">#</span>
         <span className="font-semibold text-white">{channelName}</span>
-        <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold ${passphrase ? "bg-[#1f944f]/25 text-[#7ae2a6]" : "bg-[#a12828]/25 text-[#f3a3a3]"}`}>
-          {passphrase ? "E2EE ON" : "E2EE LOCKED"}
-        </span>
         {channelDescription && !mobile && (
           <>
             <div className="mx-3 h-6 w-px bg-[#3f4147]" />
@@ -764,9 +639,9 @@ export default function MessageArea({
               const grouped = shouldGroup(msg, messages[i - 1]);
               const msgReactions = reactions.get(msg.id) ?? [];
               const attachment = msg.attachment_url ? msg : null;
-              const displayContent = getMessageText(msg);
+              const displayContent = msg.content;
               const inlineMedia = getInlineMediaUrl(displayContent);
-              const replyText = getReplyText(msg);
+              const replyText = msg.reply_to_content ?? "";
 
               // Group emoji reactions by emoji, track counts and users
               const emojiGroups = new Map<string, { count: number; users: string[]; ids: string[] }>();
@@ -1001,7 +876,7 @@ export default function MessageArea({
               if (giphyTarget) {
                 handleGiphyReaction(giphyTarget, gifUrl, gifId);
               } else if (channelId) {
-                sendEncryptedMessage(gifUrl).catch((error) => {
+                sendMessage(gifUrl).catch((error) => {
                   setSendError(error instanceof Error ? error.message : "Failed to send GIF.");
                 });
                 setShowGiphy(false);
@@ -1009,37 +884,6 @@ export default function MessageArea({
             }}
             onClose={() => setShowGiphy(false)}
           />
-        )}
-        {!passphrase && (
-          <div className="mx-3 mb-1 rounded bg-[#2b2d31] px-3 py-2 text-xs text-gray-300 md:mx-4">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
-              <span className="shrink-0 font-semibold text-[#f0b232]">End-to-end encryption enabled.</span>
-              <input
-                type="password"
-                value={passphraseInput}
-                onChange={(e) => setPassphraseInput(e.target.value)}
-                placeholder="Enter shared channel passphrase"
-                className="min-w-0 flex-1 rounded bg-[#1e1f22] px-2 py-1 text-xs text-white placeholder-gray-500 outline-none ring-1 ring-transparent focus:ring-[#5865f2]/50"
-                autoComplete="off"
-              />
-              <button
-                type="button"
-                onClick={persistPassphrase}
-                disabled={!passphraseInput.trim()}
-                className="rounded bg-[#5865f2] px-3 py-1 text-xs font-semibold text-white hover:bg-[#4752c4] disabled:opacity-50"
-              >
-                Unlock
-              </button>
-            </div>
-          </div>
-        )}
-        {passphrase && (
-          <div className="mx-3 mb-1 flex items-center justify-between rounded bg-[#2b2d31] px-3 py-1.5 text-[11px] text-gray-400 md:mx-4">
-            <span>Messages in this channel are encrypted before upload.</span>
-            <button type="button" onClick={clearPassphrase} className="text-gray-300 hover:text-white">
-              Change key
-            </button>
-          </div>
         )}
         {/* Reply preview bar */}
         {replyTo && (
@@ -1113,7 +957,7 @@ export default function MessageArea({
             </button>
             <button
               type="submit"
-              disabled={!newMessage.trim() || !passphrase}
+              disabled={!newMessage.trim()}
               className="mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#5865f2] hover:text-[#7983f5] disabled:text-gray-600"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">

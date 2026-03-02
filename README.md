@@ -73,6 +73,7 @@ Register an account to get started, then sign in. Non-admin accounts require adm
 - JWT secret: set `JWT_SECRET` in your environment (auto-generated during CI deploy if unset).
 - Database location: set `DATABASE_PATH` (default: `./data/band-chat.db`).
 - Cookie security: set `AUTH_COOKIE_SECURE` to `auto` (default), `true`, or `false`.
+- HTTPS enforcement: production redirects HTTP to HTTPS by default; set `FORCE_HTTPS=false` only for temporary troubleshooting.
 - For local network HTTP testing (e.g., `http://10.x.x.x:3000`), set `AUTH_COOKIE_SECURE=false`.
 
 ## CI/CD

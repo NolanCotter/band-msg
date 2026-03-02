@@ -13,10 +13,45 @@ const port = parseInt(process.env.PORT ?? "3000", 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
+function getFirstHeaderValue(value: string | string[] | undefined): string {
+  if (!value) return "";
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw.split(",")[0]?.trim().toLowerCase() ?? "";
+}
+
+function isLoopbackHost(hostHeader: string): boolean {
+  const host = hostHeader.split(":")[0]?.toLowerCase() ?? "";
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function shouldForceHttps(req: http.IncomingMessage): boolean {
+  if (dev) return false;
+  if (process.env.FORCE_HTTPS === "false") return false;
+
+  const host = (req.headers.host ?? "").toString();
+  if (!host || isLoopbackHost(host)) return false;
+
+  const forwardedProto = getFirstHeaderValue(req.headers["x-forwarded-proto"]);
+  const cfVisitor = getFirstHeaderValue(req.headers["cf-visitor"]);
+
+  if (forwardedProto === "https") return false;
+  if (cfVisitor.includes('"scheme":"https"')) return false;
+
+  return true;
+}
+
 await app.prepare();
 
 http
   .createServer((req, res) => {
+    if (shouldForceHttps(req)) {
+      const host = req.headers.host ?? "";
+      const location = `https://${host}${req.url ?? "/"}`;
+      res.writeHead(308, { Location: location });
+      res.end();
+      return;
+    }
+
     const parsedUrl = parse(req.url ?? "/", true);
     handle(req, res, parsedUrl);
   })
