@@ -14,6 +14,36 @@ This repository has been migrated to a **SvelteKit + Convex + Vercel** architect
 - Convex (database + backend functions)
 - Vercel adapter for deployment
 
+---
+
+## Where do I set environment variables?
+
+There are **two separate places** — don't mix them up:
+
+### 1. Inside your Convex project (convex.dev dashboard)
+
+This is for any secrets your **Convex backend functions** need.  
+👉 Go to [dashboard.convex.dev](https://dashboard.convex.dev) → your project → **Settings → Environment Variables**.
+
+**The Convex functions in this project do not need any environment variables**, so you don't need to add anything here unless you extend the backend.
+
+### 2. Inside your SvelteKit / Vercel project
+
+This is for variables your **SvelteKit server** (the `svelte-src/` code) needs — including the URL to reach Convex.
+
+- **Local development** → `.env.local` file at the repo root (see [Quick Start](#quick-start))
+- **Vercel production** → your Vercel project → **Settings → Environment Variables**
+
+| Variable | Example value | Required | Description |
+|---|---|---|---|
+| `CONVEX_URL` | `https://happy-animal-123.convex.cloud` | ✅ Yes | The URL of your Convex deployment. Get it from the Convex dashboard or by running `npx convex deploy`. |
+| `AUTH_COOKIE_SECURE` | `true` | ✅ Yes (production) | Set to `true` on Vercel so session cookies use the `Secure` flag. Use `false` for local HTTP dev. |
+| `PUBLIC_TENOR_KEY` | `AIza...` | ☑ Optional | Your [Tenor API key](https://developers.google.com/tenor/guides/quickstart) for GIF search. Falls back to the public demo key when unset (shared rate limits — not for production). |
+
+> `NODE_ENV` and `VERCEL` are injected automatically by Vercel — do **not** add them yourself.
+
+---
+
 ## Quick Start
 
 1. Install dependencies:
@@ -22,20 +52,27 @@ This repository has been migrated to a **SvelteKit + Convex + Vercel** architect
 npm install
 ```
 
-2. Configure environment values in `.env.local` (copy from `.env.local.example`):
+2. Log in to Convex and start the dev backend (this prints your `CONVEX_URL`):
 
 ```bash
-CONVEX_URL=...
-AUTH_COOKIE_SECURE=auto
+npx convex dev
 ```
 
-3. Start Convex dev backend (in one terminal):
+3. Copy the example env file and fill in your `CONVEX_URL`:
 
 ```bash
-npm run convex:dev
+cp .env.local.example .env.local
 ```
 
-4. Start SvelteKit app (in another terminal):
+Edit `.env.local`:
+
+```
+CONVEX_URL=https://your-deployment.convex.cloud   # printed by `npx convex dev`
+AUTH_COOKIE_SECURE=false                           # false for local HTTP dev
+PUBLIC_TENOR_KEY=                                  # optional — leave blank to use the shared demo key
+```
+
+4. Start the SvelteKit app (in a second terminal):
 
 ```bash
 npm run dev
@@ -65,12 +102,20 @@ npm run dev
 
 ## Deployment (Vercel)
 
-1. Import the repository in Vercel.
-2. Set environment variables:
-   - `CONVEX_URL`
-   - `AUTH_COOKIE_SECURE=true`
-3. Build command: `npm run build`
-4. Output handled by SvelteKit adapter-vercel.
+1. Run `npx convex deploy` — this pushes your Convex functions and prints the deployment URL.
+2. Import this repository in [vercel.com](https://vercel.com).
+3. In your Vercel project go to **Settings → Environment Variables** and add:
+
+| Variable | Value | Notes |
+|---|---|---|
+| `CONVEX_URL` | `https://your-deployment.convex.cloud` | **Required.** From `npx convex deploy` output or the Convex dashboard. |
+| `AUTH_COOKIE_SECURE` | `true` | **Required.** Enforces `Secure` cookie flag in production. |
+| `PUBLIC_TENOR_KEY` | `AIza...` | **Recommended.** Your [Tenor API key](https://developers.google.com/tenor/guides/quickstart) for GIF search. Falls back to the shared demo key if unset. |
+
+> `NODE_ENV` and `VERCEL` are set automatically by Vercel — do **not** add them manually.
+
+4. Build command: `npm run build` (auto-detected by Vercel).
+5. Output directory is handled by the SvelteKit Vercel adapter — no manual config needed.
 
 ## Security
 
