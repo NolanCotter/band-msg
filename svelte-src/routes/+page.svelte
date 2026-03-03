@@ -33,8 +33,7 @@
   let newMessage = "";
   let newChannel = "";
   let newChannelDescription = "";
-  let newServerName = "";
-  let newServerDescription = "";
+
   let inviteCode = "";
   let isLoggingIn = false;
   let authMode: "login" | "register" = "login";
@@ -45,43 +44,21 @@
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
   let showEmojiPicker = false;
   let showCalendar = false;
-  let showServerCreate = false;
+
   let showInviteModal = false;
   let showEventCreate = false;
   let showMemberList = false;
   let showChannelSidebar = false; // mobile drawer
+  let showAdminPanel = false;
   let selectedMessageForReaction = "";
   let messageContainer: HTMLElement | null = null;
 
+  // Admin panel state
+  type PendingUser = { id: string; username: string; role: string; status: string; createdAt: number };
+  let pendingUsers: PendingUser[] = [];
+
   // Emoji search
   let emojiSearchQuery = "";
-
-  // Band Tools state
-  type SetlistItem = { id: string; title: string; key: string; duration: string };
-  type EquipmentItem = { id: string; name: string; checkedBy: string | null };
-  let showBandTools = false;
-  let bandToolsView: "setlist" | "equipment" = "setlist";
-  let setlist: SetlistItem[] = [
-    { id: "1", title: "Highway to Hell", key: "A", duration: "3:28" },
-    { id: "2", title: "Enter Sandman", key: "Em", duration: "5:31" },
-    { id: "3", title: "Wonderwall", key: "F#m", duration: "4:18" },
-    { id: "4", title: "Black Dog", key: "A", duration: "4:55" },
-    { id: "5", title: "Don't Stop Me Now", key: "F", duration: "3:29" },
-  ];
-  let equipmentList: EquipmentItem[] = [
-    { id: "1", name: "Amps", checkedBy: null },
-    { id: "2", name: "Drum Rug", checkedBy: null },
-    { id: "3", name: "Cables", checkedBy: null },
-    { id: "4", name: "DI Boxes", checkedBy: null },
-    { id: "5", name: "Mic Stands", checkedBy: null },
-    { id: "6", name: "Drum Kit", checkedBy: null },
-    { id: "7", name: "PA System", checkedBy: null },
-  ];
-  let newSetlistTitle = "";
-  let newSetlistKey = "";
-  let newSetlistDuration = "";
-  let dragOverId = "";
-  let dragSourceId = "";
 
   // GIF picker state
   type GifItem = { id: string; title: string; url: string; preview: string; width: number; height: number };
@@ -451,21 +428,20 @@
     await refreshChannels();
   }
 
-  async function createServer() {
-    if (!newServerName.trim()) return;
-    const res = await apiPost("/api/servers", {
-      name: newServerName,
-      description: newServerDescription
-    });
+  async function confirmDeleteChannel(channelId: string, channelName: string) {
+    if (!confirm(`Delete #${channelName}? This will permanently remove the channel and all its messages.`)) return;
+    const res = await apiPost("/api/channels/delete", { channelId });
     if (!res.ok) {
-      showToast(await readApiError(res, "Create server failed"), "error");
+      showToast(await readApiError(res, "Failed to delete channel"), "error");
       return;
     }
-    newServerName = "";
-    newServerDescription = "";
-    showServerCreate = false;
-    showToast("Server created.", "success");
-    await refreshServers();
+    showToast(`#${channelName} deleted.`, "success");
+    if (selectedChannelId === channelId) {
+      selectedChannelId = "";
+      selectedChannelName = "";
+      messages = [];
+    }
+    await refreshChannels();
   }
 
   async function selectServer(server: Server) {
@@ -678,6 +654,33 @@
     showToast("Invite link copied to clipboard!", "success");
   }
 
+  async function refreshPendingUsers() {
+    if (me?.role !== "admin") return;
+    const res = await apiGet("/api/admin/users");
+    if (!res.ok) return;
+    pendingUsers = await res.json();
+  }
+
+  async function approveUser(username: string) {
+    const res = await apiPost("/api/admin/users/approve", { username });
+    if (!res.ok) {
+      showToast(await readApiError(res, "Failed to approve user"), "error");
+      return;
+    }
+    showToast(`${username} approved!`, "success");
+    await refreshPendingUsers();
+  }
+
+  async function rejectPendingUser(username: string) {
+    const res = await apiPost("/api/admin/users/reject", { username });
+    if (!res.ok) {
+      showToast(await readApiError(res, "Failed to reject user"), "error");
+      return;
+    }
+    showToast(`${username} rejected.`, "success");
+    await refreshPendingUsers();
+  }
+
   async function createEvent() {
     if (!newEventTitle.trim() || !newEventStartsAt || !newEventEndsAt) return;
     
@@ -793,7 +796,18 @@
 
   function toggleChannelSidebar() {
     showChannelSidebar = !showChannelSidebar;
-    if (showChannelSidebar) showMemberList = false;
+    if (showChannelSidebar) {
+      showMemberList = false;
+      showCalendar = false;
+    }
+  }
+
+  function toggleCalendar() {
+    showCalendar = !showCalendar;
+    if (showCalendar) {
+      showMemberList = false;
+      showChannelSidebar = false;
+    }
   }
 
   // Audio file detection
@@ -801,47 +815,6 @@
     const match = content.match(/^(https?:\/\/\S+\.(mp3|wav|ogg|flac|aac|m4a))$/i);
     if (match) return { isAudio: true, url: match[1], name: match[1].split('/').pop() || 'audio' };
     return { isAudio: false, url: '', name: '' };
-  }
-
-  // Setlist drag-and-drop
-  function onDragStart(id: string) {
-    dragSourceId = id;
-  }
-  function onDragOver(e: DragEvent, id: string) {
-    e.preventDefault();
-    dragOverId = id;
-  }
-  function onDrop(targetId: string) {
-    if (!dragSourceId || dragSourceId === targetId) { dragOverId = ""; return; }
-    const srcIdx = setlist.findIndex(s => s.id === dragSourceId);
-    const tgtIdx = setlist.findIndex(s => s.id === targetId);
-    const updated = [...setlist];
-    const [item] = updated.splice(srcIdx, 1);
-    updated.splice(tgtIdx, 0, item);
-    setlist = updated;
-    dragSourceId = "";
-    dragOverId = "";
-  }
-  function addSetlistItem() {
-    if (!newSetlistTitle.trim()) return;
-    setlist = [...setlist, {
-      id: String(Date.now()),
-      title: newSetlistTitle.trim(),
-      key: newSetlistKey.trim() || "?",
-      duration: newSetlistDuration.trim() || "0:00"
-    }];
-    newSetlistTitle = "";
-    newSetlistKey = "";
-    newSetlistDuration = "";
-  }
-  function removeSetlistItem(id: string) {
-    setlist = setlist.filter(s => s.id !== id);
-  }
-  function toggleEquipment(id: string) {
-    equipmentList = equipmentList.map(item => {
-      if (item.id !== id) return item;
-      return { ...item, checkedBy: item.checkedBy ? null : (me?.username ?? "unknown") };
-    });
   }
 
   let refreshInterval: ReturnType<typeof setInterval> | null = null;
@@ -859,6 +832,7 @@
     await refreshServers();
     await refreshChannels();
     await refreshMembers();
+    await refreshPendingUsers();
     
     // Set up refresh intervals
     refreshInterval = setInterval(async () => {
@@ -946,21 +920,6 @@
         ></div>
       {/if}
 
-      <!-- Server Rail -->
-      <aside class="server-rail">
-        {#each servers as server}
-          <button 
-            class="server-pill" 
-            class:active={server.id === selectedServerId}
-            on:click={() => selectServer(server)}
-            title={server.name}
-          >
-            {server.name.slice(0, 2).toUpperCase()}
-          </button>
-        {/each}
-        <button class="server-pill add-server" on:click={() => showInviteModal = true} title="Join Server"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
-      </aside>
-
       <!-- Channel Sidebar -->
       <aside class="channel-sidebar" class:open={showChannelSidebar}>
         <header class="sidebar-header">
@@ -999,19 +958,17 @@
               <p class="empty-state">No channels yet.</p>
             {/if}
             {#each channels as channel}
-              <button class="channel-link" class:active={channel.id === selectedChannelId && !showBandTools} on:click={() => { selectChannel(channel); showBandTools = false; showChannelSidebar = false; }}>
-                <span>#{channel.name}</span>
-              </button>
+              <div class="channel-link-row">
+                <button class="channel-link" class:active={channel.id === selectedChannelId} on:click={() => { selectChannel(channel); showChannelSidebar = false; }}>
+                  <span>#{channel.name}</span>
+                </button>
+                {#if me?.role === "admin"}
+                  <button class="channel-delete-btn" on:click={() => confirmDeleteChannel(channel.id, channel.name)} title="Delete channel">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                {/if}
+              </div>
             {/each}
-          </div>
-          <p class="section-title" style="margin-top:1rem">Band Tools</p>
-          <div class="channel-list">
-            <button class="channel-link" class:active={showBandTools && bandToolsView === 'setlist'} on:click={() => { showBandTools = true; bandToolsView = 'setlist'; showChannelSidebar = false; }}>
-              <span>🎵 Setlist</span>
-            </button>
-            <button class="channel-link" class:active={showBandTools && bandToolsView === 'equipment'} on:click={() => { showBandTools = true; bandToolsView = 'equipment'; showChannelSidebar = false; }}>
-              <span>🎸 Equipment</span>
-            </button>
           </div>
         </div>
 
@@ -1024,7 +981,13 @@
             </div>
           </div>
           <div class="footer-actions">
-            <button class="icon-btn" on:click={() => { showCalendar = !showCalendar; if (showCalendar) showMemberList = false; }} title="Calendar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
+            {#if me?.role === "admin"}
+              <button class="icon-btn" class:has-badge={pendingUsers.length > 0} on:click={() => { showAdminPanel = true; refreshPendingUsers(); }} title="Admin Panel">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.354a4 4 0 1 1 0 5.292M15 21H3v-1a6 6 0 0 1 12 0v1zm0 0h6v-1a6 6 0 0 0-9-5.197"/></svg>
+                {#if pendingUsers.length > 0}<span class="badge-dot"></span>{/if}
+              </button>
+            {/if}
+            <button class="icon-btn" on:click={toggleCalendar} title="Calendar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
             <button class="icon-btn" on:click={logout} title="Logout"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
           </div>
         </footer>
@@ -1038,11 +1001,7 @@
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
             <h3>
-              {#if showBandTools}
-                {bandToolsView === 'setlist' ? '🎵 Setlist' : '🎸 Equipment Checklist'}
-              {:else}
-                {selectedChannelName ? `#${selectedChannelName}` : "Select a channel"}
-              {/if}
+              {selectedChannelName ? `#${selectedChannelName}` : "Select a channel"}
             </h3>
           </div>
           <div class="chat-header-actions">
@@ -1057,67 +1016,6 @@
           </div>
         {/if}
 
-        <!-- Band Tools View -->
-        {#if showBandTools}
-          <div class="band-tools-view">
-            {#if bandToolsView === 'setlist'}
-              <div class="band-tools-content">
-                <p class="section-title" style="margin-bottom:1rem">Song Order — drag to reorder</p>
-                <ul class="setlist-list">
-                  {#each setlist as song, i (song.id)}
-                    <li
-                      class="setlist-item"
-                      class:drag-over={dragOverId === song.id}
-                      draggable="true"
-                      on:dragstart={() => onDragStart(song.id)}
-                      on:dragover={(e) => onDragOver(e, song.id)}
-                      on:drop={() => onDrop(song.id)}
-                      on:dragend={() => { dragOverId = ""; dragSourceId = ""; }}
-                    >
-                      <span class="setlist-num">{i + 1}</span>
-                      <svg class="drag-handle" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
-                      <span class="setlist-title">{song.title}</span>
-                      <span class="setlist-badge key">{song.key}</span>
-                      <span class="setlist-badge duration">{song.duration}</span>
-                      <button class="icon-btn setlist-remove" on:click={() => removeSetlistItem(song.id)} title="Remove">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    </li>
-                  {/each}
-                </ul>
-                <div class="setlist-add-form">
-                  <input class="field" bind:value={newSetlistTitle} placeholder="Song title" on:keydown={(e) => e.key === 'Enter' && addSetlistItem()} />
-                  <input class="field setlist-short" bind:value={newSetlistKey} placeholder="Key (e.g. Am)" />
-                  <input class="field setlist-short" bind:value={newSetlistDuration} placeholder="0:00" />
-                  <button class="primary-btn" on:click={addSetlistItem}>Add</button>
-                </div>
-              </div>
-            {:else}
-              <div class="band-tools-content">
-                <p class="section-title" style="margin-bottom:1rem">Equipment Checklist</p>
-                <ul class="equipment-list">
-                  {#each equipmentList as item (item.id)}
-                    <li class="equipment-item" class:checked={!!item.checkedBy}>
-                      <label class="equipment-label">
-                        <input
-                          type="checkbox"
-                          checked={!!item.checkedBy}
-                          on:change={() => toggleEquipment(item.id)}
-                        />
-                        <span class="equipment-name">{item.name}</span>
-                      </label>
-                      {#if item.checkedBy}
-                        <span class="equipment-checker">✓ {item.checkedBy}</span>
-                      {:else}
-                        <span class="equipment-unchecked">—</span>
-                      {/if}
-                    </li>
-                  {/each}
-                </ul>
-              </div>
-            {/if}
-          </div>
-        {:else}
         <div class="messages-scroll" bind:this={messageContainer}>
           {#if isLoadingMessages}
             <!-- Skeleton Loading States -->
@@ -1137,9 +1035,6 @@
             {#each messages as msg}
               <article
                 class="message-row"
-                on:pointerdown={(e) => handleMessagePointerDown(e, msg.id)}
-                on:pointerup={handleMessagePointerUp}
-                on:pointerleave={handleMessagePointerUp}
                 on:contextmenu={(e) => handleMessageContextMenu(e, msg.id, msg.author)}
               >
                 <div class="avatar">{msg.author.slice(0, 1).toUpperCase()}</div>
@@ -1149,8 +1044,9 @@
                     <span class="msg-time">{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                   {#if isGifMessage(msg.content).isGif}
-                    <div class="gif-message">
-                      <img src={isGifMessage(msg.content).url} alt="GIF" loading="lazy" />
+                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                    <div class="gif-message" on:contextmenu|preventDefault>
+                      <img src={isGifMessage(msg.content).url} alt="GIF" loading="lazy" draggable="false" />
                     </div>
                   {:else if isAudioMessage(msg.content).isAudio}
                     <div class="audio-player">
@@ -1166,7 +1062,19 @@
                   {:else}
                     <p class="message-text">{@html parseMarkdown(msg.content)}</p>
                   {/if}
-                  
+
+                  <!-- Quick Reactions -->
+                  <div class="quick-reactions">
+                    {#each REACTION_ICONS.slice(0, 5) as icon}
+                      <button class="quick-react-btn" on:click={() => addReaction(msg.id, icon.id)} title={icon.label}>
+                        {@html icon.svg}
+                      </button>
+                    {/each}
+                    <button class="quick-react-btn more-react-btn" on:click={() => { selectedMessageForReaction = msg.id; showEmojiPicker = true; }} title="More reactions">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                  </div>
+
                   {#if msg.reactions && msg.reactions.length > 0}
                     <div class="reactions">
                       {#each msg.reactions as reaction}
@@ -1209,7 +1117,6 @@
             </div>
           {/if}
         </div>
-        {/if}
 
         <footer class="composer">
           <div class="composer-input-row">
@@ -1229,21 +1136,30 @@
         </footer>
       </section>
 
-      <!-- Calendar Sidebar -->
+      <!-- Calendar Full Page -->
       {#if showCalendar}
-        <aside class="calendar-sidebar">
-          <header class="sidebar-header">
+        <div class="calendar-fullpage">
+          <header class="calendar-fullpage-header">
             <h2>Calendar</h2>
-            <button class="icon-btn" on:click={() => showCalendar = false} title="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            <button class="icon-btn" on:click={() => showCalendar = false} title="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </header>
           
-          <div class="calendar-content">
-            <button class="primary-btn" on:click={() => showEventCreate = true}>Create Event</button>
+          <div class="calendar-fullpage-content">
+            <div class="calendar-actions-bar">
+              <button class="primary-btn" on:click={() => showEventCreate = true}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Create Event
+              </button>
+            </div>
             
-            <div class="events-list">
+            <div class="calendar-events-grid">
               <p class="section-title">Upcoming Events</p>
               {#if events.length === 0}
-                <p class="empty-state">No events scheduled.</p>
+                <div class="calendar-empty">
+                  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <p>No events scheduled.</p>
+                  <p class="calendar-empty-sub">Create an event to get started</p>
+                </div>
               {/if}
               {#each events as event}
                 <div class="event-card">
@@ -1261,7 +1177,7 @@
               {/each}
             </div>
           </div>
-        </aside>
+        </div>
       {/if}
 
       <!-- Member List Sidebar (always in DOM for smooth transition) -->
@@ -1302,7 +1218,7 @@
   <!-- Modals -->
   {#if showEmojiPicker && selectedMessageForReaction}
     <div class="modal-backdrop bottom-sheet-backdrop" role="button" tabindex="0" on:click={closeEmojiPicker} on:keydown={(e) => e.key === 'Escape' && closeEmojiPicker()}>
-      <div class="modal reaction-picker bottom-sheet" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
+      <div class="modal reaction-picker bottom-sheet" role="dialog" tabindex="-1" on:click|stopPropagation={() => {}} on:keydown|stopPropagation={() => {}}>
         <div class="bottom-sheet-handle"></div>
         <div class="reaction-picker-header">
           <h3>Add Reaction</h3>
@@ -1370,7 +1286,7 @@
   <!-- GIF Picker Modal -->
   {#if showGifPicker}
     <div class="modal-backdrop" role="button" tabindex="0" on:click={closeGifPicker} on:keydown={(e) => e.key === 'Escape' && closeGifPicker()}>
-      <div class="modal gif-picker-modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
+      <div class="modal gif-picker-modal" role="dialog" tabindex="-1" on:click|stopPropagation={() => {}} on:keydown|stopPropagation={() => {}}>
         <div class="reaction-picker-header">
           <h3>Choose a GIF</h3>
           <button class="picker-close-btn" title="Close" on:click={closeGifPicker}>
@@ -1410,7 +1326,7 @@
   <!-- Context Menu (Unsend) -->
   {#if contextMenuMessageId}
     <div class="context-backdrop" role="button" tabindex="0" on:click={closeContextMenu} on:keydown={(e) => e.key === 'Escape' && closeContextMenu()}>
-      <div class="context-menu" role="menu" tabindex="-1" style="left:{contextMenuX}px;top:{contextMenuY}px" on:click|stopPropagation on:keydown|stopPropagation>
+      <div class="context-menu" role="menu" tabindex="-1" style="left:{contextMenuX}px;top:{contextMenuY}px" on:click|stopPropagation={() => {}} on:keydown|stopPropagation={() => {}}>
         {#if contextMenuAuthor === me?.username || me?.role === 'admin'}
           <button class="context-item danger" on:click={() => unsendMessage(contextMenuMessageId)}>Unsend Message</button>
         {/if}
@@ -1421,7 +1337,7 @@
 
   {#if showInviteModal}
     <div class="modal-backdrop" role="button" tabindex="0" on:click={() => showInviteModal = false} on:keydown={(e) => e.key === 'Escape' && (showInviteModal = false)}>
-      <div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
+      <div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation={() => {}} on:keydown|stopPropagation={() => {}}>
         <h3>Join Server</h3>
         <p>Enter an invite code to join a server</p>
         <input class="field" bind:value={inviteCode} placeholder="Invite code" />
@@ -1435,7 +1351,7 @@
 
   {#if showEventCreate}
     <div class="modal-backdrop" role="button" tabindex="0" on:click={() => showEventCreate = false} on:keydown={(e) => e.key === 'Escape' && (showEventCreate = false)}>
-      <div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
+      <div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation={() => {}} on:keydown|stopPropagation={() => {}}>
         <h3>Create Event</h3>
         <input class="field" bind:value={newEventTitle} placeholder="Event title" />
         <textarea class="field" bind:value={newEventDescription} placeholder="Description" rows="3"></textarea>
@@ -1445,6 +1361,39 @@
         <div class="modal-actions">
           <button class="ghost-btn" on:click={() => showEventCreate = false}>Cancel</button>
           <button class="primary-btn" on:click={createEvent}>Create</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if showAdminPanel}
+    <div class="modal-backdrop" role="button" tabindex="0" on:click={() => showAdminPanel = false} on:keydown={(e) => e.key === 'Escape' && (showAdminPanel = false)}>
+      <div class="modal admin-panel-modal" role="dialog" tabindex="-1" on:click|stopPropagation={() => {}} on:keydown|stopPropagation={() => {}}>
+        <h3>Admin Panel</h3>
+        <p>Manage pending account requests</p>
+        {#if pendingUsers.length === 0}
+          <div class="admin-empty">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+            <p>No pending requests</p>
+          </div>
+        {:else}
+          <div class="pending-users-list">
+            {#each pendingUsers as user}
+              <div class="pending-user-row">
+                <div class="pending-user-info">
+                  <span class="pending-user-name">{user.username}</span>
+                  <span class="pending-user-date">Registered {new Date(user.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div class="pending-user-actions">
+                  <button class="primary-btn small" on:click={() => approveUser(user.username)}>Approve</button>
+                  <button class="ghost-btn small danger-text" on:click={() => rejectPendingUser(user.username)}>Deny</button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+        <div class="modal-actions">
+          <button class="ghost-btn" on:click={() => showAdminPanel = false}>Close</button>
         </div>
       </div>
     </div>
@@ -1460,14 +1409,20 @@
 <style>
   /* ===== BASE ===== */
   .discord-app {
+    width: 100%;
     height: 100vh;
     height: 100dvh;
     display: grid;
+    grid-template-rows: minmax(0, 1fr);
     gap: 0;
     background: var(--bg-root);
     color: var(--text-body);
     font-size: 0.875rem;
     overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 
   /* ===== TOAST ===== */
@@ -1512,8 +1467,7 @@
   /* ===== AUTH ===== */
   .auth-shell {
     width: 100%;
-    height: 100vh;
-    height: 100dvh;
+    height: 100%;
     display: grid;
     place-items: center;
     padding: 2rem 1rem;
@@ -1617,95 +1571,21 @@
 
   /* ===== CHAT SHELL ===== */
   .chat-shell {
-    height: 100vh;
-    height: 100dvh;
+    height: 100%;
     display: grid;
-    grid-template-columns: 64px 260px minmax(0, 1fr);
+    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: 0;
     overflow: hidden;
     position: relative;
   }
 
-  .chat-shell:has(.calendar-sidebar) {
-    grid-template-columns: 64px 260px minmax(0, 1fr) 320px;
-  }
-
-  .chat-shell:has(.member-sidebar.open):not(:has(.calendar-sidebar)) {
-    grid-template-columns: 64px 260px minmax(0, 1fr) 240px;
-  }
-
-  .chat-shell:has(.calendar-sidebar):has(.member-sidebar.open) {
-    grid-template-columns: 64px 260px minmax(0, 1fr) 240px;
+  .chat-shell:has(.member-sidebar.open) {
+    grid-template-columns: 260px minmax(0, 1fr) 240px;
   }
 
   .sidebar-overlay {
     display: none;
-  }
-
-  /* ===== SERVER RAIL ===== */
-  .server-rail {
-    background: var(--bg-root);
-    padding: 0.75rem 0;
-    display: grid;
-    align-content: start;
-    justify-content: center;
-    gap: 0.5rem;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  .server-pill {
-    width: 42px;
-    height: 42px;
-    border-radius: var(--radius-lg);
-    background: var(--bg-elevated);
-    color: var(--text-secondary);
-    display: grid;
-    place-items: center;
-    font-weight: 700;
-    font-size: 0.75rem;
-    letter-spacing: 0.02em;
-    cursor: pointer;
-    border: none;
-    transition: border-radius 150ms ease-out, background 150ms ease-out, color 150ms ease-out;
-    position: relative;
-  }
-
-  .server-pill:hover {
-    border-radius: 12px;
-    background: var(--accent);
-    color: var(--text-primary);
-  }
-
-  .server-pill.active {
-    border-radius: 12px;
-    background: var(--accent);
-    color: var(--text-primary);
-  }
-
-  .server-pill.active::before {
-    content: '';
-    position: absolute;
-    left: -11px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 20px;
-    background: var(--text-primary);
-    border-radius: 0 2px 2px 0;
-  }
-
-  .server-pill.add-server {
-    background: transparent;
-    border: 1.5px dashed var(--border-hover);
-    color: var(--text-muted);
-    font-size: 1rem;
-  }
-
-  .server-pill.add-server:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-subtle);
   }
 
   /* ===== CHANNEL SIDEBAR ===== */
@@ -1806,6 +1686,42 @@
     border-left-color: var(--accent);
   }
 
+  .channel-link-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .channel-link-row .channel-link {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .channel-delete-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    transition: all 150ms ease-out;
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  .channel-link-row:hover .channel-delete-btn {
+    opacity: 1;
+  }
+
+  .channel-delete-btn:hover {
+    background: var(--error-subtle);
+    color: var(--error);
+  }
+
   .user-footer {
     background: var(--bg-inset);
     padding: 0.625rem 0.75rem;
@@ -1836,6 +1752,7 @@
 
   /* ===== MAIN CHAT AREA ===== */
   .chat-main {
+    height: 100%;
     background: var(--bg-root);
     display: grid;
     grid-template-rows: auto 1fr auto;
@@ -2090,6 +2007,60 @@
     color: var(--accent-text);
     padding: 0 0.2rem;
     border-radius: 3px;
+  }
+
+  /* ===== QUICK REACTIONS ===== */
+  .quick-reactions {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.35rem;
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+    pointer-events: none;
+  }
+
+  .message-row:hover .quick-reactions,
+  .message-row:focus-within .quick-reactions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (hover: none) {
+    .quick-reactions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  .quick-react-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+    transition: all 150ms ease-out;
+  }
+
+  .quick-react-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-secondary);
+    transform: scale(1.15);
+  }
+
+  .quick-react-btn :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .more-react-btn {
+    background: transparent;
+    border-style: dashed;
   }
 
   /* ===== REACTIONS ===== */
@@ -2368,26 +2339,72 @@
     color: var(--text-secondary);
   }
 
-  /* ===== CALENDAR SIDEBAR ===== */
-  .calendar-sidebar {
-    background: var(--bg-surface);
-    border-left: 1px solid var(--border-subtle);
+  /* ===== CALENDAR FULL PAGE ===== */
+  .calendar-fullpage {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-root);
+    z-index: 50;
     display: grid;
     grid-template-rows: auto 1fr;
     min-height: 0;
   }
 
-  .calendar-content {
-    padding: 1rem;
-    overflow: auto;
-    display: grid;
-    gap: 1rem;
-    align-content: start;
+  .calendar-fullpage-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-surface);
   }
 
-  .events-list {
+  .calendar-fullpage-header h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .calendar-fullpage-content {
+    padding: 1.5rem;
+    overflow: auto;
     display: grid;
+    gap: 1.5rem;
+    align-content: start;
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .calendar-actions-bar {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .calendar-events-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .calendar-empty {
+    display: grid;
+    place-items: center;
     gap: 0.5rem;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .calendar-empty p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+  }
+
+  .calendar-empty-sub {
+    font-size: 0.8125rem !important;
+    color: var(--text-muted);
   }
 
   .event-card {
@@ -2552,6 +2569,95 @@
     gap: 0.6rem;
     justify-content: flex-end;
     margin-top: 0.5rem;
+  }
+
+  /* ===== ADMIN PANEL ===== */
+  .admin-panel-modal {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .admin-empty {
+    display: grid;
+    place-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  .admin-empty p {
+    margin: 0;
+    color: var(--text-muted);
+  }
+
+  .pending-users-list {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .pending-user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .pending-user-info {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .pending-user-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+  }
+
+  .pending-user-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .pending-user-actions {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .primary-btn.small,
+  .ghost-btn.small {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .danger-text {
+    color: var(--error);
+  }
+
+  .danger-text:hover {
+    background: var(--error-subtle);
+    color: var(--error);
+  }
+
+  .badge-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background: var(--error);
+    border-radius: 50%;
+    border: 2px solid var(--bg-surface);
+  }
+
+  .icon-btn.has-badge {
+    position: relative;
   }
 
   /* ===== REACTION / GIF PICKER ===== */
@@ -2761,6 +2867,10 @@
     width: 100%;
     height: auto;
     border-radius: var(--radius-lg);
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    pointer-events: none;
   }
 
   .gif-reaction-img {
@@ -2797,173 +2907,6 @@
 
   .rehearsal-countdown strong {
     color: var(--text-primary);
-  }
-
-  /* ===== BAND TOOLS ===== */
-  .band-tools-view {
-    overflow-y: auto;
-    padding: 1.25rem;
-    min-height: 0;
-  }
-
-  .band-tools-content {
-    max-width: 640px;
-  }
-
-  /* Setlist */
-  .setlist-list {
-    list-style: none;
-    margin: 0 0 1rem;
-    padding: 0;
-    display: grid;
-    gap: 0.35rem;
-  }
-
-  .setlist-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 0.625rem 0.75rem;
-    cursor: grab;
-    transition: background 150ms ease-out, box-shadow 150ms ease-out;
-  }
-
-  .setlist-item:active { cursor: grabbing; }
-
-  .setlist-item.drag-over {
-    box-shadow: 0 0 0 2px var(--accent);
-    background: var(--accent-subtle);
-  }
-
-  .setlist-num {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    font-weight: 700;
-    min-width: 1.4rem;
-    text-align: right;
-  }
-
-  .drag-handle {
-    flex-shrink: 0;
-    color: var(--text-muted);
-  }
-
-  .setlist-title {
-    flex: 1;
-    font-weight: 500;
-    color: var(--text-body);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .setlist-badge {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    padding: 0.15rem 0.4rem;
-    border-radius: var(--radius-sm);
-    flex-shrink: 0;
-  }
-
-  .setlist-badge.key {
-    background: var(--accent-subtle);
-    color: var(--accent-text);
-  }
-
-  .setlist-badge.duration {
-    background: var(--bg-inset);
-    color: var(--text-muted);
-  }
-
-  .setlist-remove {
-    padding: 0.25rem;
-    opacity: 0.4;
-    transition: opacity 150ms ease-out;
-  }
-
-  .setlist-remove:hover {
-    opacity: 1;
-    color: var(--error);
-  }
-
-  .setlist-add-form {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .setlist-add-form .field {
-    flex: 1;
-    min-width: 120px;
-  }
-
-  .setlist-short {
-    flex: 0 0 80px !important;
-    min-width: 0 !important;
-  }
-
-  /* Equipment */
-  .equipment-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 0.3rem;
-  }
-
-  .equipment-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 0.65rem 0.9rem;
-    transition: background 150ms ease-out, border-color 150ms ease-out;
-  }
-
-  .equipment-item.checked {
-    background: var(--success-subtle);
-    border-color: var(--success);
-  }
-
-  .equipment-label {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    cursor: pointer;
-    flex: 1;
-  }
-
-  .equipment-label input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--accent);
-  }
-
-  .equipment-name {
-    font-weight: 500;
-    color: var(--text-body);
-  }
-
-  .equipment-checker {
-    font-size: 0.8125rem;
-    color: var(--success);
-    font-weight: 600;
-    flex-shrink: 0;
-    margin-left: 0.5rem;
-  }
-
-  .equipment-unchecked {
-    font-size: 0.8125rem;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    margin-left: 0.5rem;
   }
 
   /* ===== AUDIO PLAYER ===== */
@@ -3043,22 +2986,9 @@
   /* ===== RESPONSIVE ===== */
   @media (max-width: 1200px) {
     .chat-shell,
-    .chat-shell:has(.calendar-sidebar),
     .chat-shell:has(.member-sidebar),
-    .chat-shell:has(.member-sidebar.open),
-    .chat-shell:has(.calendar-sidebar):has(.member-sidebar),
-    .chat-shell:has(.calendar-sidebar):has(.member-sidebar.open) {
-      grid-template-columns: 64px 260px minmax(0, 1fr);
-    }
-
-    .calendar-sidebar {
-      position: fixed;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      z-index: 50;
-      box-shadow: -4px 0 16px rgba(0,0,0,0.4);
-      width: 320px;
+    .chat-shell:has(.member-sidebar.open) {
+      grid-template-columns: 260px minmax(0, 1fr);
     }
 
     .member-sidebar {
@@ -3080,18 +3010,10 @@
 
   @media (max-width: 980px) {
     .chat-shell,
-    .chat-shell:has(.calendar-sidebar),
     .chat-shell:has(.member-sidebar),
-    .chat-shell:has(.member-sidebar.open),
-    .chat-shell:has(.calendar-sidebar):has(.member-sidebar),
-    .chat-shell:has(.calendar-sidebar):has(.member-sidebar.open) {
+    .chat-shell:has(.member-sidebar.open) {
       grid-template-columns: 1fr;
-      height: 100vh;
-      height: 100dvh;
-    }
-
-    .server-rail {
-      display: none;
+      height: 100%;
     }
 
     .hamburger-btn {

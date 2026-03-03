@@ -648,6 +648,24 @@ export async function createChannel(args: {
   }
 }
 
+export async function deleteChannel(args: {
+  sessionToken: string;
+  channelId: string;
+}): Promise<Result<{ ok: true }>> {
+  const adminResult = await requireAdmin(args.sessionToken);
+  if (adminResult.ok === false) {
+    return adminResult;
+  }
+
+  const rows = await sql`SELECT id FROM channels WHERE id = ${args.channelId} LIMIT 1`;
+  if (!rows[0]) {
+    return { ok: false, code: 404, error: "Channel not found" };
+  }
+
+  await sql`DELETE FROM channels WHERE id = ${args.channelId}`;
+  return { ok: true, value: { ok: true } };
+}
+
 export async function listMessages(args: {
   sessionToken: string;
   channelId: string;
@@ -828,6 +846,31 @@ export async function demoteUser(args: { sessionToken: string; username: string 
   return { ok: true, value: { ok: true } };
 }
 
+export async function rejectUser(args: { sessionToken: string; username: string }): Promise<Result<{ ok: true }>> {
+  const adminResult = await requireAdmin(args.sessionToken);
+  if (adminResult.ok === false) {
+    return adminResult;
+  }
+
+  const username = normalizeUsername(args.username);
+  const rows = await sql`SELECT id, status FROM users WHERE username = ${username} LIMIT 1`;
+  const target = rows[0];
+
+  if (!target) {
+    return { ok: false, code: 404, error: "User not found" };
+  }
+
+  if (target.status !== "pending") {
+    return { ok: false, code: 400, error: "User is not pending" };
+  }
+
+  // Delete sessions for the rejected user
+  await sql`DELETE FROM sessions WHERE user_id = ${target.id}`;
+  // Delete the pending user
+  await sql`DELETE FROM users WHERE id = ${target.id}`;
+  return { ok: true, value: { ok: true } };
+}
+
 // ============ MESSAGE REACTIONS ============
 
 export async function addReaction(args: {
@@ -998,32 +1041,6 @@ export async function cleanOldTypingIndicators(): Promise<void> {
 }
 
 // ============ SERVERS/GUILDS ============
-
-export async function createServer(args: {
-  sessionToken: string;
-  name: string;
-  description?: string;
-}): Promise<Result<{ serverId: string }>> {
-  const user = await getUserBySession(args.sessionToken);
-  if (!user) {
-    return { ok: false, code: 401, error: "Unauthorized" };
-  }
-
-  const serverId = crypto.randomUUID();
-  const memberId = crypto.randomUUID();
-
-  await sql`
-    INSERT INTO servers (id, name, description, owner_id, created_at)
-    VALUES (${serverId}, ${args.name}, ${args.description || ''}, ${user.id}, ${Date.now()})
-  `;
-
-  await sql`
-    INSERT INTO server_members (id, server_id, user_id, joined_at)
-    VALUES (${memberId}, ${serverId}, ${user.id}, ${Date.now()})
-  `;
-
-  return { ok: true, value: { serverId } };
-}
 
 export async function listServers(sessionToken: string): Promise<Result<Array<{ id: string; name: string; description: string; iconUrl?: string }>>> {
   const user = await getUserBySession(sessionToken);
