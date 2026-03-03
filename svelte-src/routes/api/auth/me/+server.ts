@@ -7,15 +7,27 @@ const toJson = (body: unknown, status = 200) =>
   });
 
 export const GET = async ({ locals }: any) => {
-  if (!locals.sessionToken) {
-    return toJson({ error: "unauthorized" }, 401);
+  try {
+    if (!locals.sessionToken) {
+      return toJson({ error: "unauthorized" }, 401);
+    }
+
+    const user = await getUserBySession(locals.sessionToken);
+
+    if (!user) {
+      return toJson({ error: "unauthorized" }, 401);
+    }
+
+    return toJson(user);
+  } catch (error: any) {
+    const expose = process.env.AUTH_DEBUG === "true";
+    return toJson(
+      {
+        error: expose
+          ? `Auth check failed: ${error?.message ?? "unknown server error"}`
+          : "Auth check failed due to server configuration"
+      },
+      500
+    );
   }
-
-  const user = await getUserBySession(locals.sessionToken);
-
-  if (!user) {
-    return toJson({ error: "unauthorized" }, 401);
-  }
-
-  return toJson(user);
 };

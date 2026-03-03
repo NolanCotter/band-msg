@@ -51,6 +51,7 @@
     const csrf = getCookie("band_chat_csrf");
     return fetch(path, {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "content-type": "application/json",
         "x-csrf-token": csrf
@@ -59,8 +60,28 @@
     });
   }
 
+  async function readApiError(res: Response, fallback: string): Promise<string> {
+    try {
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const body = await res.json();
+        if (typeof body?.error === "string" && body.error.trim()) {
+          return body.error;
+        }
+      }
+
+      const text = (await res.text()).trim();
+      if (text) {
+        return `${fallback} (${res.status}): ${text.slice(0, 220)}`;
+      }
+    } catch {
+      // no-op
+    }
+    return `${fallback} (${res.status})`;
+  }
+
   async function refreshMe() {
-    const res = await fetch("/api/auth/me");
+    const res = await fetch("/api/auth/me", { credentials: "same-origin" });
     if (!res.ok) {
       me = null;
       return;
@@ -94,8 +115,7 @@
     });
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: "Registration failed" }));
-      showToast(body.error || "Registration failed", "error");
+        showToast(await readApiError(res, "Registration failed"), "error");
       return;
     }
 
@@ -115,15 +135,21 @@
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Login failed" }));
         loginPassword = attemptedPassword;
-        showToast(body.error || "Login failed", "error");
+        showToast(await readApiError(res, "Login failed"), "error");
+        return;
+      }
+
+      await refreshMe();
+      if (!me) {
+        loginPassword = attemptedPassword;
+        showToast("Signed in response received, but session cookie was not saved. Check AUTH_COOKIE_SECURE and browser cookies.", "error");
         return;
       }
 
       loginPassword = "";
-      await refreshMe();
       await refreshChannels();
+      showToast("Signed in.", "success");
     } finally {
       isLoggingIn = false;
     }
@@ -155,8 +181,7 @@
       description: newChannelDescription
     });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: "Create channel failed" }));
-      showToast(body.error || "Create channel failed", "error");
+      showToast(await readApiError(res, "Create channel failed"), "error");
       return;
     }
     newChannel = "";
