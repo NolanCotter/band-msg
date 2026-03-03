@@ -57,8 +57,6 @@
   let showMobileSidebar = false;
 
   // Band features state
-  let showSetlist = false;
-  let showEquipmentCheck = false;
   let activeBandPanel: "none" | "setlist" | "equipment" = "none";
   type SetlistItem = { id: string; title: string; artist: string; duration: string; order: number };
   type EquipmentItem = { id: string; label: string; assignee: string; checked: boolean };
@@ -118,7 +116,14 @@
   // Audio detection for audio file URLs
   function isAudioUrl(content: string): { isAudio: boolean; url: string } {
     const match = content.match(/^(https?:\/\/\S+\.(mp3|wav|ogg|flac|aac|m4a))(\?[^\s]*)?$/i);
-    if (match) return { isAudio: true, url: match[0] };
+    if (match) {
+      try {
+        const parsed = new URL(match[0]);
+        if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+          return { isAudio: true, url: parsed.href };
+        }
+      } catch { /* ignore invalid URLs */ }
+    }
     return { isAudio: false, url: "" };
   }
 
@@ -130,7 +135,7 @@
       if (sl) setlistItems = JSON.parse(sl);
       const eq = localStorage.getItem("band_equipment");
       if (eq) equipmentItems = JSON.parse(eq);
-      const pins = localStorage.getItem(`band_pins_${selectedChannelId}`);
+      const pins = localStorage.getItem(`band_pins_${encodeURIComponent(selectedChannelId)}`);
       if (pins) pinnedMessages = JSON.parse(pins);
     } catch { /* ignore */ }
   }
@@ -140,7 +145,7 @@
     try {
       localStorage.setItem("band_setlist", JSON.stringify(setlistItems));
       localStorage.setItem("band_equipment", JSON.stringify(equipmentItems));
-      localStorage.setItem(`band_pins_${selectedChannelId}`, JSON.stringify(pinnedMessages));
+      localStorage.setItem(`band_pins_${encodeURIComponent(selectedChannelId)}`, JSON.stringify(pinnedMessages));
     } catch { /* ignore */ }
   }
 
@@ -2211,11 +2216,6 @@
 
   .composer-field:disabled {
     opacity: 0.5;
-  }
-
-  /* Remove old gif-btn style */
-  .gif-btn {
-    display: none;
   }
 
   /* Form Elements */
