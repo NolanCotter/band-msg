@@ -3,6 +3,7 @@
 <style>
   :global(html) {
     height: 100%;
+    overflow-x: hidden;
     overflow-y: auto;
   }
 
@@ -13,6 +14,7 @@
     color: #dbdee1;
     min-height: 100vh;
     line-height: 1.5;
+    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
