@@ -25,8 +25,15 @@ export function parseMarkdown(text: string): string {
   // Strikethrough (~~...~~)
   result = result.replace(/~~([^~]+)~~/g, '<del>$1</del>');
   
-  // Links
-  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Links (only allow http/https URLs to prevent javascript: XSS)
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match: string, text: string, url: string) => {
+    const trimmed = url.trim().toLowerCase();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      const safeUrl = url.replace(/"/g, '&quot;');
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    }
+    return text;
+  });
   
   // Mentions (@username)
   result = result.replace(/@(\w+)/g, '<span class="mention">@$1</span>');

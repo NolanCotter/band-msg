@@ -226,12 +226,8 @@
         }
       }
       
-      // Sticky scroll: only auto-scroll if user is near the bottom
-      const shouldScroll = isUserNearBottom();
       messages = msgs;
-      if (shouldScroll || isInitialLoad) {
-        scrollToBottom();
-      }
+      scrollToBottom();
       
       // Reset connection status on success
       failedPollCount = 0;
@@ -812,7 +808,6 @@
             {server.name.slice(0, 2).toUpperCase()}
           </button>
         {/each}
-        <button class="server-pill add-server" on:click={() => showServerCreate = true} title="Create Server">+</button>
         <button class="server-pill add-server" on:click={() => showInviteModal = true} title="Join Server"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
       </aside>
 
@@ -1165,20 +1160,6 @@
     </div>
   {/if}
 
-  {#if showServerCreate}
-    <div class="modal-backdrop" role="button" tabindex="0" on:click={() => showServerCreate = false} on:keydown={(e) => e.key === 'Escape' && (showServerCreate = false)}>
-      <div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
-        <h3>Create Server</h3>
-        <input class="field" bind:value={newServerName} placeholder="Server name" />
-        <input class="field" bind:value={newServerDescription} placeholder="Description (optional)" />
-        <div class="modal-actions">
-          <button class="ghost-btn" on:click={() => showServerCreate = false}>Cancel</button>
-          <button class="primary-btn" on:click={createServer}>Create</button>
-        </div>
-      </div>
-    </div>
-  {/if}
-
   {#if showInviteModal}
     <div class="modal-backdrop" role="button" tabindex="0" on:click={() => showInviteModal = false} on:keydown={(e) => e.key === 'Escape' && (showInviteModal = false)}>
       <div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
@@ -1391,7 +1372,8 @@
   }
 
   .channel-list {
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: grid;
     gap: 0.2rem;
     align-content: start;
@@ -1565,7 +1547,8 @@
   }
 
   .messages-scroll {
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 1rem;
     display: grid;
     gap: 0.8rem;
