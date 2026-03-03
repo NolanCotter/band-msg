@@ -18,6 +18,7 @@
   let newMessage = "";
   let newChannel = "";
   let newChannelDescription = "";
+  let isLoggingIn = false;
   let toastMessage = "";
   let toastType: "error" | "success" = "error";
   let toastTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -104,20 +105,28 @@
   }
 
   async function login() {
-    const res = await apiPost("/api/auth/login", {
-      username: loginUsername,
-      password: loginPassword
-    });
+    if (isLoggingIn) return;
+    const attemptedPassword = loginPassword;
+    isLoggingIn = true;
+    try {
+      const res = await apiPost("/api/auth/login", {
+        username: loginUsername,
+        password: loginPassword
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: "Login failed" }));
-      showToast(body.error || "Login failed", "error");
-      return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Login failed" }));
+        loginPassword = attemptedPassword;
+        showToast(body.error || "Login failed", "error");
+        return;
+      }
+
+      loginPassword = "";
+      await refreshMe();
+      await refreshChannels();
+    } finally {
+      isLoggingIn = false;
     }
-
-    loginPassword = "";
-    await refreshMe();
-    await refreshChannels();
   }
 
   async function logout() {
@@ -178,8 +187,19 @@
         <h1>Welcome back</h1>
         <p>Sign in to continue chatting.</p>
         <input class="field" bind:value={loginUsername} placeholder="Username" autocomplete="username" />
-        <input class="field" bind:value={loginPassword} type="password" placeholder="Password" autocomplete="current-password" />
-        <button class="primary-btn" on:click={login}>Log In</button>
+        <input
+          class="field"
+          bind:value={loginPassword}
+          type="password"
+          placeholder="Password"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <button class="primary-btn" type="button" on:click={login} disabled={isLoggingIn}>
+          {isLoggingIn ? "Signing in..." : "Log In"}
+        </button>
       </article>
 
       <article class="auth-card">
@@ -187,7 +207,7 @@
         <p>First account becomes admin.</p>
         <input class="field" bind:value={registerUsername} placeholder="Username" autocomplete="username" />
         <input class="field" bind:value={registerPassword} type="password" placeholder="Password (12+ chars)" autocomplete="new-password" />
-        <button class="primary-btn" on:click={register}>Register</button>
+        <button class="primary-btn" type="button" on:click={register}>Register</button>
       </article>
     </section>
   {:else}
