@@ -73,7 +73,7 @@ export const handle = async ({ event, resolve }: any) => {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'", // Svelte needs inline scripts
     "style-src 'self' 'unsafe-inline'", // Svelte needs inline styles
-    "img-src 'self' data: https:",
+    "img-src 'self' data: https: https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com",
     "font-src 'self'",
     "connect-src 'self'",
     "media-src 'self'",
