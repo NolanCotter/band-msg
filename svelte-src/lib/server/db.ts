@@ -24,7 +24,6 @@ function getSqlClient() {
   }
   return sqlClient;
 }
-
 const sql = (strings: TemplateStringsArray, ...params: any[]) => getSqlClient()(strings, ...params);
 let initPromise: Promise<void> | null = null;
 
