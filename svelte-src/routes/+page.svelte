@@ -576,14 +576,31 @@
     reactionGifResults = [];
   }
 
+  const ALLOWED_GIF_HOSTS = ["media.giphy.com", "media0.giphy.com", "media1.giphy.com", "media2.giphy.com", "media3.giphy.com", "media4.giphy.com", "i.giphy.com"];
+
+  function isAllowedGifUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return ALLOWED_GIF_HOSTS.includes(parsed.hostname);
+    } catch {
+      return false;
+    }
+  }
+
   function isGifMessage(content: string): { isGif: boolean; url: string } {
-    const match = content.match(/^\[gif:(https?:\/\/[^\]]+)\]$/);
-    return match ? { isGif: true, url: match[1] } : { isGif: false, url: "" };
+    const match = content.match(/^\[gif:(https:\/\/[^\]]+)\]$/);
+    if (match && isAllowedGifUrl(match[1])) {
+      return { isGif: true, url: match[1] };
+    }
+    return { isGif: false, url: "" };
   }
 
   function isGifReaction(emoji: string): { isGif: boolean; url: string } {
     if (emoji.startsWith("gif:")) {
-      return { isGif: true, url: emoji.slice(4) };
+      const url = emoji.slice(4);
+      if (isAllowedGifUrl(url)) {
+        return { isGif: true, url };
+      }
     }
     return { isGif: false, url: "" };
   }
@@ -1041,7 +1058,7 @@
       <div class="modal reaction-picker" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
         <div class="reaction-picker-header">
           <h3>Add Reaction</h3>
-          <button class="picker-close-btn" title="Close" on:click={() => { showEmojiPicker = false; reactionPickerTab = "emoji"; }}>
+          <button class="picker-close-btn" title="Close" on:click={() => { showEmojiPicker = false; reactionPickerTab = "emoji"; reactionGifSearch = ""; reactionGifResults = []; }}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -1120,7 +1137,7 @@
               <span class="gif-spinner"></span> Loading GIFs...
             </div>
           {:else if gifResults.length === 0}
-            <p class="empty-state" style="padding:1rem">No GIFs found. Try a different search.</p>
+            <p class="empty-state gif-empty">No GIFs found. Try a different search.</p>
           {:else}
             <div class="gif-grid">
               {#each gifResults as gif}
@@ -2270,6 +2287,10 @@
     height: 20px;
     object-fit: cover;
     border-radius: 3px;
+  }
+
+  .gif-empty {
+    padding: 1rem;
   }
 
   /* Utility */
