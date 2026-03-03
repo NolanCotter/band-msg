@@ -96,5 +96,6 @@ export const REACTION_ICONS: ReactionDef[] = [
   }
 ];
 
-// Keep backward-compatible emoji list for storage but map to SVG IDs
+// New reactions use SVG icon IDs. Legacy reactions stored as Unicode emojis
+// will fall back to displaying the raw emoji text if no matching SVG is found.
 export const QUICK_EMOJIS = REACTION_ICONS.map(r => r.id);

@@ -56,7 +56,6 @@
 
   // Long-press state for reactions
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
-  let longPressMessageId = "";
 
   // Context menu state (for unsend)
   let contextMenuMessageId = "";
@@ -554,7 +553,6 @@
       showEmojiPicker = true;
       longPressTimer = null;
     }, 500);
-    longPressMessageId = messageId;
   }
 
   function handleMessagePointerUp() {
