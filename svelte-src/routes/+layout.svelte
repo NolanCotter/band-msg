@@ -1,6 +1,37 @@
 <slot />
 
 <style>
+  :global(html), :global(body) {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background: var(--bg-root);
+    color: var(--text-body);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    overflow: hidden;
+  }
+
+  :global(body > div) {
+    height: 100%;
+  }
+
+  :global(*) {
+    box-sizing: border-box;
+  }
+
+  :global(button),
+  :global(input) {
+    font: inherit;
+  }
+
   :global(:root) {
     --bg-root:       #09090B;
     --bg-surface:    #0F0F12;
