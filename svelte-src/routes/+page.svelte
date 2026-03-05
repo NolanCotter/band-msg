@@ -1410,8 +1410,11 @@
       main.discord-app {
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        min-height: 100dvh;
+        height: 100dvh;
         width: 100vw;
+        max-width: 100vw;
+        overflow-x: hidden;
         box-sizing: border-box;
       }
 
@@ -1419,8 +1422,11 @@
         display: flex;
         flex: 1 1 auto;
         min-height: 0;
+        height: 100%;
         width: 100%;
+        max-width: 100vw;
         box-sizing: border-box;
+        overflow-x: hidden;
       }
 
       .chat-main {
@@ -1429,6 +1435,7 @@
         flex: 1 1 auto;
         min-width: 0;
         min-height: 0;
+        height: 100%;
         box-sizing: border-box;
       }
 
@@ -1436,6 +1443,7 @@
         flex: 1 1 auto;
         min-height: 0;
         min-width: 0;
+        height: 100%;
         overflow-y: auto;
         overflow-x: hidden;
         padding: 0.5rem;
@@ -1454,6 +1462,7 @@
           width: 100%;
           min-width: 0;
           min-height: 0;
+          max-width: 100vw;
         }
       }
 
@@ -1465,6 +1474,7 @@
           width: 100%;
           min-width: 0;
           min-height: 0;
+          max-width: 100vw;
         }
         .hamburger-btn {
           display: flex;
@@ -1478,6 +1488,7 @@
           top: 0;
           bottom: 0;
           width: 280px;
+          max-width: 100vw;
           z-index: 60;
           transform: translateX(-100%);
           transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -1492,6 +1503,7 @@
           top: 0;
           bottom: 0;
           width: 260px !important;
+          max-width: 100vw;
           z-index: 60;
           transform: translateX(100%);
           transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1), width 0s;
