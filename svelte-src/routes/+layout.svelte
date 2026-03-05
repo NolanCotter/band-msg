@@ -89,6 +89,9 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
   }
 
   :global(*) {

@@ -1469,7 +1469,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: calc(2rem + env(safe-area-inset-top, 0px)) 2rem 2rem;
     animation: auth-fade-in 0.5s ease-out;
   }
 
@@ -1597,15 +1597,16 @@
 
   /* ===== CHANNEL SIDEBAR ===== */
   .channel-sidebar {
+    height: 100%;
     background: var(--bg-surface);
-    display: grid;
-    grid-template-rows: auto auto 1fr auto;
+    display: flex;
+    flex-direction: column;
     border-right: 1px solid var(--border-subtle);
     min-height: 0;
   }
 
   .sidebar-header {
-    padding: 0.875rem 1rem;
+    padding: calc(0.875rem + env(safe-area-inset-top, 0px)) 1rem 0.875rem;
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
     justify-content: space-between;
@@ -1652,6 +1653,7 @@
   }
 
   .channels-wrap {
+    flex: 1;
     min-height: 0;
     padding: 0.75rem;
     display: grid;
@@ -1767,7 +1769,7 @@
   }
 
   .chat-header {
-    padding: 0.875rem 1rem;
+    padding: calc(0.875rem + env(safe-area-inset-top, 0px)) 1rem 0.875rem;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--bg-root);
     display: flex;
