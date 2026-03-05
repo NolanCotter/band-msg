@@ -1412,10 +1412,8 @@
     width: 100%;
     height: 100vh;
     height: 100dvh;
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr);
-    gap: 0;
+    display: flex;
+    flex-direction: column;
     background: var(--bg-root);
     color: var(--text-body);
     font-size: 0.875rem;
@@ -1467,12 +1465,11 @@
 
   /* ===== AUTH ===== */
   .auth-shell {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    place-items: center;
-    padding: 2rem 1rem;
-    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
     animation: auth-fade-in 0.5s ease-out;
   }
 
@@ -1572,17 +1569,26 @@
 
   /* ===== CHAT SHELL ===== */
   .chat-shell {
-    height: 100%;
-    display: grid;
-    grid-template-columns: clamp(200px, 18vw, 320px) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-    gap: 0;
+    flex: 1;
+    display: flex;
     overflow: hidden;
     position: relative;
   }
 
-  .chat-shell:has(.member-sidebar.open) {
-    grid-template-columns: clamp(200px, 18vw, 320px) minmax(0, 1fr) 240px;
+  /* ===== MAIN CHAT AREA ===== */
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .messages-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.5rem;
   }
 
   .sidebar-overlay {
@@ -1753,12 +1759,11 @@
 
   /* ===== MAIN CHAT AREA ===== */
   .chat-main {
-    height: 100%;
-    background: var(--bg-root);
-    display: grid;
-    grid-template-rows: auto 1fr auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
-    position: relative;
+    background: var(--bg-root);
   }
 
   .chat-header {
@@ -1888,12 +1893,10 @@
 
   /* ===== MESSAGES ===== */
   .messages-scroll {
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 0.5rem;
-    display: grid;
-    gap: 2px;
-    align-content: start;
     scroll-behavior: smooth;
     min-height: 0;
   }
