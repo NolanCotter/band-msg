@@ -3,7 +3,7 @@
   "short_name": "BandChat",
   "description": "A full-featured Discord-like chat platform for communities",
   "start_url": "/",
-  "display": "browser",
+  "display": "standalone",
   "background_color": "#313338",
   "theme_color": "#5865F2",
   "orientation": "portrait-primary",
