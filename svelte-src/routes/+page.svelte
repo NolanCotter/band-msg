@@ -862,10 +862,22 @@
 
 <style>
   /* Ensure headers respect iOS safe area insets */
+
   .chat-header,
   .sidebar-header,
   .auth-header,
   .calendar-fullpage-header {
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    background: var(--bg-elevated, #18181B);
+    position: relative;
+    z-index: 10;
+  }
+
+  /* Also ensure the main app background fills the safe area */
+  .discord-app {
+    background: var(--bg-root, #09090B);
+    min-height: 100vh;
+    padding-top: constant(safe-area-inset-top, 0px);
     padding-top: env(safe-area-inset-top, 0px);
   }
 
