@@ -875,6 +875,11 @@
     top: calc(8px + env(safe-area-inset-top, 0px));
   }
 </style>
+<style>
+  .discord-app {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+</style>
   {#if !isAuthenticated}
     <section class="auth-shell">
       <article class="auth-card">
