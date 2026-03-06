@@ -247,6 +247,20 @@ async function ensureDb(): Promise<void> {
         )
       `;
 
+      // Push notifications subscriptions
+      await sql`
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          endpoint TEXT NOT NULL,
+          p256dh_key TEXT NOT NULL,
+          auth_key TEXT NOT NULL,
+          created_at BIGINT NOT NULL,
+          updated_at BIGINT NOT NULL,
+          UNIQUE(user_id, endpoint)
+        )
+      `;
+
       // Indexes for performance
       await sql`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id)`;
       await sql`CREATE INDEX IF NOT EXISTS idx_rate_limits_reset_at ON rate_limits (reset_at)`;
@@ -1258,4 +1272,79 @@ export async function respondToEvent(args: {
   `;
 
   return { ok: true, value: { ok: true } };
+}
+
+// ============ PUSH NOTIFICATIONS ============
+
+export async function savePushSubscription(args: {
+  sessionToken: string;
+  endpoint: string;
+  p256dhKey: string;
+  authKey: string;
+}): Promise<Result<{ ok: true }>> {
+  const user = await getUserBySession(args.sessionToken);
+  if (!user) {
+    return { ok: false, code: 401, error: "Unauthorized" };
+  }
+
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  await sql`
+    INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh_key, auth_key, created_at, updated_at)
+    VALUES (${id}, ${user.id}, ${args.endpoint}, ${args.p256dhKey}, ${args.authKey}, ${now}, ${now})
+    ON CONFLICT (user_id, endpoint)
+    DO UPDATE SET p256dh_key = ${args.p256dhKey}, auth_key = ${args.authKey}, updated_at = ${now}
+  `;
+
+  return { ok: true, value: { ok: true } };
+}
+
+export async function removePushSubscription(args: {
+  sessionToken: string;
+  endpoint: string;
+}): Promise<Result<{ ok: true }>> {
+  const user = await getUserBySession(args.sessionToken);
+  if (!user) {
+    return { ok: false, code: 401, error: "Unauthorized" };
+  }
+
+  await sql`DELETE FROM push_subscriptions WHERE user_id = ${user.id} AND endpoint = ${args.endpoint}`;
+  return { ok: true, value: { ok: true } };
+}
+
+export async function getPushSubscriptionsForUser(args: {
+  sessionToken: string;
+}): Promise<Result<Array<{ endpoint: string; p256dhKey: string; authKey: string }>>> {
+  const user = await getUserBySession(args.sessionToken);
+  if (!user) {
+    return { ok: false, code: 401, error: "Unauthorized" };
+  }
+
+  const rows = await sql`
+    SELECT endpoint, p256dh_key, auth_key
+    FROM push_subscriptions
+    WHERE user_id = ${user.id}
+  `;
+
+  return {
+    ok: true,
+    value: rows.map((r: any) => ({
+      endpoint: r.endpoint,
+      p256dhKey: r.p256dh_key,
+      authKey: r.auth_key
+    }))
+  };
+}
+
+export async function getAllPushSubscriptions(): Promise<Array<{ endpoint: string; p256dhKey: string; authKey: string }>> {
+  const rows = await sql`
+    SELECT endpoint, p256dh_key, auth_key
+    FROM push_subscriptions
+  `;
+
+  return rows.map((r: any) => ({
+    endpoint: r.endpoint,
+    p256dhKey: r.p256dh_key,
+    authKey: r.auth_key
+  }));
 }

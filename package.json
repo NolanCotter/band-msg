@@ -14,7 +14,8 @@
     "@neondatabase/serverless": "^1.0.1",
     "@sveltejs/adapter-vercel": "^5.9.1",
     "@sveltejs/kit": "^2.46.3",
-    "svelte": "^5.39.6"
+    "svelte": "^5.39.6",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",

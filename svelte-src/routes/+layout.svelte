@@ -5,6 +5,7 @@
   :global(html), :global(body) {
     height: 100%;
     min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -17,10 +18,13 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Safe area for iOS notch/Dynamic Island */
-  @supports(padding-top: env(safe-area-inset-top)) {
+  /* Safe area for iOS notch/Dynamic Island - apply to body, not children */
+  @supports (padding-top: max(env(safe-area-inset-top), 0px)) {
     :global(body) {
-      padding-top: env(safe-area-inset-top);
+      padding-top: max(env(safe-area-inset-top), 0px);
+      padding-bottom: max(env(safe-area-inset-bottom), 0px);
+      padding-left: max(env(safe-area-inset-left), 0px);
+      padding-right: max(env(safe-area-inset-right), 0px);
     }
   }
 

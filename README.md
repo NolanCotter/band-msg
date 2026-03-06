@@ -273,7 +273,43 @@ node build/index.js
 * Home screen installation
 * Standalone window mode
 * Background sync (planned)
-* Push notifications (planned)
+* **Push notifications** - Get notified of new messages even when the app is closed
+
+---
+
+## Push Notifications Setup
+
+### Generate VAPID Keys
+
+VAPID keys are required for web push notifications. Generate them with:
+
+```bash
+node scripts/generate-vapid-keys.js
+```
+
+This will output a public and private key. Add them to your `.env.local`:
+
+```bash
+VAPID_PUBLIC_KEY=your_public_key_here
+VAPID_PRIVATE_KEY=your_private_key_here
+```
+
+### Enable Push Notifications
+
+1. Log in to your account
+2. Click the bell icon in the header
+3. Click "Push Notifications" toggle to enable
+4. Allow notifications when prompted by your browser
+
+### Sending Push Notifications
+
+Admins can send push notifications via the API:
+
+```bash
+curl -X POST /api/push/send \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New Message", "body": "You have been mentioned", "url": "/"}'
+```
 
 ---
 

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, shrink-to-fit=no" />
     <meta name="description" content="A full-featured Discord-like chat platform for communities" />
     <meta name="theme-color" content="#09090B" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -18,11 +18,13 @@
     %sveltekit.head%
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { 
-        height: 100%; 
-        overflow: hidden; 
+      html, body {
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
+        -webkit-overflow-scrolling: touch;
       }
     </style>
   </head>

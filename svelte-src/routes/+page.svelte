@@ -95,10 +95,63 @@
   // Notification preferences
   let notificationPref: 'all' | 'mentions' | 'dms' | 'none' = 'mentions';
   let showNotificationPrefs = false;
+  let pushNotificationsEnabled = false;
 
   function setNotificationPref(pref: 'all' | 'mentions' | 'dms' | 'none') {
     notificationPref = pref;
     localStorage.setItem('notificationPref', pref);
+  }
+
+  async function togglePushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      showToast('Push notifications not supported in this browser', 'error');
+      return;
+    }
+
+    try {
+      const { subscribeToPush, unsubscribeFromPush, isPushSubscribed } = await import('$lib/push-notifications');
+      
+      if (pushNotificationsEnabled) {
+        const success = await unsubscribeFromPush();
+        if (success) {
+          pushNotificationsEnabled = false;
+          showToast('Push notifications disabled', 'success');
+        } else {
+          showToast('Failed to disable push notifications', 'error');
+        }
+      } else {
+        const alreadySubscribed = await isPushSubscribed();
+        if (alreadySubscribed) {
+          pushNotificationsEnabled = true;
+          showToast('Push notifications already enabled', 'success');
+          return;
+        }
+        const success = await subscribeToPush();
+        if (success) {
+          pushNotificationsEnabled = true;
+          showToast('Push notifications enabled', 'success');
+        } else {
+          showToast('Failed to enable push notifications', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to toggle push notifications:', error);
+      showToast('Failed to toggle push notifications', 'error');
+    }
+  }
+
+  // Check push notification status on mount
+  async function checkPushNotificationStatus() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return;
+    }
+
+    try {
+      const { isPushSubscribed } = await import('$lib/push-notifications');
+      pushNotificationsEnabled = await isPushSubscribed();
+    } catch (error) {
+      console.error('Failed to check push notification status:', error);
+    }
   }
 
   $: isAuthenticated = !!me;
@@ -363,6 +416,14 @@
       loginPassword = "";
       await refreshServers();
       await refreshChannels();
+      
+      // Subscribe to push notifications
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window) {
+        import('$lib/push-notifications').then(({ subscribeToPush }) => {
+          subscribeToPush();
+        }).catch(err => console.error('Failed to load push notifications:', err));
+      }
+      
       if (headerSessionToken) {
         showToast("Signed in using header-session fallback (cookies blocked by browser).", "success");
         return;
@@ -755,11 +816,19 @@
     await refreshMessages();
   }
 
-  function handleMessagePointerDown(event: PointerEvent, messageId: string) {
+  function handleMessagePointerDown(event: PointerEvent, messageId: string, author: string) {
     longPressTimer = setTimeout(() => {
-      selectedMessageForReaction = messageId;
-      showEmojiPicker = true;
+      // Long press detected - show context menu for unsend and other options
+      contextMenuMessageId = messageId;
+      contextMenuAuthor = author;
+      // Position at the center of the screen or where the touch occurred
+      contextMenuX = Math.min(event.clientX || window.innerWidth / 2, window.innerWidth - 160);
+      contextMenuY = Math.min(event.clientY || window.innerHeight / 2, window.innerHeight - 200);
       longPressTimer = null;
+      // Provide haptic feedback on mobile
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
     }, 500);
   }
 
@@ -836,13 +905,32 @@
       inviteCode = invite;
       showInviteModal = true;
     }
-    
+
+    // Register service worker for PWA and push notifications
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registered:', registration.scope);
+
+        // Check if already subscribed to push notifications
+        if ('PushManager' in window) {
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) {
+            console.log('Already subscribed to push notifications');
+            pushNotificationsEnabled = true;
+          }
+        }
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
+    }
+
     await refreshMe();
     await refreshServers();
     await refreshChannels();
     await refreshMembers();
     await refreshPendingUsers();
-    
+
     // Set up refresh intervals
     refreshInterval = setInterval(async () => {
       await refreshMessages();
@@ -1076,6 +1164,12 @@
             </button>
             {#if showNotificationPrefs}
               <div class="notification-prefs-menu">
+                <div class="push-toggle-row">
+                  <span>Push Notifications</span>
+                  <button class="push-toggle-btn" on:click|stopPropagation={togglePushNotifications} aria-label="Toggle push notifications">
+                    {pushNotificationsEnabled ? 'On' : 'Off'}
+                  </button>
+                </div>
                 <label><input type="radio" name="notif" value="all" checked={notificationPref === 'all'} on:change={() => setNotificationPref('all')}/> All messages</label>
                 <label><input type="radio" name="notif" value="mentions" checked={notificationPref === 'mentions'} on:change={() => setNotificationPref('mentions')}/> Mentions only</label>
                 <label><input type="radio" name="notif" value="dms" checked={notificationPref === 'dms'} on:change={() => setNotificationPref('dms')}/> DMs only</label>
@@ -1110,6 +1204,31 @@
           .notification-prefs-menu input[type="radio"] {
             accent-color: var(--accent, #3B82F6);
           }
+          .push-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border, #333);
+          }
+          .push-toggle-row label {
+            font-weight: 600;
+            font-size: 0.95rem;
+          }
+          .push-toggle-btn {
+            background: var(--accent, #3B82F6);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+          }
+          .push-toggle-btn:hover {
+            background: var(--accent-hover, #2563EB);
+          }
         </style>
         </header>
 
@@ -1140,7 +1259,7 @@
               <article
                 class="message-row"
                 on:contextmenu={(e) => handleMessageContextMenu(e, msg.id, msg.author)}
-                on:pointerdown={(e) => handleMessagePointerDown(e, msg.id)}
+                on:pointerdown={(e) => handleMessagePointerDown(e, msg.id, msg.author)}
                 on:pointerup={handleMessagePointerUp}
                 on:pointerleave={handleMessagePointerUp}
               >
@@ -1224,44 +1343,6 @@
             </div>
           {/if}
         </div>
-
-        {#if contextMenuMessageId}
-          <div class="message-context-menu" style="position: fixed; top: {contextMenuY}px; left: {contextMenuX}px; z-index: 200; background: var(--bg-surface, #18181B); color: var(--text-body, #D4D4D8); border: 1px solid var(--border, #333); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: 140px; padding: 0.5rem 0;">
-            <button class="context-menu-item" on:click={() => { selectedMessageForReaction = contextMenuMessageId; showEmojiPicker = true; closeContextMenu(); }}>React</button>
-            {#if me && contextMenuAuthor && me.username && contextMenuMessageId}
-              {#if me.username === contextMenuAuthor}
-                <button class="context-menu-item" on:click={() => { unsendMessage(contextMenuMessageId); closeContextMenu(); }}>Unsend</button>
-              {/if}
-            {/if}
-            <button class="context-menu-item" on:click={closeContextMenu}>Cancel</button>
-          </div>
-        {/if}
-<style>
-  .message-context-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    animation: fadeIn 0.12s;
-  }
-  .context-menu-item {
-    background: none;
-    border: none;
-    color: inherit;
-    text-align: left;
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.15s;
-  }
-  .context-menu-item:hover {
-    background: var(--bg-hover, #27272A);
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.98); }
-    to { opacity: 1; transform: scale(1); }
-  }
-</style>
 
         <footer class="composer">
           <div class="composer-input-row">
@@ -1475,10 +1556,11 @@
   {#if contextMenuMessageId}
     <div class="context-backdrop" role="button" tabindex="0" on:click={closeContextMenu} on:keydown={(e) => e.key === 'Escape' && closeContextMenu()}>
       <div class="context-menu" role="menu" tabindex="-1" style="left:{contextMenuX}px;top:{contextMenuY}px" on:click|stopPropagation={() => {}} on:keydown|stopPropagation={() => {}}>
+        <button class="context-item" on:click={() => { selectedMessageForReaction = contextMenuMessageId; showEmojiPicker = true; closeContextMenu(); }}>React</button>
         {#if contextMenuAuthor === me?.username || me?.role === 'admin'}
           <button class="context-item danger" on:click={() => unsendMessage(contextMenuMessageId)}>Unsend Message</button>
         {/if}
-        <button class="context-item" on:click={() => { openEmojiPicker(contextMenuMessageId); closeContextMenu(); }}>Add Reaction</button>
+        <button class="context-item" on:click={closeContextMenu}>Cancel</button>
       </div>
     </div>
   {/if}
@@ -1751,10 +1833,12 @@
     flex-direction: column;
     border-right: 1px solid var(--border-subtle);
     min-height: 0;
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .sidebar-header {
     padding: 0.875rem 1rem;
+    padding-top: calc(0.875rem + env(safe-area-inset-top, 0px));
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
     justify-content: space-between;
@@ -2607,10 +2691,15 @@
     overflow: hidden;
     width: 0;
     transition: width 200ms ease-out;
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .member-sidebar.open {
     width: 240px;
+  }
+
+  .member-sidebar .sidebar-header {
+    padding-top: calc(0.875rem + env(safe-area-inset-top, 0px));
   }
 
   .member-list-content {
@@ -3170,6 +3259,7 @@
       transform: translateX(100%);
       transition: transform 250ms cubic-bezier(0.32, 0.72, 0, 1), width 0s;
       width: 240px !important;
+      padding-top: env(safe-area-inset-top, 0px);
     }
 
     .member-sidebar.open {
@@ -3203,6 +3293,7 @@
       transform: translateX(-100%);
       transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
       border-right: 1px solid var(--border-subtle);
+      padding-top: env(safe-area-inset-top, 0px);
     }
 
     .channel-sidebar.open {
@@ -3218,6 +3309,7 @@
       z-index: 60;
       transform: translateX(100%);
       transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1), width 0s;
+      padding-top: env(safe-area-inset-top, 0px);
     }
 
     .member-sidebar.open {
