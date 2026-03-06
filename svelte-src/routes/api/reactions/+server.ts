@@ -47,6 +47,24 @@ export async function GET({ url, cookies }: any) {
   }
 
   const messageId = url.searchParams.get("messageId");
+  const messageIds = url.searchParams.get("messageIds");
+  
+  // Batch load reactions for multiple messages
+  if (messageIds) {
+    const ids = messageIds.split(',');
+    const allReactions: Record<string, any[]> = {};
+    
+    for (const id of ids) {
+      const result = await getMessageReactions({ sessionToken, messageId: id });
+      if (result.ok) {
+        allReactions[id] = result.value;
+      }
+    }
+    
+    return json(allReactions);
+  }
+  
+  // Single message load (legacy)
   if (!messageId) {
     return json({ error: "Missing messageId" }, { status: 400 });
   }
