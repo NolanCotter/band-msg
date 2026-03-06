@@ -1456,8 +1456,8 @@
   /* ===== TOAST ===== */
   .toast {
     position: fixed;
-    right: 1rem;
-    bottom: 1rem;
+    right: max(1rem, env(safe-area-inset-right, 0px));
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px));
     z-index: 30;
     min-width: min(360px, calc(100vw - 2rem));
     max-width: 420px;
@@ -2185,6 +2185,9 @@
     min-width: 160px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
     z-index: 201;
+    /* Prevent context menu from overlapping the notch or home bar */
+    margin-top: env(safe-area-inset-top, 0px);
+    margin-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .context-item {
