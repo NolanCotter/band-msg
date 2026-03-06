@@ -92,6 +92,15 @@
   let newEventStartsAt = "";
   let newEventEndsAt = "";
 
+  // Notification preferences
+  let notificationPref: 'all' | 'mentions' | 'dms' | 'none' = 'mentions';
+  let showNotificationPrefs = false;
+
+  function setNotificationPref(pref: 'all' | 'mentions' | 'dms' | 'none') {
+    notificationPref = pref;
+    localStorage.setItem('notificationPref', pref);
+  }
+
   $: isAuthenticated = !!me;
   $: myPresence = members.find(m => m.username === me?.username)?.presenceStatus || 'online';
   $: filteredEmojis = emojiSearchQuery
