@@ -1409,23 +1409,14 @@
 <style>
   /* ===== BASE ===== */
   .discord-app {
-    width: 100%;
-    min-height: 100%;
-    min-height: 100dvh;
-    height: 100%;
-    height: 100dvh;
+    position: fixed;
+    inset: 0;
     display: flex;
     flex-direction: column;
     background: var(--bg-root);
     color: var(--text-body);
     font-size: 0.875rem;
     overflow: hidden;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
   }
 
   /* ===== TOAST ===== */
@@ -1473,7 +1464,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: calc(2rem + env(safe-area-inset-top, 0px)) 2rem 2rem;
+    padding: 2rem;
     animation: auth-fade-in 0.5s ease-out;
   }
 
@@ -1610,7 +1601,7 @@
   }
 
   .sidebar-header {
-    padding: calc(0.875rem + env(safe-area-inset-top, 0px)) 1rem 0.875rem;
+    padding: 0.875rem 1rem;
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
     justify-content: space-between;
@@ -1773,7 +1764,7 @@
   }
 
   .chat-header {
-    padding: calc(0.875rem + env(safe-area-inset-top, 0px)) 1rem 0.875rem;
+    padding: 0.875rem 1rem;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--bg-root);
     display: flex;
@@ -2207,7 +2198,6 @@
   /* ===== COMPOSER ===== */
   .composer {
     padding: 0 1rem 1rem;
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
 
   .composer-input-row {

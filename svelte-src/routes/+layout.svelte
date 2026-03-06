@@ -12,15 +12,15 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
     overflow: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
   :global(body > div) {
     height: 100%;
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
   }
 
   :global(*) {
