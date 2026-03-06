@@ -859,6 +859,21 @@
 </script>
 
 <main class="discord-app">
+
+<style>
+  /* Ensure headers respect iOS safe area insets */
+  .chat-header,
+  .sidebar-header,
+  .auth-header,
+  .calendar-fullpage-header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* If you have absolutely positioned back/nav buttons, also add: */
+  .back-button, .nav-back {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+  }
+</style>
   {#if !isAuthenticated}
     <section class="auth-shell">
       <article class="auth-card">
