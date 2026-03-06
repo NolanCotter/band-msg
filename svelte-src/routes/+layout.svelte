@@ -1,8 +1,10 @@
 <slot />
 
 <style>
+
   :global(html), :global(body) {
     height: 100%;
+    min-height: 100vh;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -12,15 +14,15 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
-    overflow: hidden;
     -webkit-overflow-scrolling: touch;
   }
 
   :global(body > div) {
     height: 100%;
-    height: 100dvh;
+    min-height: 100vh;
     width: 100%;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   :global(*) {
