@@ -877,7 +877,20 @@
 </style>
 <style>
   .discord-app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-root, #09090B);
+  }
+
+  /* Make main chat area fill available space */
+  .chat-main {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 </style>
   {#if !isAuthenticated}
