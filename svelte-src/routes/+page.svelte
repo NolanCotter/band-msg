@@ -1112,54 +1112,57 @@
     </section>
   {:else}
     <section class="discord-layout">
-      <!-- Server Rail -->
-      <nav class="server-rail">
-        <div class="server-rail-top">
-          <button class="server-icon home-icon" title="Home" aria-label="Home">
-            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-          </button>
-          <div class="server-separator"></div>
-        </div>
-        <div class="server-list">
-          {#each servers as server}
-            <button class="server-icon" class:active={selectedServerId === server.id} on:click={() => selectServer(server)} title={server.name}>
-              {#if server.iconUrl}
-                <img src={server.iconUrl} alt={server.name} />
-              {:else}
-                <span class="server-icon-text">{server.name.slice(0, 2).toUpperCase()}</span>
-              {/if}
-            </button>
-          {/each}
-          {#if me?.role === 'admin'}
-            <button class="server-icon add-server" title="Add Server">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-            </button>
-          {/if}
-        </div>
-      </nav>
-
-      <!-- Channel Sidebar -->
-      <aside class="channel-sidebar">
+      <!-- Channel Sidebar (removed server rail) -->
+      <aside class="channel-sidebar no-server-rail">
         <header class="sidebar-header">
           <h2>{servers.find(s => s.id === selectedServerId)?.name || "Band Chat"}</h2>
           <div class="sidebar-header-actions">
             {#if selectedServerId}
               <button class="icon-btn" on:click={() => createInvite(selectedServerId)} title="Create Invite">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
               </button>
             {/if}
             <button class="icon-btn mobile-close-btn" on:click={() => showChannelSidebar = false} title="Close">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>
           </div>
         </header>
 
+        <!-- Admin Section -->
         {#if me?.role === "admin"}
+          <div class="admin-section">
+            <button class="admin-section-header" on:click={() => showAdminPanel = !showAdminPanel} type="button" aria-expanded={showAdminPanel} aria-controls="admin-panel-content">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 4.354a4 4 0 1 1 0 5.292M15 21H3v-1a6 6 0 0 1 12 0v1zm0 0h6v-1a6 6 0 0 0-9-5.197"/></svg>
+              <span>Admin Panel</span>
+              {#if pendingUsers.length > 0}
+                <span class="admin-badge">{pendingUsers.length}</span>
+              {/if}
+            </button>
+            {#if showAdminPanel}
+              <div class="admin-panel-content">
+                <p class="admin-panel-title">Pending Approvals</p>
+                {#if pendingUsers.length === 0}
+                  <p class="admin-empty">No pending requests</p>
+                {:else}
+                  {#each pendingUsers as user}
+                    <div class="pending-user-item">
+                      <span class="pending-username">{user.username}</span>
+                      <div class="pending-actions">
+                        <button class="admin-btn approve" on:click={() => approveUser(user.username)}>✓</button>
+                        <button class="admin-btn deny" on:click={() => rejectPendingUser(user.username)}>✕</button>
+                      </div>
+                    </div>
+                  {/each}
+                {/if}
+              </div>
+            {/if}
+          </div>
+          
           <div class="admin-create">
             <p class="section-title">Create channel</p>
             <input class="field" bind:value={newChannel} placeholder="channel-name" />
-            <input class="field" bind:value={newChannelDescription} placeholder="description" />
-            <button class="primary-btn" on:click={createChannel}>Create</button>
+            <input class="field" bind:value={newChannelDescription} placeholder="description (optional)" />
+            <button class="primary-btn small" on:click={createChannel}>Create</button>
           </div>
         {/if}
 
@@ -1193,20 +1196,17 @@
         <footer class="user-footer">
           <div class="user-footer-info">
             <span class="presence-dot {myPresence}"></span>
-            <div>
+            <div class="user-text">
               <strong>{me?.username}</strong>
-              <p>{me?.role}</p>
             </div>
           </div>
           <div class="footer-actions">
-            {#if me?.role === "admin"}
-              <button class="icon-btn" class:has-badge={pendingUsers.length > 0} on:click={() => { showAdminPanel = true; refreshPendingUsers(); }} title="Admin Panel">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.354a4 4 0 1 1 0 5.292M15 21H3v-1a6 6 0 0 1 12 0v1zm0 0h6v-1a6 6 0 0 0-9-5.197"/></svg>
-                {#if pendingUsers.length > 0}<span class="badge-dot"></span>{/if}
-              </button>
-            {/if}
-            <button class="icon-btn" on:click={toggleCalendar} title="Calendar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
-            <button class="icon-btn" on:click={logout} title="Logout"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+            <button class="icon-btn" on:click={() => showNotificationPrefs = !showNotificationPrefs} title="Settings">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            </button>
+            <button class="icon-btn" on:click={logout} title="Logout">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
           </div>
         </footer>
       </aside>
@@ -1456,7 +1456,7 @@
           <span>Members</span>
         </button>
         <button class="mobile-nav-item" on:click={() => { showNotificationPrefs = !showNotificationPrefs; }} aria-label="Settings">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15.4a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.22.65.22 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.08.69-.22 1z"/></svg>
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
           <span>Settings</span>
         </button>
       </nav>
@@ -1967,13 +1967,119 @@
     display: none;
   }
 
-  /* Discord-like mobile bottom nav */
-  .mobile-nav {
-    display: none;
+  /* Admin Section */
+  .admin-section {
+    margin: 8px;
+    border-radius: 8px;
+    overflow: hidden;
   }
 
-  .mobile-nav-toggle {
-    display: none;
+  .admin-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-base-tertiary, #1e1f22);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 150ms ease-out;
+    color: var(--text-muted, #949ba4);
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    text-align: left;
+  }
+
+  .admin-section-header:hover {
+    background: var(--bg-modifier-hover, rgba(79,84,92,0.16));
+    color: var(--text-normal, #dbdee1);
+  }
+
+  .admin-badge {
+    margin-left: auto;
+    background: var(--red-500, #f04054);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .admin-panel-content {
+    padding: 8px;
+    background: var(--bg-base-tertiary, #1e1f22);
+    margin-top: 4px;
+    border-radius: 8px;
+  }
+
+  .admin-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted, #949ba4);
+    text-transform: uppercase;
+    margin: 0 0 8px 0;
+  }
+
+  .admin-empty {
+    font-size: 13px;
+    color: var(--text-muted, #949ba4);
+    padding: 8px;
+    text-align: center;
+  }
+
+  .pending-user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    background: var(--bg-base-secondary, #2b2d31);
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+
+  .pending-username {
+    font-size: 13px;
+    color: var(--text-normal, #dbdee1);
+    font-weight: 500;
+  }
+
+  .pending-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .admin-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 150ms ease-out;
+  }
+
+  .admin-btn.approve {
+    background: var(--green-500, #00ba7c);
+    color: #fff;
+  }
+
+  .admin-btn.approve:hover {
+    background: var(--green-600, #00965e);
+  }
+
+  .admin-btn.deny {
+    background: var(--red-500, #f04054);
+    color: #fff;
+  }
+
+  .admin-btn.deny:hover {
+    background: var(--red-600, #da373c);
   }
 
   .admin-create {
@@ -2080,31 +2186,24 @@
   }
 
   .user-footer {
-    background: var(--bg-base-secondary, #2b2d31);
-    padding: 0.5rem 0.75rem;
+    background: var(--bg-base-tertiary, #1e1f22);
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 8px;
     border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
   }
 
   .user-footer strong {
     color: var(--text-normal, #dbdee1);
-    font-size: 0.875rem;
+    font-size: 13px;
     font-weight: 600;
-  }
-
-  .user-footer p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    text-transform: capitalize;
   }
 
   .footer-actions {
     display: flex;
-    gap: 0.25rem;
+    gap: 4px;
   }
 
   /* ===== MAIN CHAT AREA ===== */
@@ -2520,50 +2619,52 @@
   .context-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    z-index: 9999;
+    background: rgba(0,0,0,0.4);
+    cursor: default;
   }
 
   .context-menu {
     position: fixed;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 0.3rem;
-    min-width: 160px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
-    z-index: 201;
-    /* Prevent context menu from overlapping the notch or home bar */
-    margin-top: env(safe-area-inset-top, 0px);
-    margin-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-base-secondary, #2b2d31);
+    border: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+    border-radius: 8px;
+    padding: 8px 0;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 10000;
+    pointer-events: auto;
   }
 
   .context-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     width: 100%;
     background: transparent;
     border: none;
-    color: var(--text-body);
+    color: var(--text-normal, #dbdee1);
     text-align: left;
-    padding: 0.5rem 0.7rem;
-    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: 14px;
     font-family: inherit;
-    transition: background 100ms ease-in;
+    transition: background 150ms ease-out;
+    pointer-events: auto;
   }
 
   .context-item:hover {
-    background: var(--accent);
-    color: var(--text-primary);
+    background: var(--brand-experiment, #5865f2);
   }
 
   .context-item.danger {
-    color: var(--error);
+    color: var(--red-400, #f45768);
   }
 
   .context-item.danger:hover {
-    background: var(--error);
-    color: var(--text-primary);
+    background: var(--red-500, #f04054);
+    color: #fff;
   }
 
   /* ===== TYPING ===== */
@@ -3530,6 +3631,10 @@
     flex-shrink: 0;
   }
 
+  .channel-sidebar.no-server-rail {
+    width: 280px;
+  }
+
   .server-header {
     height: 48px;
     padding: 0 16px;
@@ -4307,11 +4412,12 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: calc(60px + env(safe-area-inset-bottom, 0px));
-      background: var(--bg-base-secondary, #2b2d31);
+      height: calc(64px + env(safe-area-inset-bottom, 0px));
+      background: var(--bg-base-tertiary, #1e1f22);
       border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
       z-index: 1000;
       padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-top: 4px;
     }
 
     .mobile-nav-item {
@@ -4326,8 +4432,9 @@
       color: var(--text-muted, #949ba4);
       cursor: pointer;
       transition: all 150ms ease-out;
-      padding: 8px 0;
+      padding: 6px 0;
       position: relative;
+      min-width: 60px;
     }
 
     .mobile-nav-item.active {

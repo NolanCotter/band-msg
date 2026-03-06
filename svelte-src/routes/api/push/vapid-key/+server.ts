@@ -1,5 +1,3 @@
-import { webcrypto } from 'node:crypto';
-
 const toJson = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -16,10 +14,24 @@ export const GET = async () => {
       const webPush = await import('web-push');
       const keys = webPush.default.generateVAPIDKeys();
       vapidPublicKey = keys.publicKey;
+      // Store in a file for persistence across restarts
+      const fs = await import('fs');
+      const path = await import('path');
+      const envPath = path.join(process.cwd(), '.env.local');
+      let envContent = '';
+      if (fs.existsSync(envPath)) {
+        envContent = fs.readFileSync(envPath, 'utf-8');
+      }
+      if (!envContent.includes('VAPID_PUBLIC_KEY')) {
+        envContent += `\nVAPID_PUBLIC_KEY=${keys.publicKey}\nVAPID_PRIVATE_KEY=${keys.privateKey}\n`;
+        fs.writeFileSync(envPath, envContent);
+      }
       process.env.VAPID_PUBLIC_KEY = keys.publicKey;
       process.env.VAPID_PRIVATE_KEY = keys.privateKey;
-    } catch (e) {
-      return toJson({ error: "Failed to generate VAPID keys" }, 500);
+      console.log('VAPID keys generated and saved to .env.local');
+    } catch (e: any) {
+      console.error('Failed to generate VAPID keys:', e.message);
+      return toJson({ error: "Failed to generate VAPID keys: " + e.message }, 500);
     }
   }
 
