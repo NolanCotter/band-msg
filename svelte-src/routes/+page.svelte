@@ -1363,6 +1363,29 @@
         </footer>
       </section>
 
+      <!-- Mobile Bottom Navigation -->
+      <nav class="mobile-nav">
+        <button class="mobile-nav-item" class:active={!showCalendar} on:click={() => { showCalendar = false; }}>
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chat</span>
+        </button>
+        <button class="mobile-nav-item" class:active={showCalendar} on:click={() => { showCalendar = true; }}>
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Events</span>
+        </button>
+        <button class="mobile-nav-toggle" on:click={toggleChannelSidebar} aria-label="Toggle channels">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <button class="mobile-nav-item" class:active={showMemberList} on:click={toggleMemberList}>
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Members</span>
+        </button>
+        <button class="mobile-nav-item" on:click={() => { showNotificationPrefs = !showNotificationPrefs; }} aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15.4a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.22.65.22 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.08.69-.22 1z"/></svg>
+          <span>Settings</span>
+        </button>
+      </nav>
+
       <!-- Calendar Full Page -->
       {#if showCalendar}
         <div class="calendar-fullpage">
@@ -1866,6 +1889,15 @@
   }
 
   .mobile-close-btn {
+    display: none;
+  }
+
+  /* Discord-like mobile bottom nav */
+  .mobile-nav {
+    display: none;
+  }
+
+  .mobile-nav-toggle {
     display: none;
   }
 
@@ -3304,48 +3336,158 @@
     }
   }
 
+  /* ===== DISCORD-LIKE MOBILE UI ===== */
   @media (max-width: 980px) {
     .chat-shell,
     .chat-shell:has(.member-sidebar),
     .chat-shell:has(.member-sidebar.open) {
       grid-template-columns: 1fr;
       height: 100%;
+      height: 100dvh;
     }
 
+    /* Hide desktop-only elements */
     .hamburger-btn {
-      display: flex;
+      display: none;
     }
 
-    .mobile-close-btn {
+    .mobile-nav {
       display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(60px + env(safe-area-inset-bottom, 0px));
+      background: var(--bg-base-secondary, #2b2d31);
+      border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
+    .mobile-nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted, #949ba4);
+      cursor: pointer;
+      transition: all 150ms ease-out;
+      padding: 8px 0;
+      position: relative;
+    }
+
+    .mobile-nav-item.active {
+      color: var(--text-normal, #dbdee1);
+    }
+
+    .mobile-nav-item.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 3px;
+      background: var(--brand-experiment, #5865f2);
+      border-radius: 0 0 4px 4px;
+    }
+
+    .mobile-nav-item svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .mobile-nav-item span {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .mobile-nav-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--brand-experiment, #5865f2);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(88,101,242,0.4);
+      transition: transform 150ms ease-out;
+    }
+
+    .mobile-nav-toggle:active {
+      transform: scale(0.95);
+    }
+
+    /* Channel drawer - Discord mobile style */
     .channel-sidebar {
       position: fixed;
       left: 0;
       top: 0;
-      bottom: 0;
-      width: 280px;
-      z-index: 60;
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+      width: 85%;
+      max-width: 320px;
+      z-index: 110;
       transform: translateX(-100%);
-      transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
-      border-right: 1px solid var(--border-subtle);
+      transition: transform 250ms cubic-bezier(0.32, 0.72, 0, 1);
+      background: var(--bg-base-secondary, #2b2d31);
+      border-right: none;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.5);
       padding-top: env(safe-area-inset-top, 0px);
+      display: flex;
+      flex-direction: column;
     }
 
     .channel-sidebar.open {
       transform: translateX(0);
     }
 
+    .channel-sidebar .sidebar-header {
+      background: var(--bg-base-tertiary, #1e1f22);
+      border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+      padding: 12px 16px;
+      padding-top: calc(12px + env(safe-area-inset-top, 0px));
+      min-height: 56px;
+    }
+
+    .channel-sidebar .sidebar-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-normal, #dbdee1);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-sidebar .user-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+      background: var(--bg-base-tertiary, #1e1f22);
+      padding: 12px 16px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Member list drawer */
     .member-sidebar {
       position: fixed;
       right: 0;
       top: 0;
-      bottom: 0;
-      width: 260px !important;
-      z-index: 60;
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+      width: 80%;
+      max-width: 280px;
+      z-index: 110;
       transform: translateX(100%);
-      transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1), width 0s;
+      transition: transform 250ms cubic-bezier(0.32, 0.72, 0, 1);
+      background: var(--bg-base-secondary, #2b2d31);
+      border-left: none;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.5);
       padding-top: env(safe-area-inset-top, 0px);
     }
 
@@ -3353,15 +3495,24 @@
       transform: translateX(0);
     }
 
+    .member-sidebar .sidebar-header {
+      background: var(--bg-base-tertiary, #1e1f22);
+      border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+      padding: 12px 16px;
+      min-height: 56px;
+    }
+
+    /* Overlay backdrop */
     .sidebar-overlay {
       display: block;
       position: fixed;
       inset: 0;
-      z-index: 55;
-      background: rgba(0,0,0,0.60);
+      z-index: 105;
+      background: rgba(0,0,0,0.7);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
-      animation: fade-in 0.2s ease-out;
+      opacity: 0;
+      animation: fade-in 200ms ease-out forwards;
     }
 
     @keyframes fade-in {
@@ -3369,8 +3520,318 @@
       to { opacity: 1; }
     }
 
+    /* Chat header - mobile optimized */
+    .chat-header {
+      padding: 12px 16px;
+      padding-top: calc(12px + env(safe-area-inset-top, 0px));
+      min-height: 56px;
+      background: var(--bg-base-primary, #313338);
+      border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-header h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-normal, #dbdee1);
+    }
+
+    .chat-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-header-actions .icon-btn {
+      width: 36px;
+      height: 36px;
+    }
+
+    /* Composer - mobile optimized */
+    .composer {
+      padding: 8px 16px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+      background: var(--bg-base-primary, #313338);
+    }
+
+    .composer-input-row {
+      gap: 8px;
+    }
+
+    .composer-input-row .field {
+      min-height: 44px;
+      font-size: 16px; /* Prevents iOS zoom */
+    }
+
+    .composer-input-row .primary-btn {
+      min-width: 70px;
+      height: 44px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Messages - mobile optimized */
+    .messages-scroll {
+      padding: 8px 0;
+    }
+
+    .message-row {
+      padding: 8px 16px;
+      gap: 12px;
+    }
+
+    .message-row .avatar {
+      width: 36px;
+      height: 36px;
+      font-size: 14px;
+    }
+
+    .message-content :global(p.message-text) {
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    /* Quick reactions - larger touch targets */
+    .quick-reactions {
+      gap: 6px;
+    }
+
+    .quick-reactions .quick-react-btn {
+      width: 32px;
+      height: 32px;
+    }
+
+    /* Context menu - mobile friendly */
+    .context-backdrop {
+      padding: 16px;
+    }
+
+    .context-menu {
+      max-width: calc(100% - 32px);
+      min-width: 200px;
+    }
+
+    .context-item {
+      padding: 14px 16px;
+      font-size: 1rem;
+    }
+
+    /* Bottom sheet for modals */
+    .bottom-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 80vh;
+      border-radius: 16px 16px 0 0;
+      margin: 0;
+      width: 100%;
+    }
+
+    .bottom-sheet-backdrop {
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    /* Emoji picker - mobile */
+    .reaction-picker {
+      max-height: 70vh;
+      width: 100%;
+      border-radius: 16px 16px 0 0;
+    }
+
     .emoji-grid {
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+    }
+
+    .emoji-btn {
+      width: 44px;
+      height: 44px;
+      font-size: 24px;
+    }
+
+    /* GIF picker - mobile */
+    .gif-picker-modal {
+      max-height: 80vh;
+      width: 100%;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .gif-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    /* Auth - mobile */
+    .auth-shell {
+      padding: 16px;
+      padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    }
+
+    .auth-card {
+      padding: 24px 16px;
+    }
+
+    .auth-fields .field {
+      min-height: 48px;
+      font-size: 16px;
+    }
+
+    .auth-submit {
+      height: 48px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    /* Calendar - mobile */
+    .calendar-fullpage {
+      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Member list items - larger touch targets */
+    .member-item {
+      min-height: 52px;
+      padding: 12px 16px;
+    }
+
+    /* Section titles */
+    .section-title {
+      padding: 12px 16px 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted, #949ba4);
+      font-weight: 600;
+    }
+
+    /* Channel links - larger touch targets */
+    .channel-link {
+      min-height: 44px;
+      padding: 10px 12px;
+      font-size: 15px;
+    }
+
+    .channel-link::before {
+      font-size: 18px;
+    }
+
+    /* Notification prefs menu */
+    .notification-prefs-menu {
+      right: 8px;
+      left: auto;
+      max-width: calc(100% - 16px);
+    }
+
+    /* Rehearsal countdown - mobile */
+    .rehearsal-countdown {
+      margin: 8px 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      gap: 8px;
+    }
+
+    /* Admin panel - mobile */
+    .admin-panel-modal {
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .pending-user-item {
+      min-height: 60px;
+    }
+
+    .pending-user-item .primary-btn,
+    .pending-user-item .ghost-btn {
+      min-height: 36px;
+      min-width: 80px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* Toast - mobile positioning */
+    .toast {
+      bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+      left: 16px;
+      right: 16px;
+      max-width: none;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 14px;
+    }
+
+    /* Presence dot in footer */
+    .presence-dot {
+      width: 10px;
+      height: 10px;
+    }
+
+    /* Icon buttons - consistent sizing */
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+    }
+
+    /* Server name in sidebar header - truncate */
+    .sidebar-header h2 {
+      max-width: calc(100% - 100px);
+    }
+
+    /* Hide desktop-only close button on mobile, use X in header */
+    .mobile-close-btn {
+      display: flex;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: var(--bg-modifier-hover, rgba(79,84,92,0.16));
+      color: var(--text-normal, #dbdee1);
+    }
+
+    /* Improved scrolling */
+    .channels-wrap,
+    .member-list-content {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Prevent pull-to-refresh on chat */
+    .messages-scroll {
+      overscroll-behavior-y: contain;
+    }
+  }
+
+  /* Small phones */
+  @media (max-width: 400px) {
+    .mobile-nav {
+      height: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .mobile-nav-item svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .mobile-nav-item span {
+      font-size: 9px;
+    }
+
+    .message-row {
+      padding: 6px 12px;
+    }
+
+    .message-row .avatar {
+      width: 32px;
+      height: 32px;
+    }
+
+    .channel-sidebar,
+    .member-sidebar {
+      width: 90%;
     }
   }
 </style>
