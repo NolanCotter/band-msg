@@ -1068,7 +1068,49 @@
           </div>
           <div class="chat-header-actions">
             <button class="icon-btn" class:active={showMemberList} on:click={toggleMemberList} title="Member List"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+            <button class="icon-btn" on:click={() => showNotificationPrefs = !showNotificationPrefs} title="Notification Preferences" aria-label="Notification Preferences">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15.4a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 8c.14.31.22.65.22 1v.09A1.65 1.65 0 0 0 21 12c0 .35-.08.69-.22 1z"/>
+              </svg>
+            </button>
+            {#if showNotificationPrefs}
+              <div class="notification-prefs-menu">
+                <label><input type="radio" name="notif" value="all" checked={notificationPref === 'all'} on:change={() => setNotificationPref('all')}/> All messages</label>
+                <label><input type="radio" name="notif" value="mentions" checked={notificationPref === 'mentions'} on:change={() => setNotificationPref('mentions')}/> Mentions only</label>
+                <label><input type="radio" name="notif" value="dms" checked={notificationPref === 'dms'} on:change={() => setNotificationPref('dms')}/> DMs only</label>
+                <label><input type="radio" name="notif" value="none" checked={notificationPref === 'none'} on:change={() => setNotificationPref('none')}/> None</label>
+              </div>
+            {/if}
           </div>
+        <style>
+          .notification-prefs-menu {
+            position: absolute;
+            top: 2.5rem;
+            right: 0;
+            background: var(--bg-surface, #18181B);
+            color: var(--text-body, #D4D4D8);
+            border: 1px solid var(--border, #333);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            padding: 0.75rem 1.25rem;
+            z-index: 100;
+            min-width: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          .notification-prefs-menu label {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            font-size: 1rem;
+            cursor: pointer;
+          }
+          .notification-prefs-menu input[type="radio"] {
+            accent-color: var(--accent, #3B82F6);
+          }
+        </style>
         </header>
 
         <!-- Reconnecting Overlay -->
@@ -1098,6 +1140,9 @@
               <article
                 class="message-row"
                 on:contextmenu={(e) => handleMessageContextMenu(e, msg.id, msg.author)}
+                on:pointerdown={(e) => handleMessagePointerDown(e, msg.id)}
+                on:pointerup={handleMessagePointerUp}
+                on:pointerleave={handleMessagePointerUp}
               >
                 <div class="avatar">{msg.author.slice(0, 1).toUpperCase()}</div>
                 <div class="message-content">
@@ -1179,6 +1224,42 @@
             </div>
           {/if}
         </div>
+
+        {#if contextMenuMessageId}
+          <div class="message-context-menu" style="position: fixed; top: {contextMenuY}px; left: {contextMenuX}px; z-index: 200; background: var(--bg-surface, #18181B); color: var(--text-body, #D4D4D8); border: 1px solid var(--border, #333); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: 140px; padding: 0.5rem 0;">
+            <button class="context-menu-item" on:click={() => { selectedMessageForReaction = contextMenuMessageId; showEmojiPicker = true; closeContextMenu(); }}>React</button>
+            {#if me?.username === contextMenuAuthor}
+              <button class="context-menu-item" on:click={() => { unsendMessage(contextMenuMessageId); closeContextMenu(); }}>Unsend</button>
+            {/if}
+            <button class="context-menu-item" on:click={closeContextMenu}>Cancel</button>
+          </div>
+        {/if}
+<style>
+  .message-context-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    animation: fadeIn 0.12s;
+  }
+  .context-menu-item {
+    background: none;
+    border: none;
+    color: inherit;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .context-menu-item:hover {
+    background: var(--bg-hover, #27272A);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+</style>
 
         <footer class="composer">
           <div class="composer-input-row">
