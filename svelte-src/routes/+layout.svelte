@@ -17,6 +17,13 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Safe area for iOS notch/Dynamic Island */
+  @supports(padding-top: env(safe-area-inset-top)) {
+    :global(body) {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+
   :global(body > div) {
     height: 100%;
     min-height: 100vh;
