@@ -389,6 +389,8 @@
 
   async function selectChannel(channel: Channel) {
     selectedChannelId = channel.id; selectedChannelName = channel.name;
+    messages = []; isLoadingMessages = true;
+    showChannelSidebar = false;
     await refreshMessages();
   }
 
@@ -538,8 +540,8 @@
       contextMenuX = Math.min(event.clientX || window.innerWidth / 2, window.innerWidth - 160);
       contextMenuY = Math.min(event.clientY || window.innerHeight / 2, window.innerHeight - 200);
       longPressTimer = null;
-      if (navigator.vibrate) navigator.vibrate(50);
-    }, 500);
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 350);
   }
 
   function handleMessagePointerUp() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
@@ -672,7 +674,7 @@
 
 <!-- ==================== AUTH SCREEN ==================== -->
 {#if !isAuthenticated}
-  <div class="fixed inset-0 flex items-center justify-center bg-surface-0 px-6 py-10 sm:px-10">
+  <div class="flex h-full items-center justify-center bg-surface-0 px-6 py-10 sm:px-10">
     <!-- Subtle radial glow behind the card -->
     <div class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-accent/[0.04] blur-[120px]"></div>
 
@@ -757,7 +759,7 @@
 
 <!-- ==================== MAIN APP ==================== -->
 {:else}
-  <div class="fixed inset-0 flex flex-col bg-surface-0" style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);">
+  <div class="flex h-full flex-col bg-surface-0" style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);">
     <div class="flex min-h-0 flex-1 overflow-hidden">
 
       <!-- ===== CHANNEL SIDEBAR ===== -->
@@ -821,11 +823,11 @@
           <div class="space-y-px">
             {#each channels as channel}
               <button
-                class="group relative flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left transition-all duration-150
+                class="group relative flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-all duration-150 active:scale-[0.98] active:bg-glass-active
                   {channel.id === selectedChannelId
                     ? 'bg-glass-selected text-text-primary'
                     : 'text-text-secondary hover:bg-glass-hover hover:text-text-primary'}"
-                on:click={() => { selectChannel(channel); showChannelSidebar = false; }}
+                on:click={() => selectChannel(channel)}
                 on:contextmenu={(e) => { if (me?.role === 'admin') { e.preventDefault(); confirmDeleteChannel(channel.id, channel.name); } }}
               >
                 <span class="shrink-0 text-[16px] leading-none opacity-50 font-medium">#</span>
@@ -857,8 +859,8 @@
             <p class="truncate text-[13px] font-semibold leading-tight text-text-primary">{me?.username}</p>
             <p class="truncate text-[11px] leading-tight text-text-tertiary capitalize">{myPresence}</p>
           </div>
-          <button class="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-glass-hover hover:text-danger" on:click={logout} title="Sign out">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <button class="flex h-9 w-9 items-center justify-center rounded-xl text-text-tertiary transition-all hover:bg-glass-hover hover:text-danger active:scale-95 active:bg-glass-active" on:click={logout} title="Sign out">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
         </div>
       </aside>
@@ -866,9 +868,9 @@
       <!-- ===== MAIN CHAT AREA ===== -->
       <section class="flex min-w-0 flex-1 flex-col bg-surface-2">
         <!-- Chat Header -->
-        <header class="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-          <div class="flex items-center gap-2">
-            <button class="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-glass-hover hover:text-text-secondary md:hidden" on:click={toggleChannelSidebar}>
+        <header class="flex h-13 shrink-0 items-center justify-between border-b border-border px-3">
+          <div class="flex items-center gap-1.5">
+            <button class="flex h-10 w-10 items-center justify-center rounded-xl text-text-tertiary transition-all hover:bg-glass-hover hover:text-text-secondary active:scale-95 active:bg-glass-active md:hidden" on:click={toggleChannelSidebar}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
             {#if selectedChannelName}
@@ -878,25 +880,25 @@
               <h3 class="text-[15px] font-medium text-text-tertiary">Select a channel</h3>
             {/if}
           </div>
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-0.5">
             <button
-              class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors {showCalendar ? 'bg-glass-selected text-text-primary' : 'text-text-tertiary hover:bg-glass-hover hover:text-text-secondary'}"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-all active:scale-95 {showCalendar ? 'bg-glass-selected text-text-primary' : 'text-text-tertiary hover:bg-glass-hover hover:text-text-secondary active:bg-glass-active'}"
               on:click={toggleCalendar} title="Events"
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </button>
             <button
-              class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors {showMemberList ? 'bg-glass-selected text-text-primary' : 'text-text-tertiary hover:bg-glass-hover hover:text-text-secondary'}"
+              class="flex h-10 w-10 items-center justify-center rounded-xl transition-all active:scale-95 {showMemberList ? 'bg-glass-selected text-text-primary' : 'text-text-tertiary hover:bg-glass-hover hover:text-text-secondary active:bg-glass-active'}"
               on:click={toggleMemberList} title="Members"
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
             </button>
             <div class="relative">
               <button
-                class="flex h-8 w-8 items-center justify-center rounded-lg transition-colors {showNotificationPrefs ? 'bg-glass-selected text-text-primary' : 'text-text-tertiary hover:bg-glass-hover hover:text-text-secondary'}"
+                class="flex h-10 w-10 items-center justify-center rounded-xl transition-all active:scale-95 {showNotificationPrefs ? 'bg-glass-selected text-text-primary' : 'text-text-tertiary hover:bg-glass-hover hover:text-text-secondary active:bg-glass-active'}"
                 on:click={() => showNotificationPrefs = !showNotificationPrefs} title="Notifications"
               >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               </button>
               {#if showNotificationPrefs}
                 <div class="absolute right-0 top-10 z-50 min-w-[200px] rounded-xl border border-border bg-surface-3 p-3 shadow-xl shadow-black/40">
@@ -935,7 +937,7 @@
 
         <!-- Calendar View -->
         {#if showCalendar}
-          <div class="flex-1 overflow-y-auto">
+          <div class="animate-content-in flex-1 overflow-y-auto">
             <div class="mx-auto max-w-2xl p-4">
               <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-text-primary">Events</h2>
@@ -981,13 +983,15 @@
           <div class="flex-1 overflow-y-auto" bind:this={messageContainer} on:scroll={handleScroll}>
             <div class="flex min-h-full flex-col justify-end px-4 pb-4">
               {#if isLoadingMessages}
-                {#each Array(5) as _}
-                  <div class="mt-4 flex gap-3">
-                    <div class="h-10 w-10 shrink-0 rounded-full bg-surface-3 animate-pulse-skeleton"></div>
-                    <div class="flex-1 space-y-2 py-1">
-                      <div class="h-3 w-24 rounded bg-surface-3 animate-pulse-skeleton"></div>
-                      <div class="h-3 w-48 rounded bg-surface-3 animate-pulse-skeleton"></div>
-                      <div class="h-3 w-32 rounded bg-surface-3 animate-pulse-skeleton"></div>
+                {#each Array(6) as _, i}
+                  <div class="mt-5 flex gap-3" style:opacity={1 - i * 0.12}>
+                    <div class="h-10 w-10 shrink-0 rounded-full bg-surface-4/60 animate-pulse-skeleton"></div>
+                    <div class="flex-1 space-y-2.5 py-1">
+                      <div class="h-3.5 rounded-md bg-surface-4/60 animate-pulse-skeleton" style:width="{60 + (i * 17) % 40}px"></div>
+                      <div class="h-3.5 rounded-md bg-surface-4/40 animate-pulse-skeleton" style:width="{120 + (i * 37) % 180}px"></div>
+                      {#if i % 2 === 0}
+                        <div class="h-3.5 rounded-md bg-surface-4/30 animate-pulse-skeleton" style:width="{80 + (i * 23) % 100}px"></div>
+                      {/if}
                     </div>
                   </div>
                 {/each}
@@ -1038,7 +1042,7 @@
                             {#each msg.reactions as reaction}
                               {@const icon = getReactionIcon(reaction.emoji)}
                               <button
-                                class="flex items-center gap-1 rounded-full px-2 py-[3px] text-[12px] transition-all
+                                class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all active:scale-95
                                   {reaction.users.includes(me?.username || '')
                                     ? 'bg-accent-subtle border border-accent/30 text-text-primary'
                                     : 'bg-glass border border-border text-text-secondary hover:bg-glass-hover hover:border-border-hover'}"
@@ -1048,31 +1052,31 @@
                                 }}
                                 title={reaction.users.join(', ')}
                               >
-                                <span class="flex items-center">
+                                <span class="text-[15px] leading-none">
                                   {#if isGifReaction(reaction.emoji).isGif}
-                                    <img src={isGifReaction(reaction.emoji).url} alt="GIF" class="h-4 w-4 rounded" />
+                                    <img src={isGifReaction(reaction.emoji).url} alt="GIF" class="h-5 w-5 rounded" />
                                   {:else if icon}
-                                    {@html icon.svg}
+                                    {icon.emoji}
                                   {:else}
                                     {reaction.emoji}
                                   {/if}
                                 </span>
-                                <span class="font-medium">{reaction.count}</span>
+                                <span class="font-semibold">{reaction.count}</span>
                               </button>
                             {/each}
                           </div>
                         {/if}
                       </div>
 
-                      <!-- Hover toolbar -->
-                      <div class="absolute -top-3.5 right-2 flex items-center rounded-lg border border-border bg-surface-3 opacity-0 shadow-lg shadow-black/30 transition-all duration-150 group-hover:opacity-100">
-                        {#each REACTION_ICONS.slice(0, 4) as icon}
-                          <button class="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:text-text-primary" on:click={() => addReaction(msg.id, icon.id)} title={icon.label}>
-                            {@html icon.svg}
+                      <!-- Hover toolbar (desktop) -->
+                      <div class="pointer-events-none absolute -top-4 right-2 flex items-center gap-0.5 rounded-lg border border-border bg-surface-3 px-1 py-0.5 opacity-0 shadow-lg shadow-black/30 transition-all duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                        {#each REACTION_ICONS.slice(0, 5) as icon}
+                          <button class="flex h-8 w-8 items-center justify-center rounded-md text-[16px] transition-all hover:scale-110 hover:bg-glass-hover active:scale-95" on:click={() => addReaction(msg.id, icon.id)} title={icon.label}>
+                            {icon.emoji}
                           </button>
                         {/each}
-                        <button class="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:text-text-secondary" on:click={() => { selectedMessageForReaction = msg.id; showEmojiPicker = true; }} title="More">
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <button class="flex h-8 w-8 items-center justify-center rounded-md text-text-tertiary transition-all hover:bg-glass-hover hover:text-text-secondary active:scale-95" on:click={() => { selectedMessageForReaction = msg.id; showEmojiPicker = true; }} title="More">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         </button>
                       </div>
                     </div>
@@ -1111,7 +1115,7 @@
                             {#each msg.reactions as reaction}
                               {@const icon = getReactionIcon(reaction.emoji)}
                               <button
-                                class="flex items-center gap-1 rounded-full px-2 py-[3px] text-[12px] transition-all
+                                class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] transition-all active:scale-95
                                   {reaction.users.includes(me?.username || '')
                                     ? 'bg-accent-subtle border border-accent/30 text-text-primary'
                                     : 'bg-glass border border-border text-text-secondary hover:bg-glass-hover hover:border-border-hover'}"
@@ -1121,16 +1125,16 @@
                                 }}
                                 title={reaction.users.join(', ')}
                               >
-                                <span class="flex items-center">
+                                <span class="text-[15px] leading-none">
                                   {#if isGifReaction(reaction.emoji).isGif}
-                                    <img src={isGifReaction(reaction.emoji).url} alt="GIF" class="h-4 w-4 rounded" />
+                                    <img src={isGifReaction(reaction.emoji).url} alt="GIF" class="h-5 w-5 rounded" />
                                   {:else if icon}
-                                    {@html icon.svg}
+                                    {icon.emoji}
                                   {:else}
                                     {reaction.emoji}
                                   {/if}
                                 </span>
-                                <span class="font-medium">{reaction.count}</span>
+                                <span class="font-semibold">{reaction.count}</span>
                               </button>
                             {/each}
                           </div>
@@ -1152,15 +1156,15 @@
 
           <!-- Message Input -->
           <div class="shrink-0 px-4 pb-4 pt-1">
-            <div class="flex items-center rounded-xl bg-surface-3/80 transition-colors focus-within:bg-surface-3">
+            <div class="flex items-center gap-1 rounded-2xl bg-surface-3/80 px-1 transition-colors focus-within:bg-surface-3">
               <button
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-l-xl text-text-tertiary transition-colors hover:text-text-secondary disabled:opacity-30"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-text-tertiary transition-all hover:text-text-secondary active:scale-90 disabled:opacity-30"
                 on:click={openGifPicker} disabled={!selectedChannelId} title="GIF"
               >
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="3"/><text x="12" y="14.5" text-anchor="middle" font-size="7" font-weight="800" fill="currentColor" stroke="none">GIF</text></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="3"/><text x="12" y="14.5" text-anchor="middle" font-size="7" font-weight="800" fill="currentColor" stroke="none">GIF</text></svg>
               </button>
               <input
-                class="min-w-0 flex-1 bg-transparent py-3 text-[14px] text-text-primary placeholder-text-tertiary outline-none"
+                class="min-w-0 flex-1 bg-transparent py-3.5 text-[15px] text-text-primary placeholder-text-tertiary outline-none"
                 bind:value={newMessage}
                 on:input={handleTyping}
                 placeholder={selectedChannelId ? `Message #${selectedChannelName || "channel"}` : "Select a channel"}
@@ -1168,10 +1172,10 @@
                 on:keydown={(event) => event.key === "Enter" && sendMessage()}
               />
               <button
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-r-xl transition-colors {newMessage.trim() && selectedChannelId ? 'text-accent hover:text-accent-hover' : 'text-text-tertiary/30'}"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all active:scale-90 {newMessage.trim() && selectedChannelId ? 'text-accent hover:text-accent-hover' : 'text-text-tertiary/30'}"
                 on:click={sendMessage} disabled={!selectedChannelId || !newMessage.trim()}
               >
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
               </button>
             </div>
           </div>
@@ -1259,10 +1263,10 @@
         <div class="px-5 pt-3" data-vaul-no-drag>
           <input class="w-full rounded-xl border border-border bg-surface-0/60 px-4 py-2.5 text-[13px] text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent/50" bind:value={emojiSearchQuery} placeholder="Search emoji..." />
         </div>
-        <div class="grid grid-cols-6 gap-1 overflow-y-auto p-5" data-vaul-no-drag>
+        <div class="grid grid-cols-7 gap-0.5 overflow-y-auto px-4 py-3" data-vaul-no-drag>
           {#each filteredEmojis as icon}
-            <button class="flex h-11 w-full items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-glass-hover hover:text-text-primary active:scale-90" on:click={() => { addReaction(selectedMessageForReaction, icon.id); closeEmojiPicker(); }} title={icon.label}>
-              {@html icon.svg}
+            <button class="flex aspect-square w-full items-center justify-center rounded-xl text-[22px] transition-all hover:bg-glass-hover active:scale-90 active:bg-glass-active" on:click={() => { addReaction(selectedMessageForReaction, icon.id); closeEmojiPicker(); }} title={icon.label}>
+              {icon.emoji}
             </button>
           {/each}
           {#if filteredEmojis.length === 0}
@@ -1331,20 +1335,35 @@
     <Drawer.Content class="fixed inset-x-0 bottom-0 z-[70] rounded-t-2xl bg-surface-2 outline-none">
       <div class="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-surface-4"></div>
       <Drawer.Title class="sr-only">Message Actions</Drawer.Title>
-      <div class="space-y-0.5 px-3 py-3">
-        <button class="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-[14px] font-medium text-text-primary transition-colors hover:bg-glass-hover active:bg-glass-active" on:click={() => { selectedMessageForReaction = contextMenuMessageId; showEmojiPicker = true; closeContextMenu(); }}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-          Add Reaction
+
+      <!-- Quick reactions row -->
+      <div class="flex items-center justify-center gap-2 px-5 pt-4 pb-2">
+        {#each REACTION_ICONS.slice(0, 6) as icon}
+          <button
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-3 text-[22px] transition-all hover:bg-surface-4 active:scale-90 active:bg-glass-active"
+            on:click={() => { addReaction(contextMenuMessageId, icon.id); closeContextMenu(); }}
+            title={icon.label}
+          >{icon.emoji}</button>
+        {/each}
+        <button
+          class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-3 text-text-tertiary transition-all hover:bg-surface-4 active:scale-90"
+          on:click={() => { selectedMessageForReaction = contextMenuMessageId; showEmojiPicker = true; closeContextMenu(); }}
+          title="More reactions"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
+      </div>
+
+      <div class="space-y-0.5 px-4 py-2">
         {#if contextMenuAuthor === me?.username || me?.role === 'admin'}
-          <button class="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-[14px] font-medium text-danger transition-colors hover:bg-danger/10 active:bg-danger/15" on:click={() => unsendMessage(contextMenuMessageId)}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <button class="flex w-full items-center gap-3.5 rounded-xl px-4 py-3.5 text-left text-[15px] font-medium text-danger transition-colors hover:bg-danger/10 active:bg-danger/15" on:click={() => unsendMessage(contextMenuMessageId)}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Unsend Message
           </button>
         {/if}
       </div>
-      <div class="px-3 pb-4">
-        <button class="w-full rounded-xl bg-surface-3 py-3 text-center text-[14px] font-medium text-text-secondary transition-colors hover:bg-surface-4 active:bg-glass-active" on:click={closeContextMenu}>Cancel</button>
+      <div class="px-4 pb-5 pt-1">
+        <button class="w-full rounded-xl bg-surface-3 py-3.5 text-center text-[15px] font-medium text-text-secondary transition-colors hover:bg-surface-4 active:bg-glass-active" on:click={closeContextMenu}>Cancel</button>
       </div>
     </Drawer.Content>
   </Drawer.Portal>
