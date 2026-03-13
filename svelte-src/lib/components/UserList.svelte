@@ -18,7 +18,7 @@
 </script>
 
 {#if $memberStore.showUserList}
-  <div class="hidden md:flex flex-col w-56 min-w-56 max-w-56 bg-[#0a0a0a] border-l border-white/10 overflow-hidden">
+  <div class="hidden md:flex flex-col bg-[#0a0a0a] border-l border-white/10 overflow-hidden" style="width: 240px !important; min-width: 240px !important; max-width: 240px !important; flex-shrink: 0;">
     <div class="h-14 flex items-center px-4 border-b border-white/10 shrink-0">
       <h3 class="text-[12px] font-semibold text-white/30 uppercase tracking-widest">
         Band Members

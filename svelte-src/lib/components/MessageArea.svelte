@@ -122,7 +122,7 @@
 
 <div class="flex-1 flex flex-col min-w-0 bg-black">
   <!-- Header -->
-  <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative z-10">
+  <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative" style="z-index: 100;">
     <div class="flex items-center gap-3">
       <!-- Mobile channels button -->
       <button
@@ -151,10 +151,11 @@
         </p>
       </div>
     </div>
-    <div class="flex items-center gap-1 relative z-20">
+    <div class="flex items-center gap-1 relative" style="z-index: 101; pointer-events: auto;">
       <button
-        on:click={() => { console.log('Notification clicked'); showNotificationSettings = true; }}
-        class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation"
+        on:click|stopPropagation={() => { showNotificationSettings = true; }}
+        class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer"
+        style="pointer-events: auto;"
         title="Notifications"
         type="button"
       >
@@ -164,8 +165,9 @@
         </svg>
       </button>
       <button
-        on:click={() => { console.log('Calendar clicked'); showCalendar = true; }}
-        class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation"
+        on:click|stopPropagation={() => { showCalendar = true; }}
+        class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer"
+        style="pointer-events: auto;"
         title="Calendar"
         type="button"
       >
@@ -178,8 +180,9 @@
       </button>
       {#if $authStore.user?.role === 'admin'}
         <button
-          on:click={() => { console.log('Admin clicked'); showAdminPanel = true; }}
-          class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation"
+          on:click|stopPropagation={() => { showAdminPanel = true; }}
+          class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer"
+          style="pointer-events: auto;"
           title="Admin Panel"
           type="button"
         >
