@@ -46,3 +46,6 @@ next-env.d.ts
 
 # convex
 convex/_generated/
+
+# discord-server-build-request (reference UI)
+/discord-server-build-request
