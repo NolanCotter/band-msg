@@ -122,7 +122,7 @@
 
 <div class="flex-1 flex flex-col min-w-0 bg-black">
   <!-- Header -->
-  <div class="flex items-center justify-between px-4 border-b border-white/10 shrink-0" style="height: calc(3.5rem + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top);">
+  <div class="flex items-center justify-between px-4 border-b border-white/10 shrink-0 pt-safe pb-4" style="padding-top: max(1rem, env(safe-area-inset-top)); min-height: 3.5rem;">
     <div class="flex items-center gap-3">
       <!-- Mobile channels button -->
       <button
@@ -208,7 +208,7 @@
   </div>
 
   <!-- Messages -->
-  <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-4 scrollbar-hide">
+  <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-4 scrollbar-hide bg-[#1a1a1a]">
     <!-- Welcome message -->
     <div class="px-4 md:px-5 mb-6">
       <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-3 text-white">
@@ -272,7 +272,7 @@
   </div>
 
   <!-- User panel at bottom -->
-  <div class="flex items-center gap-2.5 px-4 bg-black border-t border-white/10 shrink-0" style="height: calc(3.5rem + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);">
+  <div class="flex items-center gap-2.5 px-4 bg-black border-t border-white/10 shrink-0 py-3" style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); min-height: 3.5rem;">
     <Avatar alt={$authStore.user?.username || ''} size="sm" status={null} />
     <div class="flex-1 min-w-0">
       <p class="text-[13px] font-medium text-white truncate">{$authStore.user?.username}</p>
