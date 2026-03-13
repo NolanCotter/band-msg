@@ -8,9 +8,9 @@
   }
 </script>
 
-<div class="w-60 bg-[#0e0e10] border-r border-white/[0.04] flex flex-col">
+<div class="w-60 bg-[#0a0a0a] border-r border-white/10 flex flex-col hidden md:flex">
   <!-- Server header -->
-  <div class="h-14 flex items-center px-4 border-b border-white/[0.04] shrink-0">
+  <div class="h-14 flex items-center px-4 border-b border-white/10 shrink-0">
     <h2 class="text-[15px] font-semibold text-white">Band Chat</h2>
   </div>
 
@@ -24,7 +24,7 @@
         {#each $channelStore.channels as channel}
           <button
             on:click={() => selectChannel(channel.id)}
-            class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg transition-colors {$channelStore.selectedChannelId === channel.id ? 'bg-white/[0.08] text-white' : 'text-white/50 hover:bg-white/[0.04] hover:text-white/70'}"
+            class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg transition-colors {$channelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />

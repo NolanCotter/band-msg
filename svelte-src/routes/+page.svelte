@@ -20,10 +20,16 @@
       await channelStore.loadChannels();
       await memberStore.loadMembers();
       
+      // Load messages for selected channel
+      if ($channelStore.selectedChannelId) {
+        await messageStore.loadMessages($channelStore.selectedChannelId);
+      }
+      
       // Start polling for updates
       refreshInterval = setInterval(async () => {
         if ($channelStore.selectedChannelId) {
           await messageStore.loadMessages($channelStore.selectedChannelId);
+          await messageStore.loadTypingUsers($channelStore.selectedChannelId);
         }
         await memberStore.loadMembers();
       }, 2000);
@@ -42,7 +48,7 @@
 {#if !$authStore.user}
   <AuthScreen />
 {:else}
-  <div class="h-screen w-screen flex overflow-hidden bg-[#09090b] text-white antialiased">
+  <div class="h-screen w-screen flex overflow-hidden bg-black text-white antialiased">
     <!-- Channel Sidebar -->
     <ChannelSidebar />
     
@@ -59,13 +65,14 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: #09090b;
+    background: #000000;
     font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   :global(*) {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+    box-sizing: border-box;
   }
 
   :global(.scrollbar-hide) {
@@ -75,5 +82,11 @@
 
   :global(.scrollbar-hide::-webkit-scrollbar) {
     display: none;
+  }
+
+  @media (max-width: 768px) {
+    :global(body) {
+      overflow-x: hidden;
+    }
   }
 </style>

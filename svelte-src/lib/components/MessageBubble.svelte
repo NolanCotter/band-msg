@@ -88,7 +88,7 @@
             {@const hasReacted = reaction.users.includes($authStore.user?.username)}
             <button
               on:click={() => handleReactionClick(reaction.emoji)}
-              class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all border {hasReacted ? 'bg-orange-500/15 border-orange-500/30 text-orange-300' : 'bg-white/[0.04] border-white/[0.06] text-white/50 hover:bg-white/[0.08]'}"
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all border {hasReacted ? 'bg-white/20 border-white/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}"
             >
               <span>{reaction.emoji}</span>
               <span class="font-medium">{reaction.count}</span>
@@ -102,7 +102,8 @@
     {#if isOwn}
       <button
         on:click={handleDelete}
-        class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-white/30 hover:text-rose-400"
+        class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-white/30 hover:text-white"
+        aria-label="Delete message"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6" />

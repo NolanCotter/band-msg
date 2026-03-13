@@ -1,18 +1,30 @@
 <script lang="ts">
   import { onMount, afterUpdate } from 'svelte';
+  import { Drawer } from 'vaul-svelte';
   import { authStore } from '../stores/auth';
   import { channelStore } from '../stores/channels';
   import { messageStore } from '../stores/messages';
   import { memberStore } from '../stores/members';
   import MessageBubble from './MessageBubble.svelte';
+  import AdminPanel from './AdminPanel.svelte';
+  import Calendar from './Calendar.svelte';
   
   let messageInput = '';
   let messageContainer: HTMLDivElement;
   let typingTimeout: ReturnType<typeof setTimeout> | null = null;
+  let showAdminPanel = false;
+  let showCalendar = false;
+  let showMobileChannels = false;
+  let showMobileMembers = false;
 
   $: selectedChannel = $channelStore.channels.find(
     c => c.id === $channelStore.selectedChannelId
   );
+
+  // Load messages when channel changes
+  $: if ($channelStore.selectedChannelId) {
+    messageStore.loadMessages($channelStore.selectedChannelId);
+  }
 
   function scrollToBottom() {
     setTimeout(() => {
@@ -66,32 +78,110 @@
       handleSend();
     }
   }
+
+  async function selectChannel(channelId: string) {
+    channelStore.selectChannel(channelId);
+    await messageStore.loadMessages(channelId);
+    showMobileChannels = false;
+  }
+
+  function getAvatarColor(name: string): string {
+    const colors = ['#7c3aed', '#2563eb', '#e11d48', '#059669', '#d97706', '#db2777'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  const statusColors: Record<string, string> = {
+    online: 'bg-white',
+    idle: 'bg-white/60',
+    dnd: 'bg-white/40',
+    offline: 'bg-white/20',
+  };
+
+  const statusLabels: Record<string, string> = {
+    online: 'Online',
+    idle: 'Away',
+    dnd: 'In Session',
+    offline: 'Offline',
+  };
+
+  $: grouped = {
+    online: $memberStore.members.filter(u => u.presenceStatus === 'online'),
+    idle: $memberStore.members.filter(u => u.presenceStatus === 'idle'),
+    dnd: $memberStore.members.filter(u => u.presenceStatus === 'dnd'),
+    offline: $memberStore.members.filter(u => u.presenceStatus === 'offline'),
+  };
 </script>
 
-<div class="flex-1 flex flex-col min-w-0 bg-[#111113]">
+<div class="flex-1 flex flex-col min-w-0 bg-black">
   <!-- Header -->
-  <div class="h-14 flex items-center justify-between px-4 border-b border-white/[0.04] shrink-0">
+  <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/10 text-white">
+      <!-- Mobile channels button -->
+      <button
+        on:click={() => showMobileChannels = true}
+        class="md:hidden p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5"
+        aria-label="Open channels"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+      
+      <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-lg text-black">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18V5l12-2v13" />
-          <circle cx="6" cy="18" r="3" />
-          <circle cx="18" cy="16" r="3" />
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </div>
       <div>
         <h3 class="text-[15px] font-semibold text-white tracking-tight leading-tight">
           #{selectedChannel?.name || 'general'}
         </h3>
-        <p class="text-[11px] text-white/30 leading-tight">
+        <p class="text-[11px] text-white/30 leading-tight hidden sm:block">
           {selectedChannel?.description || 'Band chat'}
         </p>
       </div>
     </div>
     <div class="flex items-center gap-1">
       <button
-        on:click={() => memberStore.toggleUserList()}
-        class="p-2 rounded-lg transition-colors {$memberStore.showUserList ? 'text-white/60 bg-white/[0.06]' : 'text-white/20 hover:text-white/40 hover:bg-white/[0.05]'}"
+        on:click={() => showCalendar = true}
+        class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5"
+        title="Calendar"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      </button>
+      {#if $authStore.user?.role === 'admin'}
+        <button
+          on:click={() => showAdminPanel = true}
+          class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5"
+          title="Admin Panel"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+      {/if}
+      <button
+        on:click={() => {
+          if (window.innerWidth < 768) {
+            showMobileMembers = true;
+          } else {
+            memberStore.toggleUserList();
+          }
+        }}
+        class="p-2 rounded-lg transition-colors {$memberStore.showUserList ? 'text-white bg-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}"
+        title="Members"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -107,11 +197,9 @@
   <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-4 scrollbar-hide">
     <!-- Welcome message -->
     <div class="px-4 md:px-5 mb-6">
-      <div class="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-3 text-orange-400/60">
+      <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-3 text-white">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18V5l12-2v13" />
-          <circle cx="6" cy="18" r="3" />
-          <circle cx="18" cy="16" r="3" />
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </div>
       <h2 class="text-2xl font-bold text-white mb-1">
@@ -122,7 +210,7 @@
       </p>
     </div>
 
-    <div class="h-px bg-white/[0.04] mx-4 mb-4" />
+    <div class="h-px bg-white/10 mx-4 mb-4"></div>
 
     {#each $messageStore.messages as message, i}
       {@const prev = i > 0 ? $messageStore.messages[i - 1] : null}
@@ -143,7 +231,7 @@
 
   <!-- Input area -->
   <div class="px-4 pb-4 md:pb-5 shrink-0">
-    <div class="relative flex items-center bg-white/[0.04] border border-white/[0.06] rounded-2xl overflow-hidden transition-all focus-within:border-orange-500/20 focus-within:bg-white/[0.06]">
+    <div class="relative flex items-center bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-all focus-within:border-white/30 focus-within:bg-white/10">
       <input
         type="text"
         bind:value={messageInput}
@@ -157,7 +245,8 @@
       <button
         on:click={handleSend}
         disabled={!messageInput.trim()}
-        class="p-3 transition-colors shrink-0 {messageInput.trim() ? 'text-orange-400 hover:text-orange-300' : 'text-white/10'}"
+        class="p-3 transition-colors shrink-0 {messageInput.trim() ? 'text-white hover:text-white/80' : 'text-white/10'}"
+        aria-label="Send message"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="22" y1="2" x2="11" y2="13" />
@@ -168,12 +257,12 @@
   </div>
 
   <!-- User panel at bottom -->
-  <div class="h-14 flex items-center gap-2.5 px-4 bg-[#09090b] border-t border-white/[0.04] shrink-0">
+  <div class="h-14 flex items-center gap-2.5 px-4 bg-black border-t border-white/10 shrink-0">
     <div class="relative">
-      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-600 flex items-center justify-center text-white text-sm font-semibold">
+      <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-black text-sm font-semibold">
         {$authStore.user?.username.charAt(0).toUpperCase()}
       </div>
-      <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#09090b]" />
+      <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-white rounded-full border-2 border-black"></div>
     </div>
     <div class="flex-1 min-w-0">
       <p class="text-[13px] font-medium text-white truncate">{$authStore.user?.username}</p>
@@ -181,3 +270,91 @@
     </div>
   </div>
 </div>
+
+{#if showAdminPanel}
+  <AdminPanel onClose={() => showAdminPanel = false} />
+{/if}
+
+{#if showCalendar}
+  <Calendar onClose={() => showCalendar = false} />
+{/if}
+
+<!-- Mobile Channels Drawer -->
+<Drawer.Root bind:open={showMobileChannels}>
+  <Drawer.Portal>
+    <Drawer.Overlay class="fixed inset-0 bg-black/60 z-40" />
+    <Drawer.Content class="fixed bottom-0 left-0 right-0 max-h-[85vh] flex flex-col bg-[#0a0a0a] rounded-t-2xl z-50 border-t border-white/10">
+      <div class="flex-1 overflow-y-auto">
+        <div class="sticky top-0 bg-[#0a0a0a] border-b border-white/10 px-4 py-4">
+          <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4"></div>
+          <h2 class="text-lg font-semibold text-white">Channels</h2>
+        </div>
+        <div class="p-4">
+          <h3 class="text-xs font-semibold text-white/25 uppercase tracking-widest px-2 mb-2">
+            Text Channels
+          </h3>
+          <div class="space-y-1">
+            {#each $channelStore.channels as channel}
+              <button
+                on:click={() => selectChannel(channel.id)}
+                class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors {$channelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span class="text-base font-medium truncate">{channel.name}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
+
+<!-- Mobile Members Drawer -->
+<Drawer.Root bind:open={showMobileMembers}>
+  <Drawer.Portal>
+    <Drawer.Overlay class="fixed inset-0 bg-black/60 z-40" />
+    <Drawer.Content class="fixed bottom-0 left-0 right-0 max-h-[85vh] flex flex-col bg-[#0a0a0a] rounded-t-2xl z-50 border-t border-white/10">
+      <div class="flex-1 overflow-y-auto">
+        <div class="sticky top-0 bg-[#0a0a0a] border-b border-white/10 px-4 py-4">
+          <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4"></div>
+          <h2 class="text-lg font-semibold text-white">Band Members</h2>
+        </div>
+        <div class="p-4">
+          {#each Object.entries(grouped) as [status, users]}
+            {#if users.length > 0}
+              <div class="mb-6">
+                <h4 class="text-xs font-semibold text-white/25 uppercase tracking-widest px-2 mb-2">
+                  {statusLabels[status]} — {users.length}
+                </h4>
+                <div class="space-y-1">
+                  {#each users as user}
+                    <button class="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                      <div class="relative shrink-0">
+                        <div
+                          class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold {status === 'offline' ? 'bg-white/5' : 'bg-white/10'}"
+                          style={status !== 'offline' ? `background: ${getAvatarColor(user.username)};` : ''}
+                        >
+                          {user.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0a0a0a] {statusColors[status]}"></div>
+                      </div>
+                      <div class="flex-1 min-w-0 text-left">
+                        <p class="text-sm font-medium truncate {status === 'offline' ? 'text-white/30' : 'text-white/70'}">
+                          {user.username}
+                        </p>
+                        <p class="text-xs text-white/20 truncate">{user.role}</p>
+                      </div>
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
