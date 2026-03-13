@@ -122,7 +122,7 @@
 
 <div class="flex-1 flex flex-col min-w-0 bg-black">
   <!-- Header -->
-  <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0" style="padding-top: env(safe-area-inset-top);">
+  <div class="flex items-center justify-between px-4 border-b border-white/10 shrink-0" style="height: calc(3.5rem + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top);">
     <div class="flex items-center gap-3">
       <!-- Mobile channels button -->
       <button
@@ -272,7 +272,7 @@
   </div>
 
   <!-- User panel at bottom -->
-  <div class="h-14 flex items-center gap-2.5 px-4 bg-black border-t border-white/10 shrink-0" style="padding-bottom: env(safe-area-inset-bottom);">
+  <div class="flex items-center gap-2.5 px-4 bg-black border-t border-white/10 shrink-0" style="height: calc(3.5rem + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);">
     <Avatar alt={$authStore.user?.username || ''} size="sm" status={null} />
     <div class="flex-1 min-w-0">
       <p class="text-[13px] font-medium text-white truncate">{$authStore.user?.username}</p>
