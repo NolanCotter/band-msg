@@ -8,7 +8,7 @@
   }
 </script>
 
-<div class="bg-[#0a0a0a] border-r border-white/10 flex flex-col hidden md:flex" style="width: 240px !important; min-width: 240px !important; max-width: 240px !important; flex-shrink: 0;">
+<div class="hidden md:flex bg-[#0a0a0a] border-r border-white/10 flex-col" style="width: 240px; min-width: 240px; max-width: 240px; flex-shrink: 0;">
   <!-- Server header -->
   <div class="h-14 flex items-center px-4 border-b border-white/10 shrink-0">
     <h2 class="text-[15px] font-semibold text-white">Band Chat</h2>
