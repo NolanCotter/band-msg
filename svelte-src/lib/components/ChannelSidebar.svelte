@@ -8,7 +8,28 @@
   }
 </script>
 
-<div class="hidden md:flex bg-[#0a0a0a] border-r border-white/10 flex-col" style="width: 240px; min-width: 240px; max-width: 240px; flex-shrink: 0;">
+<style>
+  .channel-sidebar {
+    display: none;
+    background-color: #0a0a0a;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    flex-direction: column;
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
+    flex-shrink: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  @media (min-width: 768px) {
+    .channel-sidebar {
+      display: flex;
+    }
+  }
+</style>
+
+<div class="channel-sidebar">
   <!-- Server header -->
   <div class="h-14 flex items-center px-4 border-b border-white/10 shrink-0">
     <h2 class="text-[15px] font-semibold text-white">Band Chat</h2>

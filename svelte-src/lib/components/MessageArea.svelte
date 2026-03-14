@@ -120,7 +120,7 @@
   };
 </script>
 
-<div class="flex-1 flex flex-col min-w-0 bg-black">
+<div class="flex-1 flex flex-col min-w-0 bg-black" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
   <!-- Header -->
   <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative" style="z-index: 100;">
     <div class="flex items-center gap-3">

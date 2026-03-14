@@ -17,8 +17,30 @@
   };
 </script>
 
+<style>
+  .members-sidebar {
+    display: none;
+    flex-direction: column;
+    background-color: #0a0a0a;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
+    flex-shrink: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  @media (min-width: 768px) {
+    .members-sidebar {
+      display: flex;
+    }
+  }
+</style>
+
 {#if $memberStore.showUserList}
-  <div class="hidden md:flex flex-col bg-[#0a0a0a] border-l border-white/10 overflow-hidden" style="width: 240px; min-width: 240px; max-width: 240px; flex-shrink: 0;">
+  <div class="members-sidebar">
     <div class="h-14 flex items-center px-4 border-b border-white/10 shrink-0">
       <h3 class="text-[12px] font-semibold text-white/30 uppercase tracking-widest">
         Band Members
