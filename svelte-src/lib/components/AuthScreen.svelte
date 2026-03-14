@@ -135,6 +135,7 @@
         {/if}
 
         <button
+          type="button"
           on:click={handleSubmit}
           disabled={$authStore.isLoading}
           class="w-full py-3 bg-white text-black font-semibold rounded-xl hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -150,6 +151,7 @@
 
       <div class="mt-6 text-center">
         <button
+          type="button"
           on:click={() => { mode = mode === 'login' ? 'register' : 'login'; error = ''; }}
           class="text-sm text-white/40 hover:text-white/60 transition-colors"
         >

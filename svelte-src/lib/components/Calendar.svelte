@@ -68,19 +68,21 @@
   }
 </script>
 
-<div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+<div class="fixed inset-0 bg-black/80 flex items-center justify-center z-[200] p-4" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
   <div class="bg-[#111] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-white/10">
       <h2 class="text-xl font-bold text-white">Calendar & Events</h2>
       <div class="flex items-center gap-2">
         <button
+          type="button"
           on:click={() => showCreateForm = !showCreateForm}
           class="px-4 py-2 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-sm font-medium"
         >
           {showCreateForm ? 'Cancel' : 'New Event'}
         </button>
         <button
+          type="button"
           on:click={onClose}
           class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
         >
@@ -144,6 +146,7 @@
               </div>
             </div>
             <button
+              type="button"
               on:click={createEvent}
               class="w-full px-4 py-2 bg-white text-black rounded-lg hover:bg-white/90 transition-colors font-medium"
             >

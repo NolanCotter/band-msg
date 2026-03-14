@@ -55,7 +55,7 @@
             </h4>
             <div class="space-y-0.5">
               {#each users as user}
-                <button class="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group">
+                <button type="button" class="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group">
                   <Avatar
                     alt={user.username}
                     size="sm"

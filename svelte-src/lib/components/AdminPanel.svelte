@@ -69,12 +69,13 @@
   }
 </script>
 
-<div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+<div class="fixed inset-0 bg-black/80 flex items-center justify-center z-[200] p-4" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
   <div class="bg-[#111] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-white/10">
       <h2 class="text-xl font-bold text-white">Admin Panel</h2>
       <button
+        type="button"
         on:click={onClose}
         class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
       >
@@ -88,12 +89,14 @@
     <!-- Tabs -->
     <div class="flex border-b border-white/10">
       <button
+        type="button"
         on:click={() => activeTab = 'pending'}
         class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'pending' ? 'text-white border-b-2 border-white' : 'text-white/40 hover:text-white/60'}"
       >
         Pending Approvals ({pendingUsers.length})
       </button>
       <button
+        type="button"
         on:click={() => activeTab = 'users'}
         class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'users' ? 'text-white border-b-2 border-white' : 'text-white/40 hover:text-white/60'}"
       >
@@ -121,12 +124,14 @@
                   </div>
                   <div class="flex gap-2">
                     <button
+                      type="button"
                       on:click={() => approveUser(user.username)}
                       class="px-4 py-2 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-sm font-medium"
                     >
                       Approve
                     </button>
                     <button
+                      type="button"
                       on:click={() => rejectUser(user.username)}
                       class="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
                     >

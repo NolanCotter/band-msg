@@ -122,12 +122,13 @@
 
 <div class="flex-1 flex flex-col min-w-0 bg-black" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
   <!-- Header -->
-  <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative" style="z-index: 100;">
+  <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative z-10">
     <div class="flex items-center gap-3">
       <!-- Mobile channels button -->
       <button
+        type="button"
         on:click={() => showMobileChannels = true}
-        class="md:hidden p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5"
+        class="md:hidden p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 touch-manipulation"
         aria-label="Open channels"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -151,13 +152,12 @@
         </p>
       </div>
     </div>
-    <div class="flex items-center gap-1 relative" style="z-index: 101; pointer-events: auto;">
+    <div class="flex items-center gap-1 relative">
       <button
+        type="button"
         on:click|stopPropagation={() => { showNotificationSettings = true; }}
         class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer"
-        style="pointer-events: auto;"
         title="Notifications"
-        type="button"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -165,11 +165,10 @@
         </svg>
       </button>
       <button
+        type="button"
         on:click|stopPropagation={() => { showCalendar = true; }}
         class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer"
-        style="pointer-events: auto;"
         title="Calendar"
-        type="button"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -180,11 +179,10 @@
       </button>
       {#if $authStore.user?.role === 'admin'}
         <button
+          type="button"
           on:click|stopPropagation={() => { showAdminPanel = true; }}
           class="p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer"
-          style="pointer-events: auto;"
           title="Admin Panel"
-          type="button"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
@@ -193,6 +191,7 @@
         </button>
       {/if}
       <button
+        type="button"
         on:click={() => {
           if (window.innerWidth < 768) {
             showMobileMembers = true;
@@ -264,6 +263,7 @@
         />
       </div>
       <button
+        type="button"
         on:click={handleSend}
         disabled={!messageInput.trim()}
         class="p-3 rounded-xl transition-all shrink-0 {messageInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
@@ -303,7 +303,7 @@
 <Drawer.Root bind:open={showMobileChannels} direction="left">
   <Drawer.Portal>
     <Drawer.Overlay class="fixed inset-0 bg-black/60 z-40" />
-    <Drawer.Content class="fixed top-0 bottom-0 left-0 w-80 max-w-[85vw] flex flex-col bg-[#0a0a0a] z-50 border-r border-white/10">
+    <Drawer.Content class="fixed top-0 bottom-0 left-0 w-80 max-w-[85vw] flex flex-col bg-[#0a0a0a] z-50 border-r border-white/10" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
       <div class="flex-1 overflow-y-auto">
         <div class="sticky top-0 bg-[#0a0a0a] border-b border-white/10 px-4 py-4">
           <h2 class="text-lg font-semibold text-white">Channels</h2>
@@ -315,6 +315,7 @@
           <div class="space-y-1">
             {#each $channelStore.channels as channel}
               <button
+                type="button"
                 on:click={() => selectChannel(channel.id)}
                 class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors {$channelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
               >
@@ -335,7 +336,7 @@
 <Drawer.Root bind:open={showMobileMembers} direction="right">
   <Drawer.Portal>
     <Drawer.Overlay class="fixed inset-0 bg-black/60 z-40" />
-    <Drawer.Content class="fixed top-0 bottom-0 right-0 w-80 max-w-[85vw] flex flex-col bg-[#0a0a0a] z-50 border-l border-white/10">
+    <Drawer.Content class="fixed top-0 bottom-0 right-0 w-80 max-w-[85vw] flex flex-col bg-[#0a0a0a] z-50 border-l border-white/10" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
       <div class="flex-1 overflow-y-auto">
         <div class="sticky top-0 bg-[#0a0a0a] border-b border-white/10 px-4 py-4">
           <h2 class="text-lg font-semibold text-white">Band Members</h2>
@@ -349,7 +350,7 @@
                 </h4>
                 <div class="space-y-1">
                   {#each users as user}
-                    <button class="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-white/5 transition-colors">
+                    <button type="button" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-white/5 transition-colors">
                       <Avatar
                         alt={user.username}
                         size="md"

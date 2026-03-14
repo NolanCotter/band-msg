@@ -60,39 +60,4 @@
   </div>
 {/if}
 
-<style>
-  :global(body) {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #000000;
-    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    height: 100vh;
-    height: 100dvh;
-  }
 
-  :global(*) {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    box-sizing: border-box;
-  }
-
-  :global(.scrollbar-hide) {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  :global(.scrollbar-hide::-webkit-scrollbar) {
-    display: none;
-  }
-
-  @media (max-width: 768px) {
-    :global(body) {
-      overflow-x: hidden;
-      touch-action: pan-y;
-    }
-  }
-</style>

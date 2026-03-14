@@ -77,12 +77,13 @@
   }
 </script>
 
-<div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" on:click={onClose}>
+<div class="fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);" on:click={onClose}>
   <div class="bg-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl" on:click|stopPropagation>
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-white/10">
       <h2 class="text-xl font-bold text-white">Notification Settings</h2>
       <button
+        type="button"
         on:click={onClose}
         class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
         aria-label="Close"
@@ -111,6 +112,7 @@
           </p>
         </div>
         <button
+          type="button"
           on:click={handleToggleNotifications}
           disabled={isLoading || notificationPermission === 'denied'}
           class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {isSubscribed ? 'bg-white' : 'bg-white/20'} disabled:opacity-50 disabled:cursor-not-allowed"
@@ -137,6 +139,7 @@
       {#if isSubscribed}
         <div class="pt-4 border-t border-white/10">
           <button
+            type="button"
             on:click={testNotification}
             class="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-colors text-sm font-medium"
           >

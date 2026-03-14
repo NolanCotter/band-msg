@@ -44,6 +44,7 @@
       <div class="space-y-0.5">
         {#each $channelStore.channels as channel}
           <button
+            type="button"
             on:click={() => selectChannel(channel.id)}
             class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg transition-colors {$channelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
           >
