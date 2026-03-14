@@ -1,4 +1,4 @@
-import { listMessages, sendMessage, deleteMessage, getPushSubscriptionsExceptUser, getUserBySession } from "$lib/server/db";
+import { listMessages, sendMessage, deleteMessage, getPushSubscriptionsForMessage, getUserBySession } from "$lib/server/db";
 import webPush from 'web-push';
 
 // VAPID keys should be set in environment variables
@@ -69,7 +69,10 @@ export const POST = async ({ locals, request }: any) => {
   try {
     const user = await getUserBySession(locals.sessionToken);
     if (user && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-      const subscriptions = await getPushSubscriptionsExceptUser(user.id);
+      const subscriptions = await getPushSubscriptionsForMessage({
+        userId: user.id,
+        channelId: channelId
+      });
       
       if (subscriptions.length > 0) {
         // Strip markdown image syntax for notifications if it's a GIF
@@ -80,7 +83,9 @@ export const POST = async ({ locals, request }: any) => {
           title: `New message from ${user.username}`,
           body: displayContent,
           url: '/',
-          tag: 'band-chat-message'
+          icon: '/icons/icon-192.png',
+          badge: '/icons/icon-192.png',
+          tag: `band-chat-message-${channelId}`
         });
 
         // Send notifications asynchronously

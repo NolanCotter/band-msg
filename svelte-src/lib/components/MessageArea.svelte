@@ -12,6 +12,7 @@
   import Avatar from './Avatar.svelte';
   import Input from './Input.svelte';
   import GiphyPicker from './GiphyPicker.svelte';
+  import CreateChannel from './CreateChannel.svelte';
   
   let messageInput = '';
   let messageContainer: HTMLDivElement;
@@ -22,6 +23,7 @@
   let showMobileMembers = false;
   let showNotificationSettings = false;
   let showGiphy = false;
+  let showCreateChannel = false;
 
   $: selectedChannel = $channelStore.channels.find(
     c => c.id === $channelStore.selectedChannelId
@@ -309,7 +311,7 @@
   </div>
 
   <!-- User panel at bottom -->
-  <div class="h-12 flex items-center gap-2.5 px-4 bg-black border-t border-white/8 shrink-0" style="padding-bottom: env(safe-area-inset-bottom);">
+  <div class="flex items-center gap-2.5 px-4 bg-black border-t border-white/8 shrink-0 py-3" style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); min-height: calc(3rem + env(safe-area-inset-bottom));">
     <div class="relative">
       <Avatar alt={$authStore.user?.username || ''} size="sm" status={null} />
       <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-black"></div>
@@ -323,6 +325,10 @@
 
 {#if showAdminPanel}
   <AdminPanel onClose={() => showAdminPanel = false} />
+{/if}
+
+{#if showCreateChannel}
+  <CreateChannel onClose={() => showCreateChannel = false} />
 {/if}
 
 {#if showCalendar}

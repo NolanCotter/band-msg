@@ -1,4 +1,4 @@
-import { createChannel, listChannels } from "$lib/server/db";
+import { setChannelMuted, getMutedChannelIds } from "$lib/server/db";
 
 const toJson = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -11,7 +11,9 @@ export const GET = async ({ locals }: any) => {
     return toJson({ error: "unauthorized" }, 401);
   }
 
-  const result = await listChannels(locals.sessionToken);
+  const result = await getMutedChannelIds({
+    sessionToken: locals.sessionToken
+  });
 
   if (result.ok === false) {
     return toJson({ error: result.error }, result.code ?? 400);
@@ -20,30 +22,24 @@ export const GET = async ({ locals }: any) => {
   return toJson(result.value);
 };
 
-export const POST = async ({ locals, request }: any) => {
+export const POST = async ({ locals, params, request }: any) => {
   if (!locals.sessionToken) {
     return toJson({ error: "unauthorized" }, 401);
   }
 
+  const channelId = params.id;
   const body = await request.json().catch(() => null);
-  const name = typeof body?.name === "string" ? body.name : "";
-  const description = typeof body?.description === "string" ? body.description : "";
-  const isPrivate = typeof body?.isPrivate === "boolean" ? body.isPrivate : false;
+  const muted = typeof body?.muted === "boolean" ? body.muted : true;
 
-  if (!name) {
-    return toJson({ error: "name is required" }, 400);
-  }
-
-  const result = await createChannel({
+  const result = await setChannelMuted({
     sessionToken: locals.sessionToken,
-    name,
-    description,
-    isPrivate
+    channelId,
+    muted
   });
 
   if (result.ok === false) {
     return toJson({ error: result.error }, result.code ?? 400);
   }
 
-  return toJson({ id: result.value.channelId }, 201);
+  return toJson({ ok: true });
 };

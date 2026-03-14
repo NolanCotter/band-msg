@@ -249,6 +249,17 @@ async function ensureDb(): Promise<void> {
         )
       `;
 
+      // Channel notification settings
+      await sql`
+        CREATE TABLE IF NOT EXISTS channel_notification_settings (
+          channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          muted BOOLEAN DEFAULT false,
+          updated_at BIGINT NOT NULL,
+          PRIMARY KEY (channel_id, user_id)
+        )
+      `;
+
       // Push notifications subscriptions
       await sql`
         CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -617,10 +628,13 @@ export async function listChannels(sessionToken: string): Promise<Result<Array<{
     return { ok: false, code: 401, error: "Unauthorized" };
   }
 
+  // Get all public channels AND private channels the user is a member of (or all if admin)
   const rows = await sql`
-    SELECT id, name, description
-    FROM channels
-    ORDER BY created_at ASC
+    SELECT c.id, c.name, c.description, c.is_private
+    FROM channels c
+    LEFT JOIN channel_members cm ON c.id = cm.channel_id AND cm.user_id = ${user.id}
+    WHERE c.is_private = false OR ${user.role} = 'admin' OR cm.user_id IS NOT NULL
+    ORDER BY c.created_at ASC
   `;
   const channelRows = rows as any[];
 
@@ -629,7 +643,8 @@ export async function listChannels(sessionToken: string): Promise<Result<Array<{
     value: channelRows.map((row) => ({
       id: row.id,
       name: row.name,
-      description: row.description
+      description: row.description,
+      isPrivate: row.is_private
     }))
   };
 }
@@ -638,6 +653,7 @@ export async function createChannel(args: {
   sessionToken: string;
   name: string;
   description: string;
+  isPrivate?: boolean;
 }): Promise<Result<{ channelId: string }>> {
   const adminResult = await requireAdmin(args.sessionToken);
   if (adminResult.ok === false) {
@@ -651,10 +667,21 @@ export async function createChannel(args: {
 
   try {
     const id = crypto.randomUUID();
+    const now = Date.now();
+    
     await sql`
-      INSERT INTO channels (id, name, description, created_by, created_at)
-      VALUES (${id}, ${name}, ${args.description.trim().slice(0, 300)}, ${adminResult.value.id}, ${Date.now()})
+      INSERT INTO channels (id, name, description, is_private, created_by, created_at)
+      VALUES (${id}, ${name}, ${args.description.trim().slice(0, 300)}, ${args.isPrivate}, ${adminResult.value.id}, ${now})
     `;
+
+    if (args.isPrivate) {
+      // Add creator as member automatically
+      const memberId = crypto.randomUUID();
+      await sql`
+        INSERT INTO channel_members (id, channel_id, user_id, can_read, can_write, added_at)
+        VALUES (${memberId}, ${id}, ${adminResult.value.id}, true, true, ${now})
+      `;
+    }
 
     return { ok: true, value: { channelId: id } };
   } catch (error) {
@@ -692,9 +719,20 @@ export async function listMessages(args: {
     return { ok: false, code: 401, error: "Unauthorized" };
   }
 
-  const channelRows = await sql`SELECT id FROM channels WHERE id = ${args.channelId} LIMIT 1`;
-  if (!channelRows[0]) {
+  const channelRows = await sql`
+    SELECT c.id, c.is_private, cm.user_id as member_id, cm.can_read
+    FROM channels c
+    LEFT JOIN channel_members cm ON c.id = cm.channel_id AND cm.user_id = ${user.id}
+    WHERE c.id = ${args.channelId} LIMIT 1
+  `;
+  const channel = channelRows[0];
+  
+  if (!channel) {
     return { ok: false, code: 404, error: "Channel not found" };
+  }
+
+  if (channel.is_private && user.role !== "admin" && (!channel.member_id || !channel.can_read)) {
+    return { ok: false, code: 403, error: "You don't have permission to read this channel" };
   }
 
   const rows = await sql`
@@ -734,9 +772,20 @@ export async function sendMessage(args: {
     return { ok: false, code: 400, error: "Message must be 1-4000 chars" };
   }
 
-  const channelRows = await sql`SELECT id FROM channels WHERE id = ${args.channelId} LIMIT 1`;
-  if (!channelRows[0]) {
+  const channelRows = await sql`
+    SELECT c.id, c.is_private, cm.user_id as member_id, cm.can_write
+    FROM channels c
+    LEFT JOIN channel_members cm ON c.id = cm.channel_id AND cm.user_id = ${user.id}
+    WHERE c.id = ${args.channelId} LIMIT 1
+  `;
+  const channel = channelRows[0];
+  
+  if (!channel) {
     return { ok: false, code: 404, error: "Channel not found" };
+  }
+
+  if (channel.is_private && user.role !== "admin" && (!channel.member_id || !channel.can_write)) {
+    return { ok: false, code: 403, error: "You don't have permission to write in this channel" };
   }
 
   const id = crypto.randomUUID();
@@ -1314,6 +1363,62 @@ export async function removePushSubscription(args: {
   return { ok: true, value: { ok: true } };
 }
 
+export async function setChannelMuted(args: {
+  sessionToken: string;
+  channelId: string;
+  muted: boolean;
+}): Promise<Result<{ ok: true }>> {
+  const user = await getUserBySession(args.sessionToken);
+  if (!user) {
+    return { ok: false, code: 401, error: "Unauthorized" };
+  }
+
+  await sql`
+    INSERT INTO channel_notification_settings (channel_id, user_id, muted, updated_at)
+    VALUES (${args.channelId}, ${user.id}, ${args.muted}, ${Date.now()})
+    ON CONFLICT (channel_id, user_id)
+    DO UPDATE SET muted = ${args.muted}, updated_at = ${Date.now()}
+  `;
+
+  return { ok: true, value: { ok: true } };
+}
+
+export async function getMutedChannelIds(args: {
+  sessionToken: string;
+}): Promise<Result<string[]>> {
+  const user = await getUserBySession(args.sessionToken);
+  if (!user) {
+    return { ok: false, code: 401, error: "Unauthorized" };
+  }
+
+  const rows = await sql`
+    SELECT channel_id FROM channel_notification_settings
+    WHERE user_id = ${user.id} AND muted = true
+  `;
+
+  return { ok: true, value: rows.map(r => r.channel_id) };
+}
+
+export async function getPushSubscriptionsForMessage(args: {
+  userId: string;
+  channelId: string;
+}): Promise<Array<{ endpoint: string; p256dhKey: string; authKey: string }>> {
+  // Get all subscriptions except the sender's, and EXCEPT those who have muted this channel
+  const rows = await sql`
+    SELECT p.endpoint, p.p256dh_key, p.auth_key
+    FROM push_subscriptions p
+    LEFT JOIN channel_notification_settings cns ON p.user_id = cns.user_id AND cns.channel_id = ${args.channelId}
+    WHERE p.user_id != ${args.userId}
+      AND (cns.muted IS NULL OR cns.muted = false)
+  `;
+
+  return rows.map((r: any) => ({
+    endpoint: r.endpoint,
+    p256dhKey: r.p256dh_key,
+    authKey: r.auth_key
+  }));
+}
+
 export async function getPushSubscriptionsForUser(args: {
   sessionToken: string;
 }): Promise<Result<Array<{ endpoint: string; p256dhKey: string; authKey: string }>>> {
@@ -1342,20 +1447,6 @@ export async function getAllPushSubscriptions(): Promise<Array<{ endpoint: strin
   const rows = await sql`
     SELECT endpoint, p256dh_key, auth_key
     FROM push_subscriptions
-  `;
-
-  return rows.map((r: any) => ({
-    endpoint: r.endpoint,
-    p256dhKey: r.p256dh_key,
-    authKey: r.auth_key
-  }));
-}
-
-export async function getPushSubscriptionsExceptUser(userId: string): Promise<Array<{ endpoint: string; p256dhKey: string; authKey: string }>> {
-  const rows = await sql`
-    SELECT endpoint, p256dh_key, auth_key
-    FROM push_subscriptions
-    WHERE user_id != ${userId}
   `;
 
   return rows.map((r: any) => ({
