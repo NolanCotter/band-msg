@@ -120,7 +120,7 @@
   };
 </script>
 
-<div class="flex-1 flex flex-col min-w-0 bg-black" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
+<div class="flex-1 flex flex-col min-w-0 bg-black" style="padding-top: env(safe-area-inset-top);">
   <!-- Header -->
   <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative z-10">
     <div class="flex items-center gap-3">
@@ -213,23 +213,25 @@
   </div>
 
   <!-- Messages -->
-  <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-4 scrollbar-hide bg-[#1a1a1a]">
+  <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-3 scrollbar-hide bg-black">
     <!-- Welcome message -->
-    <div class="px-4 md:px-5 mb-6">
-      <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-3 text-white">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div class="px-4 md:px-5 mb-3 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-white/8 flex items-center justify-center shrink-0 text-white">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </div>
-      <h2 class="text-2xl font-bold text-white mb-1">
-        #{selectedChannel?.name || 'general'}
-      </h2>
-      <p class="text-sm text-white/30">
-        {selectedChannel?.description || 'Your band\'s space. Talk, plan, and make music together.'}
-      </p>
+      <div class="min-w-0">
+        <h2 class="text-base font-bold text-white leading-tight">
+          #{selectedChannel?.name || 'general'}
+        </h2>
+        <p class="text-xs text-white/30 truncate">
+          {selectedChannel?.description || 'Talk, plan, and make music together.'}
+        </p>
+      </div>
     </div>
 
-    <div class="h-px bg-white/10 mx-4 mb-4"></div>
+    <div class="h-px bg-white/6 mx-4 mb-3"></div>
 
     {#each $messageStore.messages as message, i}
       {@const prev = i > 0 ? $messageStore.messages[i - 1] : null}
