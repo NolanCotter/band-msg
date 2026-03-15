@@ -42,11 +42,6 @@ export function setCsrfCookie(cookies: any, token: string): void {
     path: "/",
     maxAge: SESSION_TTL_MS / 1000
   });
-  
-  // Debug log in development
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('CSRF cookie set:', token.substring(0, 10) + '...');
-  }
 }
 
 export function expiresAtMs(): number {

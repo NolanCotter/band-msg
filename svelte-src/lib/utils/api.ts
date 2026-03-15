@@ -29,21 +29,12 @@ export async function apiPost(
   payload: Record<string, unknown>,
   method: 'POST' | 'DELETE' = 'POST'
 ) {
-  // Wait for CSRF token to be available
   const csrf = await waitForCsrfToken();
-  
-  // Debug logging
-  if (!csrf) {
-    console.warn('CSRF token not found after waiting');
-  } else {
-    console.log('CSRF token found:', csrf.substring(0, 10) + '...');
-  }
   
   const headers: Record<string, string> = {
     'content-type': 'application/json',
   };
   
-  // Only add CSRF token if it exists
   if (csrf) {
     headers['x-csrf-token'] = csrf;
   }
