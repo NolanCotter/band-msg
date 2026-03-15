@@ -171,7 +171,7 @@
       <button
         type="button"
         on:click={() => showMobileChannels = true}
-        class="md:hidden p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 touch-manipulation relative"
+        class="lg:hidden p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 touch-manipulation relative"
         style="z-index: 101; pointer-events: auto;"
         aria-label="Open channels"
       >
@@ -200,7 +200,7 @@
       <button
         type="button"
         on:click={() => showMobileMembers = true}
-        class="md:hidden p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer relative"
+        class="lg:hidden p-2 rounded-lg transition-colors text-white/40 hover:text-white hover:bg-white/5 touch-manipulation cursor-pointer relative"
         style="z-index: 101; pointer-events: auto;"
         title="Show Members"
       >
