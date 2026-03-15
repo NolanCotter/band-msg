@@ -12,8 +12,8 @@
   import { messageStore } from '../lib/stores/messages';
   import { memberStore } from '../lib/stores/members';
   import { themeStore } from '../lib/stores/theme';
+  import { pusherStore } from '../lib/stores/pusher';
 
-  let refreshInterval: ReturnType<typeof setInterval> | null = null;
   let showPWAGuide = false;
   let showUsernameSetup = false;
 
@@ -46,6 +46,9 @@
     }
     
     if ($authStore.user) {
+      // Connect to Pusher for real-time updates
+      pusherStore.connect();
+      
       // Load initial data
       await channelStore.loadChannels();
       await memberStore.loadMembers();
@@ -54,20 +57,11 @@
       if ($channelStore.selectedChannelId) {
         await messageStore.loadMessages($channelStore.selectedChannelId);
       }
-      
-      // Start polling for updates
-      refreshInterval = setInterval(async () => {
-        if ($channelStore.selectedChannelId) {
-          await messageStore.loadMessages($channelStore.selectedChannelId);
-          await messageStore.loadTypingUsers($channelStore.selectedChannelId);
-        }
-        await memberStore.loadMembers();
-      }, 2000);
     }
   });
 
   onDestroy(() => {
-    if (refreshInterval) clearInterval(refreshInterval);
+    pusherStore.disconnect();
   });
 
   function handlePWAGuideComplete() {
@@ -84,6 +78,9 @@
     // Reload user data
     await authStore.checkAuth();
     
+    // Connect to Pusher
+    pusherStore.connect();
+    
     // Load initial data
     await channelStore.loadChannels();
     await memberStore.loadMembers();
@@ -92,15 +89,6 @@
     if ($channelStore.selectedChannelId) {
       await messageStore.loadMessages($channelStore.selectedChannelId);
     }
-    
-    // Start polling for updates
-    refreshInterval = setInterval(async () => {
-      if ($channelStore.selectedChannelId) {
-        await messageStore.loadMessages($channelStore.selectedChannelId);
-        await messageStore.loadTypingUsers($channelStore.selectedChannelId);
-      }
-      await memberStore.loadMembers();
-    }, 2000);
   }
 </script>
 

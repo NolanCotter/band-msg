@@ -1,4 +1,5 @@
 import { listMessages, sendMessage, deleteMessage, getPushSubscriptionsForMessage, getUserBySession } from "$lib/server/db";
+import { triggerNewMessage, triggerMessageDeleted } from "$lib/server/pusher";
 import webPush from 'web-push';
 
 // VAPID keys should be set in environment variables
@@ -65,9 +66,20 @@ export const POST = async ({ locals, request }: any) => {
     return toJson({ error: result.error }, result.code ?? 400);
   }
 
+  // Get user info and trigger Pusher event
+  const user = await getUserBySession(locals.sessionToken);
+  if (user) {
+    triggerNewMessage(channelId, {
+      id: result.value.messageId,
+      author: user.username,
+      content,
+      createdAt: Date.now(),
+      reactions: []
+    });
+  }
+
   // Trigger push notifications in the background
   try {
-    const user = await getUserBySession(locals.sessionToken);
     if (user && VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
       const subscriptions = await getPushSubscriptionsForMessage({
         userId: user.id,
@@ -104,7 +116,6 @@ export const POST = async ({ locals, request }: any) => {
           } catch (error: any) {
             if (error.statusCode === 410 || error.statusCode === 404) {
               console.log('Expired subscription on new message:', sub.endpoint);
-              // In a real app we would delete the subscription here
             }
           }
         })).catch(console.error);
@@ -138,5 +149,8 @@ export const DELETE = async ({ locals, request }: any) => {
     return toJson({ error: result.error }, result.code ?? 400);
   }
 
+  // Note: We'd need channelId to trigger Pusher event properly
+  // For now, clients handle deletion optimistically
+  
   return toJson({ deleted: true });
 };

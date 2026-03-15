@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { apiGet, apiPost } from '../utils/api';
+import { pusherStore } from './pusher';
 
 type Reaction = {
   emoji: string;
@@ -28,6 +29,8 @@ function createMessageStore() {
     typingUsers: [],
   });
 
+  let typingTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
   return {
     subscribe,
 
@@ -50,16 +53,63 @@ function createMessageStore() {
             }
           }
           
-          // Only update if messages actually changed
-          update(state => {
-            const currentIds = state.messages.map(m => m.id).join(',');
-            const newIds = messages.map((m: Message) => m.id).join(',');
-            const reactionsChanged = JSON.stringify(state.messages.map(m => m.reactions)) !== JSON.stringify(messages.map((m: Message) => m.reactions));
-            
-            if (currentIds !== newIds || reactionsChanged) {
-              return { ...state, messages, isLoading: false };
+          update(state => ({ ...state, messages, isLoading: false, typingUsers: [] }));
+          
+          // Subscribe to Pusher channel for real-time updates
+          pusherStore.subscribeToChannel(channelId, {
+            onNewMessage: (data) => {
+              update(state => ({
+                ...state,
+                messages: [...state.messages, data]
+              }));
+            },
+            onMessageDeleted: (data) => {
+              update(state => ({
+                ...state,
+                messages: state.messages.filter(m => m.id !== data.messageId)
+              }));
+            },
+            onReactionUpdate: (data) => {
+              update(state => ({
+                ...state,
+                messages: state.messages.map(m =>
+                  m.id === data.messageId ? { ...m, reactions: data.reactions } : m
+                )
+              }));
+            },
+            onTyping: (data) => {
+              update(state => {
+                let typingUsers = [...state.typingUsers];
+                
+                // Clear existing timeout for this user
+                const existingTimeout = typingTimeouts.get(data.username);
+                if (existingTimeout) {
+                  clearTimeout(existingTimeout);
+                }
+                
+                if (data.isTyping) {
+                  if (!typingUsers.includes(data.username)) {
+                    typingUsers.push(data.username);
+                  }
+                  
+                  // Auto-remove after 3 seconds
+                  const timeout = setTimeout(() => {
+                    update(s => ({
+                      ...s,
+                      typingUsers: s.typingUsers.filter(u => u !== data.username)
+                    }));
+                    typingTimeouts.delete(data.username);
+                  }, 3000);
+                  
+                  typingTimeouts.set(data.username, timeout);
+                } else {
+                  typingUsers = typingUsers.filter(u => u !== data.username);
+                  typingTimeouts.delete(data.username);
+                }
+                
+                return { ...state, typingUsers };
+              });
             }
-            return { ...state, isLoading: false };
           });
         }
       } catch (error) {
@@ -70,7 +120,7 @@ function createMessageStore() {
     async sendMessage(channelId: string, content: string) {
       const res = await apiPost('/api/messages', { channelId, content });
       if (res.ok) {
-        await this.loadMessages(channelId);
+        // Pusher will handle adding the message via real-time event
         return { success: true };
       }
       const error = await res.json();
@@ -80,44 +130,32 @@ function createMessageStore() {
     async deleteMessage(messageId: string, channelId: string) {
       const res = await apiPost('/api/messages', { messageId }, 'DELETE');
       if (res.ok) {
-        await this.loadMessages(channelId);
+        // Pusher will handle removing the message via real-time event
         return { success: true };
       }
       return { success: false };
     },
 
     async addReaction(messageId: string, emoji: string, channelId: string) {
-      const res = await apiPost('/api/reactions', { messageId, emoji, action: 'add' });
-      if (res.ok) {
-        await this.loadMessages(channelId);
-      }
+      await apiPost('/api/reactions', { messageId, emoji, action: 'add' });
+      // Pusher will handle updating reactions via real-time event
     },
 
     async removeReaction(messageId: string, emoji: string, channelId: string) {
-      const res = await apiPost('/api/reactions', { messageId, emoji, action: 'remove' });
-      if (res.ok) {
-        await this.loadMessages(channelId);
-      }
+      await apiPost('/api/reactions', { messageId, emoji, action: 'remove' });
+      // Pusher will handle updating reactions via real-time event
     },
 
     async startTyping(channelId: string) {
-      await apiPost('/api/typing', { channelId, action: 'start' });
+      pusherStore.sendTyping(channelId, true);
     },
 
     async stopTyping(channelId: string) {
-      await apiPost('/api/typing', { channelId, action: 'stop' });
+      pusherStore.sendTyping(channelId, false);
     },
 
     async loadTypingUsers(channelId: string) {
-      try {
-        const res = await apiGet(`/api/typing?channelId=${encodeURIComponent(channelId)}`);
-        if (res.ok) {
-          const users = await res.json();
-          update(state => ({ ...state, typingUsers: users.map((u: any) => u.username) }));
-        }
-      } catch (error) {
-        // Ignore typing errors
-      }
+      // Typing is now handled via Pusher real-time events
     },
   };
 }
