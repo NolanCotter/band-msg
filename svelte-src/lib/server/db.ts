@@ -784,7 +784,7 @@ export async function listMessages(args: {
       (SELECT COUNT(*) FROM messages WHERE reply_to_id = m.id) as reply_count
     FROM messages m
     JOIN users u ON u.id = m.user_id
-    WHERE m.channel_id = ${args.channelId} AND m.reply_to_id IS NULL
+    WHERE m.channel_id = ${args.channelId}
     ORDER BY m.created_at ASC
     LIMIT 200
   `;
