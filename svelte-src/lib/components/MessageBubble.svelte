@@ -7,6 +7,7 @@
 
   export let message: any;
   export let showHeader: boolean;
+  export let onOpenThread: ((message: any) => void) | null = null;
 
   function getAvatarColor(name: string): string {
     const colors = ['#7c3aed', '#2563eb', '#e11d48', '#059669', '#d97706', '#db2777'];
@@ -217,20 +218,50 @@
           {/each}
         </div>
       {/if}
+
+      <!-- Thread Reply Button -->
+      {#if onOpenThread && message.replyCount > 0}
+        <button
+          on:click={() => onOpenThread && onOpenThread(message)}
+          class="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-lg text-xs text-white/50 hover:text-white hover:bg-white/5 transition-all duration-200"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span class="font-medium">{message.replyCount} {message.replyCount === 1 ? 'reply' : 'replies'}</span>
+        </button>
+      {/if}
     </div>
 
-    <!-- Delete button for own messages -->
-    {#if isOwn}
-      <button
-        on:click={handleDelete}
-        class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-white/30 hover:text-white"
-        aria-label="Delete message"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6" />
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        </svg>
-      </button>
-    {/if}
+    <!-- Action buttons -->
+    <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+      <!-- Reply in thread button -->
+      {#if onOpenThread}
+        <button
+          on:click={() => onOpenThread && onOpenThread(message)}
+          class="p-2 text-white/30 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+          aria-label="Reply in thread"
+          title="Reply in thread"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
+      {/if}
+
+      <!-- Delete button for own messages -->
+      {#if isOwn}
+        <button
+          on:click={handleDelete}
+          class="p-2 text-white/30 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+          aria-label="Delete message"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+      {/if}
+    </div>
   </div>
 </div>

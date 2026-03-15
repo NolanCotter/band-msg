@@ -51,6 +51,7 @@ export const POST = async ({ locals, request }: any) => {
   const body = await request.json().catch(() => null);
   const channelId = typeof body?.channelId === "string" ? body.channelId : "";
   const content = typeof body?.content === "string" ? body.content : "";
+  const replyToId = typeof body?.replyToId === "string" ? body.replyToId : null;
 
   if (!channelId || !content) {
     return toJson({ error: "channelId and content are required" }, 400);
@@ -59,7 +60,8 @@ export const POST = async ({ locals, request }: any) => {
   const result = await sendMessage({
     sessionToken: locals.sessionToken,
     channelId,
-    content
+    content,
+    replyToId
   });
 
   if (result.ok === false) {
@@ -74,7 +76,9 @@ export const POST = async ({ locals, request }: any) => {
       author: user.username,
       content,
       createdAt: Date.now(),
-      reactions: []
+      reactions: [],
+      replyToId,
+      replyCount: 0
     });
   }
 

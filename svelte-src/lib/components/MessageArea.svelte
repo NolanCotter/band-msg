@@ -14,6 +14,7 @@
   import Input from './Input.svelte';
   import GiphyPicker from './GiphyPicker.svelte';
   import CreateChannel from './CreateChannel.svelte';
+  import ThreadPanel from './ThreadPanel.svelte';
   
   let messageInput = '';
   let messageContainer: HTMLDivElement;
@@ -27,6 +28,13 @@
   let showCreateChannel = false;
   let shouldAutoScroll = true;
   let previousMessageCount = 0;
+  let showThread = false;
+  let threadMessage: any = null;
+
+  function openThread(message: any) {
+    threadMessage = message;
+    showThread = true;
+  }
   
   onMount(() => {
     themeStore.init();
@@ -49,8 +57,8 @@
     shouldAutoScroll = distanceFromBottom < 100;
   }
 
-  function scrollToBottom() {
-    if (!shouldAutoScroll) return;
+  function scrollToBottom(force = false) {
+    if (!force && !shouldAutoScroll) return;
     setTimeout(() => {
       if (messageContainer) {
         messageContainer.scrollTop = messageContainer.scrollHeight;
@@ -58,10 +66,10 @@
     }, 50);
   }
 
-  // Only auto-scroll when new messages arrive
-  $: if ($messageStore.messages.length > previousMessageCount) {
+  // Auto-scroll when new messages arrive or when channel changes
+  $: if ($messageStore.messages.length > previousMessageCount || $channelStore.selectedChannelId) {
     previousMessageCount = $messageStore.messages.length;
-    scrollToBottom();
+    scrollToBottom(true); // Force scroll on new messages
   }
 
   afterUpdate(() => {
@@ -304,7 +312,7 @@
     {#each $messageStore.messages as message, i}
       {@const prev = i > 0 ? $messageStore.messages[i - 1] : null}
       {@const showHeader = !prev || prev.author !== message.author || message.createdAt - prev.createdAt > 300000}
-      <MessageBubble {message} {showHeader} />
+      <MessageBubble {message} {showHeader} onOpenThread={openThread} />
     {/each}
 
     {#if $messageStore.typingUsers.length > 0}
@@ -378,6 +386,16 @@
   <GiphyPicker
     onClose={() => showGiphy = false}
     onSelect={handleGiphySelect}
+  />
+{/if}
+
+{#if showThread && threadMessage}
+  <ThreadPanel
+    parentMessage={threadMessage}
+    onClose={() => {
+      showThread = false;
+      threadMessage = null;
+    }}
   />
 {/if}
 

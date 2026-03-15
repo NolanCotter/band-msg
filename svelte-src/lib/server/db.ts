@@ -752,7 +752,7 @@ export async function deleteChannel(args: {
 export async function listMessages(args: {
   sessionToken: string;
   channelId: string;
-}): Promise<Result<Array<{ id: string; content: string; channelId: string; createdAt: number; author: string }>>> {
+}): Promise<Result<Array<{ id: string; content: string; channelId: string; createdAt: number; author: string; replyCount: number }>>> {
   const user = await getUserBySession(args.sessionToken);
   if (!user) {
     return { ok: false, code: 401, error: "Unauthorized" };
@@ -775,10 +775,16 @@ export async function listMessages(args: {
   }
 
   const rows = await sql`
-    SELECT m.id, m.content, m.channel_id, m.created_at, u.username AS author
+    SELECT 
+      m.id, 
+      m.content, 
+      m.channel_id, 
+      m.created_at, 
+      u.username AS author,
+      (SELECT COUNT(*) FROM messages WHERE reply_to_id = m.id) as reply_count
     FROM messages m
     JOIN users u ON u.id = m.user_id
-    WHERE m.channel_id = ${args.channelId}
+    WHERE m.channel_id = ${args.channelId} AND m.reply_to_id IS NULL
     ORDER BY m.created_at ASC
     LIMIT 200
   `;
@@ -791,7 +797,8 @@ export async function listMessages(args: {
       content: row.content,
       channelId: row.channel_id,
       createdAt: Number(row.created_at),
-      author: row.author
+      author: row.author,
+      replyCount: Number(row.reply_count) || 0
     }))
   };
 }
@@ -800,6 +807,7 @@ export async function sendMessage(args: {
   sessionToken: string;
   channelId: string;
   content: string;
+  replyToId?: string | null;
 }): Promise<Result<{ messageId: string }>> {
   const user = await getUserBySession(args.sessionToken);
   if (!user) {
@@ -829,8 +837,8 @@ export async function sendMessage(args: {
 
   const id = crypto.randomUUID();
   await sql`
-    INSERT INTO messages (id, channel_id, user_id, content, created_at)
-    VALUES (${id}, ${args.channelId}, ${user.id}, ${content}, ${Date.now()})
+    INSERT INTO messages (id, channel_id, user_id, content, reply_to_id, created_at)
+    VALUES (${id}, ${args.channelId}, ${user.id}, ${content}, ${args.replyToId || null}, ${Date.now()})
   `;
 
   return { ok: true, value: { messageId: id } };
