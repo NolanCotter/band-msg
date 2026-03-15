@@ -244,6 +244,18 @@ body.light-mode [style*="background-color: rgb(34, 34, 34)"] {
 	border-color: #e5e7eb !important;
 }
 
+/* Mobile drawers - Vaul drawer backgrounds */
+body.light-mode [class*="bg-[#0a0a0a]"],
+body.light-mode [style*="background-color: #0a0a0a"],
+body.light-mode [style*="background-color: rgb(10, 10, 10)"] {
+	background-color: #fafafa !important;
+}
+
+/* Drawer overlays */
+body.light-mode [class*="bg-black/60"] {
+	background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
 /* Reaction picker */
 body.light-mode .bg-\[\#222\] {
 	background-color: #fafafa !important;

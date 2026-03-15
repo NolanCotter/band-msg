@@ -69,7 +69,8 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   
-  @media (min-width: 768px) {
+  /* Only show on desktop (1024px+), hide on tablets and mobile */
+  @media (min-width: 1024px) {
     .channel-sidebar {
       display: flex;
     }
@@ -125,7 +126,7 @@
               {#if $authStore.user?.role === 'admin' && channel['isPrivate']}
                 <button 
                   on:click={(e) => openSettings(e, channel)}
-                  class="p-1 text-white/40 hover:text-white rounded mix-blend-screen transition-all duration-200 hover:scale-110 active:scale-95"
+                  class="p-1 rounded mix-blend-normal transition-all duration-200 hover:scale-110 active:scale-95 text-white/40 hover:text-white"
                   aria-label="Channel Settings"
                   title="Channel Settings"
                 >
@@ -137,7 +138,7 @@
               {/if}
               <button 
                 on:click={(e) => toggleMute(e, channel.id)}
-                class="p-1 text-white/40 hover:text-white rounded mix-blend-screen transition-all duration-200 hover:scale-110 active:scale-95 {mutedChannelIds.has(channel.id) ? 'text-white opacity-100' : ''}"
+                class="p-1 rounded mix-blend-normal transition-all duration-200 hover:scale-110 active:scale-95 {mutedChannelIds.has(channel.id) ? 'text-white opacity-100' : 'text-white/40 hover:text-white'}"
                 aria-label={mutedChannelIds.has(channel.id) ? "Unmute Channel" : "Mute Channel"}
                 title={mutedChannelIds.has(channel.id) ? "Unmute Channel" : "Mute Channel"}
               >

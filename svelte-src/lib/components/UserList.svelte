@@ -34,7 +34,8 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   
-  @media (min-width: 768px) {
+  /* Only show on desktop (1024px+), hide on tablets and mobile */
+  @media (min-width: 1024px) {
     .members-sidebar {
       display: flex;
     }
