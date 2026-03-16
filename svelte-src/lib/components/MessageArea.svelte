@@ -80,13 +80,19 @@
   async function handleSend() {
     if (!messageInput.trim() || !$convexChannelStore.selectedChannelId) return;
     
+    console.log('[MessageArea] Sending message:', messageInput, 'to channel:', $convexChannelStore.selectedChannelId);
+    
     const result = await messageStore.sendMessage(
       $convexChannelStore.selectedChannelId,
       messageInput
     );
     
+    console.log('[MessageArea] Send result:', result);
+    
     if (result.success) {
       messageInput = '';
+    } else {
+      console.error('[MessageArea] Failed to send:', result.error);
     }
   }
 
