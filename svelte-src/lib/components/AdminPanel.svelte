@@ -2,70 +2,109 @@
   import { onMount } from 'svelte';
   import { Drawer } from 'vaul-svelte';
   import { fade } from 'svelte/transition';
-  import { authStore } from '../stores/auth';
-  import { apiGet, apiPost } from '../utils/api';
+  import { convex } from '../convex';
+  import { api } from '../../../convex/_generated/api';
+  import { convexMessageStore } from '../stores/convexMessages';
 
   export let onClose: () => void;
 
-  type PendingUser = {
+  type User = {
     id: string;
     username: string;
+    email?: string;
     role: string;
     status: string;
     createdAt: number;
   };
 
-  let pendingUsers: PendingUser[] = [];
-  let allUsers: any[] = [];
+  let pendingUsers: User[] = [];
+  let allUsers: User[] = [];
   let isLoading = false;
   let activeTab: 'pending' | 'users' = 'pending';
+  let sessionToken = '';
 
   onMount(async () => {
-    await loadPendingUsers();
-    await loadAllUsers();
+    // Get session token from store
+    const unsubscribe = convexMessageStore.subscribe(state => {
+      sessionToken = state.sessionToken;
+    });
+
+    if (sessionToken) {
+      await loadPendingUsers();
+      await loadAllUsers();
+    }
+
+    return unsubscribe;
   });
 
   async function loadPendingUsers() {
+    if (!sessionToken) return;
+    
     isLoading = true;
     try {
-      const res = await apiGet('/api/admin/users');
-      if (res.ok) {
-        pendingUsers = await res.json();
-      }
+      const users = await convex.query(api.auth.getPendingUsers, { sessionToken });
+      pendingUsers = users;
+    } catch (error) {
+      console.error('[AdminPanel] Failed to load pending users:', error);
     } finally {
       isLoading = false;
     }
   }
 
   async function loadAllUsers() {
-    allUsers = [];
-  }
-
-  async function approveUser(username: string) {
-    const res = await apiPost('/api/admin/users/approve', { username });
-    if (res.ok) {
-      await loadPendingUsers();
+    if (!sessionToken) return;
+    
+    try {
+      const users = await convex.query(api.auth.getAllUsers, { sessionToken });
+      allUsers = users;
+    } catch (error) {
+      console.error('[AdminPanel] Failed to load all users:', error);
     }
   }
 
-  async function rejectUser(username: string) {
-    const res = await apiPost('/api/admin/users/reject', { username });
-    if (res.ok) {
+  async function approveUser(userId: string) {
+    if (!sessionToken) return;
+    
+    try {
+      await convex.mutation(api.auth.approveUser, { sessionToken, userId });
       await loadPendingUsers();
+      await loadAllUsers();
+    } catch (error) {
+      console.error('[AdminPanel] Failed to approve user:', error);
     }
   }
 
-  async function promoteUser(username: string) {
-    const res = await apiPost('/api/admin/users/promote', { username });
-    if (res.ok) {
+  async function rejectUser(userId: string) {
+    if (!sessionToken) return;
+    
+    try {
+      await convex.mutation(api.auth.rejectUser, { sessionToken, userId });
       await loadPendingUsers();
+      await loadAllUsers();
+    } catch (error) {
+      console.error('[AdminPanel] Failed to reject user:', error);
     }
   }
 
-  async function demoteUser(username: string) {
-    const res = await apiPost('/api/admin/users/demote', { username });
-    if (res.ok) {
-      await loadPendingUsers();
+  async function promoteUser(userId: string) {
+    if (!sessionToken) return;
+    
+    try {
+      await convex.mutation(api.auth.promoteUser, { sessionToken, userId });
+      await loadAllUsers();
+    } catch (error) {
+      console.error('[AdminPanel] Failed to promote user:', error);
+    }
+  }
+
+  async function demoteUser(userId: string) {
+    if (!sessionToken) return;
+    
+    try {
+      await convex.mutation(api.auth.demoteUser, { sessionToken, userId });
+      await loadAllUsers();
+    } catch (error) {
+      console.error('[AdminPanel] Failed to demote user:', error);
     }
   }
 </script>
@@ -148,14 +187,14 @@
                     <div class="flex gap-2 shrink-0">
                       <button
                         type="button"
-                        on:click={() => approveUser(user.username)}
+                        on:click={() => approveUser(user.id)}
                         class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
                       >
                         Approve
                       </button>
                       <button
                         type="button"
-                        on:click={() => rejectUser(user.username)}
+                        on:click={() => rejectUser(user.id)}
                         class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
                       >
                         Reject
@@ -167,9 +206,50 @@
             </div>
           {/if}
         {:else}
-          <div class="text-center py-12">
-            <p class="text-sm text-white/30">User management coming soon</p>
-          </div>
+          {#if allUsers.length === 0}
+            <div class="text-center py-12">
+              <p class="text-sm text-white/30">No users found</p>
+            </div>
+          {:else}
+            <div class="space-y-2">
+              {#each allUsers as user}
+                <div class="bg-white/5 border border-white/8 rounded-xl p-3.5">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2">
+                        <p class="font-medium text-white text-sm truncate">{user.username}</p>
+                        {#if user.role === 'admin'}
+                          <span class="px-1.5 py-0.5 bg-white/10 text-white/60 rounded text-xs font-medium">Admin</span>
+                        {/if}
+                      </div>
+                      <p class="text-xs text-white/35">
+                        {user.email || 'No email'} • {user.status}
+                      </p>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                      {#if user.role === 'admin'}
+                        <button
+                          type="button"
+                          on:click={() => demoteUser(user.id)}
+                          class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                        >
+                          Demote
+                        </button>
+                      {:else}
+                        <button
+                          type="button"
+                          on:click={() => promoteUser(user.id)}
+                          class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                        >
+                          Promote
+                        </button>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
         {/if}
       </div>
     </Drawer.Content>
@@ -247,14 +327,14 @@
                   <div class="flex gap-2 shrink-0">
                     <button
                       type="button"
-                      on:click={() => approveUser(user.username)}
+                      on:click={() => approveUser(user.id)}
                       class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
                     >
                       Approve
                     </button>
                     <button
                       type="button"
-                      on:click={() => rejectUser(user.username)}
+                      on:click={() => rejectUser(user.id)}
                       class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
                     >
                       Reject
@@ -266,9 +346,50 @@
           </div>
         {/if}
       {:else}
-        <div class="text-center py-12">
-          <p class="text-sm text-white/30">User management coming soon</p>
-        </div>
+        {#if allUsers.length === 0}
+          <div class="text-center py-12">
+            <p class="text-sm text-white/30">No users found</p>
+          </div>
+        {:else}
+          <div class="space-y-2">
+            {#each allUsers as user}
+              <div class="bg-white/5 border border-white/8 rounded-xl p-3.5">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                      <p class="font-medium text-white text-sm truncate">{user.username}</p>
+                      {#if user.role === 'admin'}
+                        <span class="px-1.5 py-0.5 bg-white/10 text-white/60 rounded text-xs font-medium">Admin</span>
+                      {/if}
+                    </div>
+                    <p class="text-xs text-white/35">
+                      {user.email || 'No email'} • {user.status}
+                    </p>
+                  </div>
+                  <div class="flex gap-2 shrink-0">
+                    {#if user.role === 'admin'}
+                      <button
+                        type="button"
+                        on:click={() => demoteUser(user.id)}
+                        class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                      >
+                        Demote
+                      </button>
+                    {:else}
+                      <button
+                        type="button"
+                        on:click={() => promoteUser(user.id)}
+                        class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                      >
+                        Promote
+                      </button>
+                    {/if}
+                  </div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
       {/if}
     </div>
   </div>
