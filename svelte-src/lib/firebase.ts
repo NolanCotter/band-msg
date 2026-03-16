@@ -175,6 +175,7 @@ export async function isPushSubscribed(): Promise<boolean> {
   if (!browser) return false;
   
   try {
+    console.log('[Firebase] Checking push subscription status...');
     const { convex } = await import('./convex');
     const { api } = await import('../../convex/_generated/api');
     const { convexMessageStore } = await import('./stores/convexMessages');
@@ -184,9 +185,12 @@ export async function isPushSubscribed(): Promise<boolean> {
       sessionToken = state.sessionToken;
     })();
 
+    console.log('[Firebase] Session token exists:', !!sessionToken);
+
     if (!sessionToken) return false;
 
     const result = await convex.query(api.pushSubscriptions.isSubscribed, { sessionToken });
+    console.log('[Firebase] Subscription check result:', result);
     return result.subscribed === true;
   } catch (error) {
     console.error('Error checking subscription status:', error);

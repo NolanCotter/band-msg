@@ -14,12 +14,18 @@
   let mutedChannelIds = new Set<string>();
   
   onMount(async () => {
+    console.log('[NotificationSettings] Component mounted');
+    
     // Initialize Firebase
     await initializeFirebase();
     
     if ('Notification' in window) {
       notificationPermission = Notification.permission;
-      isSubscribed = await isPushSubscribed();
+      console.log('[NotificationSettings] Notification permission:', notificationPermission);
+      
+      const subscribed = await isPushSubscribed();
+      console.log('[NotificationSettings] Is subscribed:', subscribed);
+      isSubscribed = subscribed;
     }
     
     await loadMutedChannels();
@@ -38,19 +44,24 @@
   }
   
   async function handleToggleNotifications() {
+    console.log('[NotificationSettings] Toggle clicked, current state:', isSubscribed);
     isLoading = true;
     error = '';
     
     try {
       if (isSubscribed) {
+        console.log('[NotificationSettings] Unsubscribing...');
         const result = await unsubscribeFromPushNotifications();
+        console.log('[NotificationSettings] Unsubscribe result:', result);
         if (result.success) {
           isSubscribed = false;
         } else {
           error = result.error || 'Failed to unsubscribe from notifications';
         }
       } else {
+        console.log('[NotificationSettings] Subscribing...');
         const result = await subscribeToPushNotifications();
+        console.log('[NotificationSettings] Subscribe result:', result);
         if (result.success) {
           isSubscribed = true;
           notificationPermission = 'granted';
