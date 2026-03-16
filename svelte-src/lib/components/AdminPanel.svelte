@@ -104,6 +104,7 @@
       return;
     }
     
+    isLoading = true; // Show loading state
     console.log('[AdminPanel] Approving signup request:', requestId);
     try {
       const result = await convex.mutation(api.signupRequests.approve, { 
@@ -113,10 +114,12 @@
       console.log('[AdminPanel] Signup request approved successfully:', result);
       // Reload the list to remove the approved request
       await loadSignupRequests();
-      alert('User approved successfully!');
+      alert('User approved successfully! They can now login.');
     } catch (error) {
       console.error('[AdminPanel] Failed to approve signup request:', error);
       alert('Failed to approve: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -294,15 +297,17 @@
                     <div class="flex gap-2 shrink-0">
                       <button
                         type="button"
-                        on:click={() => approveSignupRequest(request.id)}
-                        class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                        on:click|stopPropagation={() => approveSignupRequest(request.id)}
+                        disabled={isLoading}
+                        class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50"
                       >
-                        Approve
+                        {isLoading ? 'Approving...' : 'Approve'}
                       </button>
                       <button
                         type="button"
-                        on:click={() => rejectSignupRequest(request.id)}
-                        class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                        on:click|stopPropagation={() => rejectSignupRequest(request.id)}
+                        disabled={isLoading}
+                        class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
                       >
                         Reject
                       </button>
@@ -487,15 +492,17 @@
                   <div class="flex gap-2 shrink-0">
                     <button
                       type="button"
-                      on:click={() => approveSignupRequest(request.id)}
-                      class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                      on:click|stopPropagation={() => approveSignupRequest(request.id)}
+                      disabled={isLoading}
+                      class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50"
                     >
-                      Approve
+                      {isLoading ? 'Approving...' : 'Approve'}
                     </button>
                     <button
                       type="button"
-                      on:click={() => rejectSignupRequest(request.id)}
-                      class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                      on:click|stopPropagation={() => rejectSignupRequest(request.id)}
+                      disabled={isLoading}
+                      class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
                     >
                       Reject
                     </button>
