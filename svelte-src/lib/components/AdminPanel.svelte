@@ -172,19 +172,27 @@
 
   async function approveUser(userId: string, username: string) {
     if (!sessionToken) return;
-    
+
+    isLoading = true;
     try {
-      await convex.mutation(api.auth.approveUser, { 
-        sessionToken, 
-        userId: userId as Id<"users"> 
+      await convex.mutation(api.auth.approveUser, {
+        sessionToken,
+        userId: userId as Id<"users">
       });
       // Also approve in SQL via SvelteKit API
       await apiPost('/api/admin/users/approve', { username });
-      
-      await loadPendingUsers();
-      await loadAllUsers();
+
+      await Promise.all([
+        loadPendingUsers(),
+        loadAllUsers()
+      ]);
+
+      alert('User approved successfully!');
     } catch (error) {
       console.error('[AdminPanel] Failed to approve user:', error);
+      alert('Failed to approve user: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -374,15 +382,17 @@
                     <div class="flex gap-2 shrink-0">
                       <button
                         type="button"
-                        on:click={() => approveUser(user.id, user.username)}
-                        class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                        on:click|stopPropagation={() => approveUser(user.id, user.username)}
+                        disabled={isLoading}
+                        class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50"
                       >
-                        Approve
+                        {isLoading ? 'Approving...' : 'Approve'}
                       </button>
                       <button
                         type="button"
-                        on:click={() => rejectUser(user.id, user.username)}
-                        class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                        on:click|stopPropagation={() => rejectUser(user.id, user.username)}
+                        disabled={isLoading}
+                        class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
                       >
                         Reject
                       </button>
@@ -569,15 +579,17 @@
                   <div class="flex gap-2 shrink-0">
                     <button
                       type="button"
-                      on:click={() => approveUser(user.id, user.username)}
-                      class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                      on:click|stopPropagation={() => approveUser(user.id, user.username)}
+                      disabled={isLoading}
+                      class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50"
                     >
-                      Approve
+                      {isLoading ? 'Approving...' : 'Approve'}
                     </button>
                     <button
                       type="button"
-                      on:click={() => rejectUser(user.id, user.username)}
-                      class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                      on:click|stopPropagation={() => rejectUser(user.id, user.username)}
+                      disabled={isLoading}
+                      class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
                     >
                       Reject
                     </button>

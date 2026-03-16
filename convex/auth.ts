@@ -25,6 +25,7 @@ export const getUser = query({
       username: user.username,
       email: user.email,
       role: user.role,
+      status: user.status || "pending", // CRITICAL: Must return status for approval flow
       needsUsernameSetup: user.needsUsernameSetup || false,
     };
   },
