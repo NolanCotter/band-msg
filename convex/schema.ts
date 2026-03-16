@@ -83,6 +83,8 @@ export default defineSchema({
 
   signupRequests: defineTable({
     username: v.string(),
+    passwordHash: v.optional(v.string()),
+    passwordSalt: v.optional(v.string()),
     status: v.string(), // "pending" | "approved" | "rejected"
     createdAt: v.number(),
     approvedAt: v.optional(v.number()),

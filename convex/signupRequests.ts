@@ -80,7 +80,7 @@ export const getAll = query({
   },
 });
 
-// Approve a signup request (admin only)
+// Approve a signup request (admin only) - creates the user account
 export const approve = mutation({
   args: {
     sessionToken: v.string(),
@@ -103,6 +103,40 @@ export const approve = mutation({
       throw new Error("Request not found");
     }
 
+    if (request.status === "approved") {
+      throw new Error("Request already approved");
+    }
+
+    if (!request.passwordHash || !request.passwordSalt) {
+      throw new Error("Cannot approve: signup request missing password data");
+    }
+
+    // Check if user already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", request.username))
+      .first();
+
+    if (existingUser) {
+      console.log('[signupRequests.approve] User already exists, just updating status');
+      await ctx.db.patch(existingUser._id, {
+        status: "approved",
+      });
+    } else {
+      // Create the user account from the signup request
+      console.log('[signupRequests.approve] Creating new user account');
+      await ctx.db.insert("users", {
+        username: request.username,
+        passwordHash: request.passwordHash,
+        passwordSalt: request.passwordSalt,
+        role: "member",
+        status: "approved",
+        createdAt: Date.now(),
+        presenceStatus: "offline",
+        lastSeen: Date.now(),
+      });
+    }
+
     // Update the signup request
     await ctx.db.patch(args.requestId, {
       status: "approved",
@@ -110,22 +144,7 @@ export const approve = mutation({
       approvedBy: admin._id,
     });
 
-    // ALSO update the user status to approved
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", request.username))
-      .first();
-
-    if (user) {
-      console.log('[signupRequests.approve] Updating user status to approved:', user._id);
-      await ctx.db.patch(user._id, {
-        status: "approved",
-      });
-    } else {
-      console.log('[signupRequests.approve] WARNING: User not found for username:', request.username);
-    }
-
-    console.log('[signupRequests.approve] Request approved successfully');
+    console.log('[signupRequests.approve] Request approved and user created successfully');
     return { success: true };
   },
 });

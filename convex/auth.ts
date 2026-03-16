@@ -145,7 +145,7 @@ export const demoteUser = mutation({
   },
 });
 
-// Register new user
+// Register new user - only creates signup request, not the user
 export const register = mutation({
   args: {
     username: v.string(),
@@ -165,37 +165,69 @@ export const register = mutation({
       throw new Error("Username already exists");
     }
 
+    // Check if signup request already exists
+    const existingRequest = await ctx.db
+      .query("signupRequests")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .first();
+    
+    if (existingRequest) {
+      throw new Error("Signup request already exists");
+    }
+
     // Check if this is the first user (bootstrap admin)
     const allUsers = await ctx.db.query("users").collect();
     const approvedAdmins = allUsers.filter(u => u.role === "admin" && u.status === "approved");
     const isFirstUser = approvedAdmins.length === 0;
 
-    // Create signup request (pending for non-first users)
-    const requestId = await ctx.db.insert("signupRequests", {
-      username,
-      status: isFirstUser ? "approved" : "pending",
-      createdAt: Date.now(),
-      approvedAt: isFirstUser ? Date.now() : undefined,
-    });
+    if (isFirstUser) {
+      // First user - create immediately as admin
+      const userId = await ctx.db.insert("users", {
+        username,
+        passwordHash: args.passwordHash,
+        passwordSalt: args.passwordSalt,
+        role: "admin",
+        status: "approved",
+        createdAt: Date.now(),
+        presenceStatus: "offline",
+        lastSeen: Date.now(),
+      });
 
-    const userId = await ctx.db.insert("users", {
-      username,
-      passwordHash: args.passwordHash,
-      passwordSalt: args.passwordSalt,
-      role: isFirstUser ? "admin" : "member",
-      status: isFirstUser ? "approved" : "approved", // Still auto-approve users for login
-      createdAt: Date.now(),
-      presenceStatus: "offline",
-      lastSeen: Date.now(),
-    });
+      // Create approved signup request for tracking
+      const requestId = await ctx.db.insert("signupRequests", {
+        username,
+        passwordHash: args.passwordHash,
+        passwordSalt: args.passwordSalt,
+        status: "approved",
+        createdAt: Date.now(),
+        approvedAt: Date.now(),
+      });
 
-    return {
-      id: userId,
-      username,
-      role: isFirstUser ? "admin" : "member",
-      status: isFirstUser ? "approved" : "approved",
-      requestId,
-    };
+      return {
+        id: userId,
+        username,
+        role: "admin",
+        status: "approved",
+        requestId,
+      };
+    } else {
+      // Not first user - only create signup request
+      const requestId = await ctx.db.insert("signupRequests", {
+        username,
+        passwordHash: args.passwordHash,
+        passwordSalt: args.passwordSalt,
+        status: "pending",
+        createdAt: Date.now(),
+      });
+
+      return {
+        id: requestId,
+        username,
+        role: "member",
+        status: "pending",
+        requestId,
+      };
+    }
   },
 });
 
