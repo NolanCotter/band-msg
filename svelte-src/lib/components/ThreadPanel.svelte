@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { Drawer } from 'vaul-svelte';
+  import { fade } from 'svelte/transition';
   import { convex } from '../convex';
   import { api } from '../../../convex/_generated/api';
   import type { Id } from '../../../convex/_generated/dataModel';
@@ -110,14 +112,124 @@
   });
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-end">
-  <!-- Overlay background - no click handler -->
-  <div class="absolute inset-0"></div>
+<!-- Mobile Drawer (bottom half) -->
+<Drawer.Root open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+  <Drawer.Portal>
+    <Drawer.Overlay class="fixed inset-0 bg-black/80 z-[200] md:hidden" transition={fade} transitionConfig={{ duration: 150 }} />
+    <Drawer.Content class="fixed bottom-0 left-0 right-0 z-[200] flex flex-col bg-black rounded-t-[20px] max-h-[65vh] md:hidden outline-none" style="padding-bottom: env(safe-area-inset-bottom);">
+      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3"></div>
+      
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+        <h3 class="text-[15px] font-semibold text-white">Thread</h3>
+        <button
+          type="button"
+          on:click={onClose}
+          class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+          aria-label="Close thread"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Parent Message -->
+      <div class="px-4 py-3 border-b border-white/10 shrink-0">
+        <div class="flex gap-3">
+          <Avatar alt={parentMessage.author} size="sm" status={null} />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-baseline gap-2 mb-0.5">
+              <span class="text-[13px] font-semibold" style="color: {getAvatarColor(parentMessage.author)};">
+                {parentMessage.author}
+              </span>
+              <span class="text-[10px] text-white/40 font-medium">
+                {formatTime(parentMessage.createdAt)}
+              </span>
+            </div>
+            <div class="text-[13px] text-white/80 leading-relaxed break-words whitespace-pre-wrap line-clamp-3">
+              {@html parseMarkdown(parentMessage.content)}
+            </div>
+          </div>
+        </div>
+        <div class="mt-2 text-[12px] text-white/40 font-medium">
+          {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+        </div>
+      </div>
+
+      <!-- Replies -->
+      <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-2 scrollbar-hide">
+        {#if isLoading}
+          <div class="flex items-center justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20"></div>
+          </div>
+        {:else if replies.length === 0}
+          <div class="flex flex-col items-center justify-center py-8 text-white/30">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <p class="text-sm">No replies yet</p>
+          </div>
+        {:else}
+          {#each replies as reply}
+            <div class="px-4 py-2 hover:bg-white/[0.02]">
+              <div class="flex gap-2.5">
+                <Avatar alt={reply.author} size="sm" status={null} />
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-baseline gap-2 mb-0.5">
+                    <span class="text-[12px] font-semibold" style="color: {getAvatarColor(reply.author)};">
+                      {reply.author}
+                    </span>
+                    <span class="text-[10px] text-white/40 font-medium">
+                      {formatTime(reply.createdAt)}
+                    </span>
+                  </div>
+                  <div class="text-[13px] text-white/80 leading-relaxed break-words whitespace-pre-wrap">
+                    {@html parseMarkdown(reply.content)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      <!-- Reply Input -->
+      <div class="px-4 pb-3 pt-2 border-t border-white/10 shrink-0">
+        <div class="flex items-end gap-2">
+          <div class="flex-1">
+            <Input
+              type="text"
+              bind:value={replyInput}
+              on:keydown={handleKeyDown}
+              placeholder="Reply..."
+              maxlength={2000}
+              autocomplete="off"
+            />
+          </div>
+          <button
+            type="button"
+            on:click={sendReply}
+            disabled={!replyInput.trim()}
+            class="p-3 rounded-xl transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 {replyInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
+            aria-label="Send reply"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
+
+<!-- Desktop Panel (full height, right side) -->
+<div class="hidden md:flex fixed inset-0 z-[200] items-center justify-end">
+  <!-- Overlay background -->
+  <div class="absolute inset-0 bg-black/60"></div>
   
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div 
     class="relative w-full max-w-2xl h-full bg-[#0a0a0a] border-l border-white/10 flex flex-col animate-slide-left z-10"
     style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);"
@@ -128,7 +240,7 @@
       <button
         type="button"
         on:click={onClose}
-        class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors touch-manipulation"
+        class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
         aria-label="Close thread"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -162,7 +274,7 @@
     </div>
 
     <!-- Replies -->
-    <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-3 scrollbar-hide">
+    <div class="flex-1 overflow-y-auto py-3 scrollbar-hide">
       {#if isLoading}
         <div class="flex items-center justify-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20"></div>
