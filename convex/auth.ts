@@ -435,3 +435,27 @@ export const syncExternalUser = mutation({
     };
   },
 });
+
+// Fix all admin users to have approved status (run once)
+export const fixAdminStatus = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const allUsers = await ctx.db.query("users").collect();
+    const admins = allUsers.filter(u => u.role === "admin");
+
+    console.log('[fixAdminStatus] Found admins:', admins.length);
+
+    for (const admin of admins) {
+      console.log('[fixAdminStatus] Updating admin:', admin.username, 'current status:', admin.status);
+      await ctx.db.patch(admin._id, {
+        status: "approved",
+      });
+    }
+
+    return { 
+      success: true, 
+      updated: admins.length,
+      admins: admins.map(a => ({ username: a.username, oldStatus: a.status }))
+    };
+  },
+});
