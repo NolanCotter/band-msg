@@ -87,27 +87,32 @@ export const approve = mutation({
     requestId: v.id("signupRequests"),
   },
   handler: async (ctx, args) => {
-    console.log('[signupRequests.approve] Starting approval for:', args.requestId);
+    console.log('[signupRequests.approve] ========== START ==========');
+    console.log('[signupRequests.approve] Request ID:', args.requestId);
     
     const admin = await getUserByToken(ctx, args.sessionToken);
-    console.log('[signupRequests.approve] Admin user:', admin?._id, admin?.role);
+    console.log('[signupRequests.approve] Admin:', admin?._id, 'Role:', admin?.role);
     
     if (!admin || admin.role !== "admin") {
+      console.error('[signupRequests.approve] Unauthorized - not admin');
       throw new Error("Unauthorized");
     }
 
     const request = await ctx.db.get(args.requestId);
-    console.log('[signupRequests.approve] Request found:', request);
+    console.log('[signupRequests.approve] Request:', request);
     
     if (!request) {
+      console.error('[signupRequests.approve] Request not found');
       throw new Error("Request not found");
     }
 
     if (request.status === "approved") {
+      console.log('[signupRequests.approve] Request already approved');
       throw new Error("Request already approved");
     }
 
     if (!request.passwordHash || !request.passwordSalt) {
+      console.error('[signupRequests.approve] Missing password data');
       throw new Error("Cannot approve: signup request missing password data");
     }
 
@@ -117,15 +122,17 @@ export const approve = mutation({
       .withIndex("by_username", (q) => q.eq("username", request.username))
       .first();
 
+    console.log('[signupRequests.approve] Existing user:', existingUser?._id);
+
     if (existingUser) {
-      console.log('[signupRequests.approve] User already exists, just updating status');
+      console.log('[signupRequests.approve] Updating existing user status to approved');
       await ctx.db.patch(existingUser._id, {
         status: "approved",
       });
+      console.log('[signupRequests.approve] ✓ User status updated');
     } else {
-      // Create the user account from the signup request
       console.log('[signupRequests.approve] Creating new user account');
-      await ctx.db.insert("users", {
+      const newUserId = await ctx.db.insert("users", {
         username: request.username,
         passwordHash: request.passwordHash,
         passwordSalt: request.passwordSalt,
@@ -135,16 +142,19 @@ export const approve = mutation({
         presenceStatus: "offline",
         lastSeen: Date.now(),
       });
+      console.log('[signupRequests.approve] ✓ New user created:', newUserId);
     }
 
     // Update the signup request
+    console.log('[signupRequests.approve] Updating signup request status');
     await ctx.db.patch(args.requestId, {
       status: "approved",
       approvedAt: Date.now(),
       approvedBy: admin._id,
     });
+    console.log('[signupRequests.approve] ✓ Signup request updated');
 
-    console.log('[signupRequests.approve] Request approved and user created successfully');
+    console.log('[signupRequests.approve] ========== SUCCESS ==========');
     return { success: true };
   },
 });

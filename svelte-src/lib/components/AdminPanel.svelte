@@ -50,7 +50,10 @@
   });
 
   async function loadSignupRequests() {
-    if (!sessionToken) return;
+    if (!sessionToken) {
+      console.log('[AdminPanel] No session token, skipping signup requests load');
+      return;
+    }
     
     console.log('[AdminPanel] Loading signup requests...');
     isLoading = true;
@@ -60,6 +63,7 @@
       signupRequests = requests;
     } catch (error) {
       console.error('[AdminPanel] Failed to load signup requests:', error);
+      signupRequests = []; // Clear on error
     } finally {
       isLoading = false;
     }
@@ -95,37 +99,55 @@
   }
 
   async function approveSignupRequest(requestId: string) {
-    console.log('[AdminPanel] Approve clicked');
-    console.log('[AdminPanel] Session token exists:', !!sessionToken);
+    console.log('[AdminPanel] ========== APPROVE BUTTON CLICKED ==========');
     console.log('[AdminPanel] Request ID:', requestId);
+    console.log('[AdminPanel] Session token exists:', !!sessionToken);
+    console.log('[AdminPanel] Current isLoading:', isLoading);
     
     if (!sessionToken) {
+      console.error('[AdminPanel] No session token available');
       alert('No session token - please refresh the page');
       return;
     }
     
-    isLoading = true; // Show loading state
-    console.log('[AdminPanel] Approving signup request:', requestId);
+    if (isLoading) {
+      console.log('[AdminPanel] Already loading, ignoring click');
+      return;
+    }
+    
+    isLoading = true;
+    console.log('[AdminPanel] Starting approval process...');
+    
     try {
+      console.log('[AdminPanel] Calling Convex mutation...');
       const result = await convex.mutation(api.signupRequests.approve, { 
         sessionToken, 
         requestId: requestId as Id<"signupRequests"> 
       });
-      console.log('[AdminPanel] Signup request approved successfully:', result);
-      // Reload the list to remove the approved request
-      await loadSignupRequests();
+      console.log('[AdminPanel] ✓ Approval successful:', result);
+      
+      console.log('[AdminPanel] Reloading all data...');
+      await Promise.all([
+        loadSignupRequests(),
+        loadPendingUsers(),
+        loadAllUsers()
+      ]);
+      console.log('[AdminPanel] ✓ Data reloaded');
+      
       alert('User approved successfully! They can now login.');
     } catch (error) {
-      console.error('[AdminPanel] Failed to approve signup request:', error);
+      console.error('[AdminPanel] ✗ Approval failed:', error);
       alert('Failed to approve: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       isLoading = false;
+      console.log('[AdminPanel] ========== APPROVE PROCESS COMPLETE ==========');
     }
   }
 
   async function rejectSignupRequest(requestId: string) {
     if (!sessionToken) return;
     
+    isLoading = true;
     console.log('[AdminPanel] Rejecting signup request:', requestId);
     try {
       const result = await convex.mutation(api.signupRequests.reject, { 
@@ -133,11 +155,18 @@
         requestId: requestId as Id<"signupRequests"> 
       });
       console.log('[AdminPanel] Signup request rejected successfully:', result);
-      // Reload the list to remove the rejected request
-      await loadSignupRequests();
+      
+      // Reload all data to ensure UI is in sync
+      await Promise.all([
+        loadSignupRequests(),
+        loadPendingUsers(),
+        loadAllUsers()
+      ]);
     } catch (error) {
       console.error('[AdminPanel] Failed to reject signup request:', error);
       alert('Failed to reject: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      isLoading = false;
     }
   }
 
