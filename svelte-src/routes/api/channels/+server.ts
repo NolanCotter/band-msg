@@ -25,6 +25,11 @@ export const POST = async ({ locals, request }: any) => {
     return toJson({ error: "unauthorized" }, 401);
   }
 
+  // Only admins can create channels
+  if (locals.user?.role !== 'admin') {
+    return toJson({ error: "Only admins can create channels" }, 403);
+  }
+
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name : "";
   const description = typeof body?.description === "string" ? body.description : "";
@@ -33,11 +38,6 @@ export const POST = async ({ locals, request }: any) => {
 
   if (!name) {
     return toJson({ error: "name is required" }, 400);
-  }
-
-  // Only admins can create private channels
-  if (isPrivate && locals.user?.role !== 'admin') {
-    return toJson({ error: "Only admins can create private channels" }, 403);
   }
 
   const result = await createChannel({

@@ -168,6 +168,40 @@ export const demoteUser = mutation({
   },
 });
 
+// Admin: Remove user completely
+export const removeUser = mutation({
+  args: { 
+    sessionToken: v.string(),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const admin = await getUserByToken(ctx, args.sessionToken);
+    if (!admin || admin.role !== "admin") {
+      throw new Error("Unauthorized");
+    }
+
+    // Don't allow removing yourself
+    if (admin._id === args.userId) {
+      throw new Error("Cannot remove yourself");
+    }
+
+    // Delete user's sessions
+    const sessions = await ctx.db
+      .query("sessions")
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .collect();
+    
+    for (const session of sessions) {
+      await ctx.db.delete(session._id);
+    }
+
+    // Delete the user
+    await ctx.db.delete(args.userId);
+    
+    return { success: true };
+  },
+});
+
 // Register new user - only creates signup request, not the user
 export const register = mutation({
   args: {

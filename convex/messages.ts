@@ -28,12 +28,15 @@ export const list = query({
       }
     }
 
-    // Get messages
-    const messages = await ctx.db
+    // Get messages (only top-level messages, not thread replies)
+    const allMessages = await ctx.db
       .query("messages")
       .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
       .order("asc")
       .take(200);
+
+    // Filter out thread replies - only show top-level messages
+    const messages = allMessages.filter(msg => !msg.replyToId);
 
     // Get user info for each message
     const messagesWithAuthors = await Promise.all(

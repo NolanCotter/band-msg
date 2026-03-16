@@ -258,6 +258,7 @@
   async function demoteUser(userId: string, username: string) {
     if (!sessionToken) return;
     
+    isLoading = true;
     try {
       await convex.mutation(api.auth.demoteUser, { 
         sessionToken, 
@@ -269,6 +270,33 @@
       await loadAllUsers();
     } catch (error) {
       console.error('[AdminPanel] Failed to demote user:', error);
+      alert('Failed to demote user: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function removeUser(userId: string, username: string) {
+    if (!sessionToken) return;
+    
+    if (!confirm(`Are you sure you want to permanently remove ${username}? This cannot be undone.`)) {
+      return;
+    }
+    
+    isLoading = true;
+    try {
+      await convex.mutation(api.auth.removeUser, { 
+        sessionToken, 
+        userId: userId as Id<"users"> 
+      });
+      
+      await loadAllUsers();
+      alert('User removed successfully');
+    } catch (error) {
+      console.error('[AdminPanel] Failed to remove user:', error);
+      alert('Failed to remove user: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      isLoading = false;
     }
   }
 </script>
@@ -451,20 +479,30 @@
                       {#if user.role === 'admin'}
                         <button
                           type="button"
-                          on:click={() => demoteUser(user.id, user.username)}
-                          class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                          on:click|stopPropagation={() => demoteUser(user.id, user.username)}
+                          disabled={isLoading}
+                          class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
                         >
                           Demote
                         </button>
                       {:else}
                         <button
                           type="button"
-                          on:click={() => promoteUser(user.id, user.username)}
-                          class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                          on:click|stopPropagation={() => promoteUser(user.id, user.username)}
+                          disabled={isLoading}
+                          class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50"
                         >
                           Promote
                         </button>
                       {/if}
+                      <button
+                        type="button"
+                        on:click|stopPropagation={() => removeUser(user.id, user.username)}
+                        disabled={isLoading}
+                        class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-xs font-medium disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -481,16 +519,19 @@
 <div class="hidden md:flex fixed inset-0 bg-black/80 z-[200] items-center justify-center" style="padding-top: env(safe-area-inset-top);">
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="absolute inset-0" on:click={onClose}></div>
+  <div class="absolute inset-0" on:click={() => { if (!isLoading) onClose(); }}></div>
   
-  <div class="relative bg-black border border-white/10 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="relative bg-black border border-white/10 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col" on:click|stopPropagation>
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
       <h2 class="text-lg font-bold text-white">Admin</h2>
       <button
         type="button"
-        on:click={onClose}
-        class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+        on:click={() => { if (!isLoading) onClose(); }}
+        disabled={isLoading}
+        class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="Close"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -648,20 +689,30 @@
                     {#if user.role === 'admin'}
                       <button
                         type="button"
-                        on:click={() => demoteUser(user.id, user.username)}
-                        class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium"
+                        on:click|stopPropagation={() => demoteUser(user.id, user.username)}
+                        disabled={isLoading}
+                        class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50"
                       >
                         Demote
                       </button>
                     {:else}
                       <button
                         type="button"
-                        on:click={() => promoteUser(user.id, user.username)}
-                        class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold"
+                        on:click|stopPropagation={() => promoteUser(user.id, user.username)}
+                        disabled={isLoading}
+                        class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50"
                       >
                         Promote
                       </button>
                     {/if}
+                    <button
+                      type="button"
+                      on:click|stopPropagation={() => removeUser(user.id, user.username)}
+                      disabled={isLoading}
+                      class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-xs font-medium disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               </div>

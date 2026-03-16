@@ -9,7 +9,7 @@ export default defineSchema({
     passwordSalt: v.optional(v.string()),
     googleId: v.optional(v.string()),
     role: v.string(), // "admin" | "member"
-    status: v.string(), // "approved" | "pending" | "rejected" - REQUIRED field
+    status: v.optional(v.string()), // "approved" | "pending" | "rejected" - optional for backwards compatibility
     presenceStatus: v.string(), // "online" | "idle" | "dnd" | "offline"
     lastSeen: v.number(),
     createdAt: v.optional(v.number()),
