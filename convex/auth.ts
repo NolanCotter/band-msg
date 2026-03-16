@@ -144,3 +144,103 @@ export const demoteUser = mutation({
     return { success: true };
   },
 });
+
+// Register new user
+export const register = mutation({
+  args: {
+    username: v.string(),
+    passwordHash: v.string(),
+    passwordSalt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const username = args.username.trim().toLowerCase();
+    
+    // Check if username already exists
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .first();
+    
+    if (existing) {
+      throw new Error("Username already exists");
+    }
+
+    // Check if this is the first user (bootstrap admin)
+    const allUsers = await ctx.db.query("users").collect();
+    const approvedAdmins = allUsers.filter(u => u.role === "admin" && u.status === "approved");
+    const isFirstUser = approvedAdmins.length === 0;
+
+    const userId = await ctx.db.insert("users", {
+      username,
+      passwordHash: args.passwordHash,
+      passwordSalt: args.passwordSalt,
+      role: isFirstUser ? "admin" : "member",
+      status: isFirstUser ? "approved" : "approved", // Auto-approve all users
+      createdAt: Date.now(),
+    });
+
+    return {
+      id: userId,
+      username,
+      role: isFirstUser ? "admin" : "member",
+      status: isFirstUser ? "approved" : "approved",
+    };
+  },
+});
+
+// Login user
+export const login = mutation({
+  args: {
+    username: v.string(),
+    passwordHash: v.string(),
+    sessionToken: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const username = args.username.trim().toLowerCase();
+    
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .first();
+
+    if (!user || user.passwordHash !== args.passwordHash) {
+      throw new Error("Invalid username or password");
+    }
+
+    if (user.status !== "approved") {
+      throw new Error("Account pending approval");
+    }
+
+    // Create session
+    await ctx.db.insert("sessions", {
+      token: args.sessionToken,
+      userId: user._id,
+      expiresAt: args.expiresAt,
+      createdAt: Date.now(),
+    });
+
+    return {
+      id: user._id,
+      username: user.username,
+      role: user.role,
+      status: user.status,
+      needsUsernameSetup: user.needsUsernameSetup || false,
+    };
+  },
+});
+
+// Get login salt
+export const getLoginSalt = query({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const username = args.username.trim().toLowerCase();
+    
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .first();
+
+    return user?.passwordSalt || null;
+  },
+});

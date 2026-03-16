@@ -9,8 +9,10 @@ export default defineSchema({
     passwordSalt: v.optional(v.string()),
     googleId: v.optional(v.string()),
     role: v.string(), // "admin" | "member"
+    status: v.optional(v.string()), // "approved" | "pending" | "rejected"
     presenceStatus: v.string(), // "online" | "idle" | "dnd" | "offline"
     lastSeen: v.number(),
+    createdAt: v.optional(v.number()),
     needsUsernameSetup: v.optional(v.boolean()),
   })
     .index("by_username", ["username"])
@@ -21,6 +23,7 @@ export default defineSchema({
     userId: v.id("users"),
     token: v.string(),
     expiresAt: v.number(),
+    createdAt: v.optional(v.number()),
   }).index("by_token", ["token"]),
 
   channels: defineTable({
