@@ -171,28 +171,52 @@
   }
 
   async function approveUser(userId: string, username: string) {
-    if (!sessionToken) return;
+    console.log('[AdminPanel] ========== APPROVE USER BUTTON CLICKED ==========');
+    console.log('[AdminPanel] User ID:', userId);
+    console.log('[AdminPanel] Username:', username);
+    console.log('[AdminPanel] Session token exists:', !!sessionToken);
+
+    if (!sessionToken) {
+      console.error('[AdminPanel] No session token available');
+      alert('No session token - please refresh the page');
+      return;
+    }
+
+    if (isLoading) {
+      console.log('[AdminPanel] Already loading, ignoring click');
+      return;
+    }
 
     isLoading = true;
+    console.log('[AdminPanel] Starting user approval process...');
+
     try {
+      console.log('[AdminPanel] Step 1: Calling Convex mutation to approve user...');
       await convex.mutation(api.auth.approveUser, {
         sessionToken,
         userId: userId as Id<"users">
       });
-      // Also approve in SQL via SvelteKit API
-      await apiPost('/api/admin/users/approve', { username });
+      console.log('[AdminPanel] ✓ Convex user approval successful');
 
+      console.log('[AdminPanel] Step 2: Calling SQL API to approve user...');
+      const sqlResponse = await apiPost('/api/admin/users/approve', { username });
+      console.log('[AdminPanel] SQL API response:', sqlResponse);
+      console.log('[AdminPanel] ✓ SQL user approval successful');
+
+      console.log('[AdminPanel] Step 3: Reloading all data...');
       await Promise.all([
         loadPendingUsers(),
         loadAllUsers()
       ]);
+      console.log('[AdminPanel] ✓ Data reloaded');
 
       alert('User approved successfully!');
     } catch (error) {
-      console.error('[AdminPanel] Failed to approve user:', error);
+      console.error('[AdminPanel] ✗ User approval failed:', error);
       alert('Failed to approve user: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       isLoading = false;
+      console.log('[AdminPanel] ========== APPROVE USER PROCESS COMPLETE ==========');
     }
   }
 

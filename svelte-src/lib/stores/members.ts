@@ -43,11 +43,11 @@ function createMemberStore() {
 
     startPolling() {
       if (!browser || pollInterval) return;
-      
-      // Poll every 10 seconds
+
+      // Poll every 5 seconds for real-time presence updates
       pollInterval = setInterval(() => {
         this.loadMembers();
-      }, 10000);
+      }, 5000);
     },
 
     stopPolling() {

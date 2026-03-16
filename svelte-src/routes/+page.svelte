@@ -52,13 +52,23 @@
       heartbeatInterval = setInterval(async () => {
         if (data.sessionToken) {
           try {
+            // Update Convex presence
             await convex.mutation(api.auth.heartbeat, { sessionToken: data.sessionToken });
+            // Also update SQL presence so member list shows correct status
+            await fetch('/api/presence', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'online' })
+            });
           } catch (error) {
             console.error('[Page] Heartbeat failed:', error);
           }
         }
       }, 30000);
     }
+
+    // Start polling for member status updates
+    memberStore.startPolling();
   }
 
   function startApprovalPolling() {
@@ -124,6 +134,7 @@
   onDestroy(() => {
     pusherStore.disconnect();
     stopApprovalPolling();
+    memberStore.stopPolling();
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);
     }

@@ -80,7 +80,7 @@ export const getPendingUsers = query({
 
 // Admin: Approve user
 export const approveUser = mutation({
-  args: { 
+  args: {
     sessionToken: v.string(),
     userId: v.id("users"),
   },
@@ -90,7 +90,29 @@ export const approveUser = mutation({
       throw new Error("Unauthorized");
     }
 
+    // Get the user to find their username
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Update user status
     await ctx.db.patch(args.userId, { status: "approved" });
+
+    // Also update any corresponding signup request
+    const signupRequest = await ctx.db
+      .query("signupRequests")
+      .withIndex("by_username", (q) => q.eq("username", user.username))
+      .first();
+
+    if (signupRequest && signupRequest.status === "pending") {
+      await ctx.db.patch(signupRequest._id, {
+        status: "approved",
+        approvedAt: Date.now(),
+        approvedBy: admin._id,
+      });
+    }
+
     return { success: true };
   },
 });
