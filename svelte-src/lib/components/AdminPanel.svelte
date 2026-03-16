@@ -54,7 +54,7 @@
     console.log('[AdminPanel] Loading signup requests...');
     isLoading = true;
     try {
-      const requests = await convex.query(api.signupRequests.getAll, { sessionToken });
+      const requests = await convex.query(api.signupRequests.getPending, { sessionToken });
       console.log('[AdminPanel] Signup requests loaded:', requests);
       signupRequests = requests;
     } catch (error) {
@@ -98,8 +98,9 @@
     
     console.log('[AdminPanel] Approving signup request:', requestId);
     try {
-      await convex.mutation(api.signupRequests.approve, { sessionToken, requestId });
-      console.log('[AdminPanel] Signup request approved successfully');
+      const result = await convex.mutation(api.signupRequests.approve, { sessionToken, requestId });
+      console.log('[AdminPanel] Signup request approved successfully:', result);
+      // Reload the list to remove the approved request
       await loadSignupRequests();
     } catch (error) {
       console.error('[AdminPanel] Failed to approve signup request:', error);
@@ -112,8 +113,9 @@
     
     console.log('[AdminPanel] Rejecting signup request:', requestId);
     try {
-      await convex.mutation(api.signupRequests.reject, { sessionToken, requestId });
-      console.log('[AdminPanel] Signup request rejected successfully');
+      const result = await convex.mutation(api.signupRequests.reject, { sessionToken, requestId });
+      console.log('[AdminPanel] Signup request rejected successfully:', result);
+      // Reload the list to remove the rejected request
       await loadSignupRequests();
     } catch (error) {
       console.error('[AdminPanel] Failed to reject signup request:', error);
