@@ -77,7 +77,6 @@
       class="fixed inset-0 bg-black/80 z-[200]"
       transition={fade}
       transitionConfig={{ duration: 150 }}
-      on:click={onClose}
     />
     <Drawer.Content
       class="fixed bottom-0 left-0 right-0 z-[200] flex flex-col bg-[#0a0a0a] rounded-t-[20px] max-h-[96vh] md:hidden outline-none"
