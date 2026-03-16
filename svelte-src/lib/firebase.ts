@@ -52,12 +52,21 @@ export function getFirebaseMessaging() {
   return messaging;
 }
 
+// Detect if running on iOS
+function isIOS(): boolean {
+  if (!browser) return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 // Request notification permission and get FCM token
 export async function requestNotificationPermission(): Promise<string | null> {
   if (!browser) return null;
   
   try {
     console.log('Requesting notification permission...');
+    console.log('Is iOS:', isIOS());
+    
     const permission = await Notification.requestPermission();
     console.log('Permission result:', permission);
     
@@ -66,6 +75,46 @@ export async function requestNotificationPermission(): Promise<string | null> {
       return null;
     }
     
+    // iOS uses native push API, not Firebase
+    if (isIOS()) {
+      console.log('iOS detected - using native push API');
+      
+      // For iOS, we need to use the service worker's pushManager
+      if (!swRegistration) {
+        swRegistration = await registerServiceWorker();
+      }
+      
+      if (!swRegistration) {
+        console.error('Service worker not registered');
+        return null;
+      }
+      
+      // Check if already subscribed
+      let subscription = await swRegistration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        // Subscribe using VAPID key
+        const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+        if (!vapidKey) {
+          console.error('VAPID key missing');
+          return null;
+        }
+        
+        subscription = await swRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKey
+        });
+      }
+      
+      // Convert subscription to a token-like string for storage
+      const subscriptionJSON = subscription.toJSON();
+      const token = subscriptionJSON.endpoint || '';
+      console.log('iOS push subscription endpoint:', token ? 'Yes' : 'No');
+      
+      return token;
+    }
+    
+    // Non-iOS: use Firebase Cloud Messaging
     const messaging = getFirebaseMessaging();
     if (!messaging) {
       console.error('Firebase Messaging not initialized');

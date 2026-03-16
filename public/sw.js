@@ -27,17 +27,37 @@ self.addEventListener("activate", (event) => {
 
 // Push notification handler
 self.addEventListener("push", (event) => {
+  console.log('[SW] Push event received:', event);
+  
   let data = { title: "Band Chat", body: "New message", icon: "/notification-icon.png" };
+  
   try {
     if (event.data) {
-      data = Object.assign(data, event.data.json());
+      // Try to parse as JSON first (Firebase format)
+      try {
+        const parsed = event.data.json();
+        console.log('[SW] Parsed push data:', parsed);
+        
+        // Handle Firebase notification format
+        if (parsed.notification) {
+          data.title = parsed.notification.title || data.title;
+          data.body = parsed.notification.body || data.body;
+          data.icon = parsed.notification.icon || data.icon;
+        } else {
+          // Handle direct data
+          data = Object.assign(data, parsed);
+        }
+      } catch (jsonError) {
+        // If not JSON, treat as text
+        data.body = event.data.text();
+      }
     }
-  } catch {
-    if (event.data) {
-      data.body = event.data.text();
-    }
+  } catch (error) {
+    console.error('[SW] Error parsing push data:', error);
   }
 
+  console.log('[SW] Showing notification:', data);
+  
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
@@ -45,6 +65,8 @@ self.addEventListener("push", (event) => {
       badge: "/notification-icon.png",
       tag: data.tag || "band-chat-notification",
       data: data.url ? { url: data.url } : {},
+      requireInteraction: false,
+      vibrate: [200, 100, 200]
     })
   );
 });
