@@ -66,10 +66,8 @@
         requestId: requestId as Id<"signupRequests"> 
       });
       await loadData();
-      alert('User approved successfully!');
     } catch (error) {
       console.error('[AdminPanel] Failed to approve:', error);
-      alert('Failed to approve: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       isLoading = false;
     }
