@@ -51,7 +51,7 @@
     
     isLoading = true;
     try {
-      const requests = await convex.query(api.signupRequests.getPending, { sessionToken });
+      const requests = await convex.query(api.signupRequests.getAll, { sessionToken });
       signupRequests = requests;
     } catch (error) {
       console.error('[AdminPanel] Failed to load signup requests:', error);
