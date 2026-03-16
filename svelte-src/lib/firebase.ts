@@ -108,10 +108,28 @@ export async function requestNotificationPermission(): Promise<string | null> {
       
       // Convert subscription to a token-like string for storage
       const subscriptionJSON = subscription.toJSON();
-      const token = subscriptionJSON.endpoint || '';
-      console.log('iOS push subscription endpoint:', token ? 'Yes' : 'No');
+      const endpoint = subscriptionJSON.endpoint || '';
+      const p256dh = subscriptionJSON.keys?.p256dh || '';
+      const auth = subscriptionJSON.keys?.auth || '';
       
-      return token;
+      console.log('iOS push subscription:', {
+        hasEndpoint: !!endpoint,
+        hasP256dh: !!p256dh,
+        hasAuth: !!auth
+      });
+      
+      // Store the full subscription data
+      if (!endpoint) {
+        console.error('No endpoint in subscription');
+        return null;
+      }
+      
+      // Return endpoint as the "token" but we'll store keys separately
+      return JSON.stringify({
+        endpoint,
+        p256dh,
+        auth
+      });
     }
     
     // Non-iOS: use Firebase Cloud Messaging
@@ -159,10 +177,10 @@ export function onForegroundMessage(callback: (payload: any) => void) {
 // Subscribe to push notifications
 export async function subscribeToPushNotifications(): Promise<{ success: boolean; error?: string }> {
   try {
-    const token = await requestNotificationPermission();
+    const tokenOrSubscription = await requestNotificationPermission();
     
-    if (!token) {
-      return { success: false, error: 'Failed to get FCM token' };
+    if (!tokenOrSubscription) {
+      return { success: false, error: 'Failed to get push subscription' };
     }
     
     const { convex } = await import('./convex');
@@ -179,11 +197,26 @@ export async function subscribeToPushNotifications(): Promise<{ success: boolean
       return { success: false, error: 'Not authenticated' };
     }
 
+    // Parse subscription data (could be FCM token or iOS subscription object)
+    let endpoint, p256dh, auth;
+    
+    try {
+      const parsed = JSON.parse(tokenOrSubscription);
+      endpoint = parsed.endpoint;
+      p256dh = parsed.p256dh;
+      auth = parsed.auth;
+    } catch {
+      // It's a plain FCM token
+      endpoint = tokenOrSubscription;
+      p256dh = 'fcm';
+      auth = 'fcm';
+    }
+
     await convex.mutation(api.pushSubscriptions.subscribe, {
       sessionToken,
-      endpoint: token,
-      p256dhKey: 'fcm',
-      authKey: 'fcm'
+      endpoint,
+      p256dhKey: p256dh,
+      authKey: auth
     });
     
     return { success: true };
