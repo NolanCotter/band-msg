@@ -2,21 +2,47 @@
   import { onMount, onDestroy } from 'svelte';
   import { notificationStore } from '../stores/notificationStore';
   import { convexChannelStore } from '../stores/convexChannels';
+  import { convex } from '../convex';
+  import { api } from '../../convex/_generated/api';
+  import { convexMessageStore } from '../stores/convexMessages';
   import Spinner from './Spinner.svelte';
   
   export let onClose: () => void;
   
+  let debugInfo: any = null;
+  
   onMount(async () => {
     console.log('[NotificationSettings] Component mounted');
     await notificationStore.init();
+    await loadDebugInfo();
   });
 
   onDestroy(() => {
     notificationStore.setError(null);
   });
   
+  async function loadDebugInfo() {
+    try {
+      let sessionToken = '';
+      const unsubscribe = convexMessageStore.subscribe(state => {
+        sessionToken = state.sessionToken;
+      });
+      unsubscribe();
+      
+      if (sessionToken) {
+        debugInfo = await convex.query(api.debugNotifications.debugNotificationSetup, {
+          sessionToken,
+        });
+        console.log('[NotificationSettings] Debug info:', debugInfo);
+      }
+    } catch (err) {
+      console.error('[NotificationSettings] Failed to load debug info:', err);
+    }
+  }
+  
   async function handleToggleNotifications() {
     await notificationStore.toggleNotifications();
+    await loadDebugInfo(); // Reload debug info after toggle
   }
   
   async function toggleChannelMute(channelId: string) {
@@ -184,6 +210,21 @@
           </li>
         </ul>
       </div>
+
+      <!-- Debug Info -->
+      {#if debugInfo}
+        <div class="pt-4 border-t border-white/8">
+          <h4 class="text-xs font-semibold text-white/50 mb-2">Debug Info:</h4>
+          <div class="text-xs text-white/40 space-y-1 font-mono">
+            <div>Subscribed: {debugInfo.currentUser.hasSubscription ? 'Yes' : 'No'}</div>
+            <div>Total Subscriptions: {debugInfo.totalSubscriptions}</div>
+            <div>Total Users: {debugInfo.totalApprovedUsers}</div>
+            {#if debugInfo.currentUser.subscription}
+              <div class="text-green-400">Token: {debugInfo.currentUser.subscription.endpoint}</div>
+            {/if}
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 </div>

@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as channels from "../channels.js";
 import type * as debug from "../debug.js";
+import type * as debugNotifications from "../debugNotifications.js";
 import type * as events from "../events.js";
 import type * as fixUserStatus from "../fixUserStatus.js";
 import type * as messages from "../messages.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   channels: typeof channels;
   debug: typeof debug;
+  debugNotifications: typeof debugNotifications;
   events: typeof events;
   fixUserStatus: typeof fixUserStatus;
   messages: typeof messages;
