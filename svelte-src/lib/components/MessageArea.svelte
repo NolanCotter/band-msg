@@ -2,7 +2,6 @@
   import { onMount, afterUpdate } from 'svelte';
   import { Drawer } from 'vaul-svelte';
   import { authStore } from '../stores/auth';
-  import { channelStore } from '../stores/channels';
   import { convexChannelStore } from '../stores/convexChannels';
   import { convexMessageStore as messageStore } from '../stores/convexMessages';
   import { memberStore } from '../stores/members';
@@ -119,7 +118,7 @@
   }
 
   async function selectChannel(channelId: string) {
-    channelStore.selectChannel(channelId);
+    convexChannelStore.selectChannel(channelId);
     await messageStore.loadMessages(channelId);
     showMobileChannels = false;
   }
@@ -404,7 +403,7 @@
             Text Channels
           </h3>
           <div class="space-y-1">
-            {#each $channelStore.channels as channel}
+            {#each $convexChannelStore.channels as channel}
               <button
                 type="button"
                 on:click={() => selectChannel(channel.id)}

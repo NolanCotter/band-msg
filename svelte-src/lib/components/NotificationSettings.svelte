@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { initializeFirebase, subscribeToPushNotifications, unsubscribeFromPushNotifications, isPushSubscribed } from '../firebase';
-  import { channelStore } from '../stores/channels';
+  import { convexChannelStore } from '../stores/convexChannels';
   import { apiPost, apiGet } from '../utils/api';
   import Spinner from './Spinner.svelte';
   
@@ -192,7 +192,7 @@
           <h4 class="text-sm font-semibold text-white mb-3">Channel Notifications</h4>
           <p class="text-xs text-white/40 mb-3">Choose which channels send you notifications</p>
           <div class="space-y-2">
-            {#each $channelStore.channels as channel}
+            {#each $convexChannelStore.channels as channel}
               <div class="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
                 <div class="flex items-center gap-2.5 flex-1 min-w-0">
                   {#if channel['isPrivate']}

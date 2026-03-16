@@ -1,8 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { apiGet, apiPost } from '../utils/api';
+  import { convex } from '../convex';
+  import { api } from '../../../convex/_generated/api';
+  import type { Id } from '../../../convex/_generated/dataModel';
   import { authStore } from '../stores/auth';
-  import { channelStore } from '../stores/channels';
+  import { convexChannelStore } from '../stores/convexChannels';
+  import { convexMessageStore } from '../stores/convexMessages';
   import { parseMarkdown } from '$lib/markdown';
   import Avatar from './Avatar.svelte';
   import Input from './Input.svelte';
@@ -14,6 +17,16 @@
   let replyInput = '';
   let isLoading = false;
   let messageContainer: HTMLDivElement;
+
+  function getCookie(name: string): string {
+    if (typeof document === 'undefined') return '';
+    const prefix = `${encodeURIComponent(name)}=`;
+    const found = document.cookie
+      .split(';')
+      .map(part => part.trim())
+      .find(part => part.startsWith(prefix));
+    return found ? decodeURIComponent(found.slice(prefix.length)) : '';
+  }
 
   function getAvatarColor(name: string): string {
     const colors = ['#7c3aed', '#2563eb', '#e11d48', '#059669', '#d97706', '#db2777'];
@@ -38,11 +51,19 @@
   async function loadReplies() {
     isLoading = true;
     try {
-      const res = await apiGet(`/api/threads/${parentMessage.id}`);
-      if (res.ok) {
-        replies = await res.json();
-        setTimeout(scrollToBottom, 100);
+      const sessionToken = getCookie('band_chat_session');
+      if (!sessionToken) {
+        console.error('[ThreadPanel] No session token');
+        return;
       }
+
+      const threadReplies = await convex.query(api.messages.getThread, {
+        messageId: parentMessage.id as Id<"messages">,
+        sessionToken
+      });
+      
+      replies = threadReplies;
+      setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error('Failed to load replies:', error);
     } finally {
@@ -51,19 +72,21 @@
   }
 
   async function sendReply() {
-    if (!replyInput.trim() || !$channelStore.selectedChannelId) return;
+    if (!replyInput.trim() || !$convexChannelStore.selectedChannelId) return;
 
     try {
-      const res = await apiPost('/api/messages', {
-        channelId: $channelStore.selectedChannelId,
+      const sessionToken = getCookie('band_chat_session');
+      if (!sessionToken) return;
+
+      await convex.mutation(api.messages.send, {
+        channelId: $convexChannelStore.selectedChannelId as Id<"channels">,
         content: replyInput,
-        replyToId: parentMessage.id
+        sessionToken,
+        replyToId: parentMessage.id as Id<"messages">
       });
 
-      if (res.ok) {
-        replyInput = '';
-        await loadReplies();
-      }
+      replyInput = '';
+      await loadReplies();
     } catch (error) {
       console.error('Failed to send reply:', error);
     }

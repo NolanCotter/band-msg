@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Drawer } from 'vaul-svelte';
   import { fade } from 'svelte/transition';
-  import { channelStore } from '../stores/channels';
+  import { convexChannelStore } from '../stores/convexChannels';
   import { authStore } from '../stores/auth';
   import { apiPost } from '../utils/api';
   import MemberSelector from './MemberSelector.svelte';
@@ -51,8 +51,8 @@
         return;
       }
       
-      await channelStore.loadChannels();
-      channelStore.selectChannel(data.id);
+      await convexChannelStore.loadChannels();
+      convexChannelStore.selectChannel(data.id);
       onClose();
     } catch (err: any) {
       error = 'An unexpected error occurred';

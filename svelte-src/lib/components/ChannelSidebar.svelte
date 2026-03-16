@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { channelStore } from '../stores/channels';
+  import { convexChannelStore } from '../stores/convexChannels';
   import { convexMessageStore as messageStore } from '../stores/convexMessages';
   import { authStore } from '../stores/auth';
   import { apiPost } from '../utils/api';
@@ -50,7 +50,7 @@
   }
 
   async function selectChannel(channelId: string) {
-    channelStore.selectChannel(channelId);
+    convexChannelStore.selectChannel(channelId);
     await messageStore.loadMessages(channelId);
   }
 </script>
@@ -100,13 +100,13 @@
         {/if}
       </div>
       <div class="space-y-0.5">
-        {#each $channelStore.channels as channel}
+        {#each $convexChannelStore.channels as channel}
           <div
             role="button"
             tabindex="0"
             on:click={() => selectChannel(channel.id)}
             on:keydown={(e) => e.key === 'Enter' && selectChannel(channel.id)}
-            class="group flex items-center justify-between w-full px-2 py-1.5 rounded-lg transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-98 {$channelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
+            class="group flex items-center justify-between w-full px-2 py-1.5 rounded-lg transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-98 {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
           >
             <div class="flex items-center gap-2 truncate">
               {#if channel['isPrivate']}

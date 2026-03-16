@@ -8,9 +8,7 @@
   import PWAInstallGuide from '../lib/components/PWAInstallGuide.svelte';
   import UsernameSetup from '../lib/components/UsernameSetup.svelte';
   import { authStore } from '../lib/stores/auth';
-  import { channelStore } from '../lib/stores/channels';
   import { convexChannelStore } from '../lib/stores/convexChannels';
-  import { messageStore } from '../lib/stores/messages';
   import { convexMessageStore } from '../lib/stores/convexMessages';
   import { memberStore } from '../lib/stores/members';
   import { themeStore } from '../lib/stores/theme';
@@ -97,12 +95,12 @@
     pusherStore.connect();
     
     // Load initial data
-    await channelStore.loadChannels();
+    await convexChannelStore.loadChannels();
     await memberStore.loadMembers();
     
     // Load messages for selected channel
-    if ($channelStore.selectedChannelId) {
-      await messageStore.loadMessages($channelStore.selectedChannelId);
+    if ($convexChannelStore.selectedChannelId) {
+      await convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
     }
   }
 </script>
