@@ -116,7 +116,7 @@
 <Drawer.Root open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
   <Drawer.Portal>
     <Drawer.Overlay class="fixed inset-0 bg-black/80 z-[200] md:hidden" transition={fade} transitionConfig={{ duration: 150 }} />
-    <Drawer.Content class="fixed bottom-0 left-0 right-0 z-[200] flex flex-col bg-black rounded-t-[20px] max-h-[65vh] md:hidden outline-none" style="padding-bottom: env(safe-area-inset-bottom);">
+    <Drawer.Content class="fixed bottom-0 left-0 right-0 z-[200] flex flex-col bg-black rounded-t-[20px] max-h-[75vh] md:hidden outline-none" style="padding-bottom: env(safe-area-inset-bottom);">
       <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3"></div>
       
       <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
