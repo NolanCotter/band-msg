@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { convex } from '../convex';
-  import { api } from '../../convex/_generated/api';
-  import type { Id } from '../../convex/_generated/dataModel';
+  import { api } from '../../../convex/_generated/api';
+  import type { Id } from '../../../convex/_generated/dataModel';
   import { authStore } from '../stores/auth';
   import { channelStore } from '../stores/channels';
   import { convexMessageStore as messageStore } from '../stores/convexMessages';
