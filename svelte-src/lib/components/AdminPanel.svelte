@@ -95,7 +95,14 @@
   }
 
   async function approveSignupRequest(requestId: string) {
-    if (!sessionToken) return;
+    console.log('[AdminPanel] Approve clicked');
+    console.log('[AdminPanel] Session token exists:', !!sessionToken);
+    console.log('[AdminPanel] Request ID:', requestId);
+    
+    if (!sessionToken) {
+      alert('No session token - please refresh the page');
+      return;
+    }
     
     console.log('[AdminPanel] Approving signup request:', requestId);
     try {
@@ -106,9 +113,10 @@
       console.log('[AdminPanel] Signup request approved successfully:', result);
       // Reload the list to remove the approved request
       await loadSignupRequests();
+      alert('User approved successfully!');
     } catch (error) {
       console.error('[AdminPanel] Failed to approve signup request:', error);
-      alert('Failed to approve: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      alert('Failed to approve: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
