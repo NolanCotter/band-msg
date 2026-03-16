@@ -72,14 +72,23 @@
   }
 
   async function sendReply() {
-    if (!replyInput.trim() || !$convexChannelStore.selectedChannelId) return;
+    if (!replyInput.trim()) return;
 
     try {
       const sessionToken = getCookie('band_chat_session');
-      if (!sessionToken) return;
+      if (!sessionToken) {
+        console.error('[ThreadPanel] No session token');
+        return;
+      }
+
+      console.log('[ThreadPanel] Sending reply:', {
+        channelId: parentMessage.channelId,
+        content: replyInput,
+        replyToId: parentMessage.id
+      });
 
       await convex.mutation(api.messages.send, {
-        channelId: $convexChannelStore.selectedChannelId as Id<"channels">,
+        channelId: parentMessage.channelId as Id<"channels">,
         content: replyInput,
         sessionToken,
         replyToId: parentMessage.id as Id<"messages">
@@ -88,7 +97,7 @@
       replyInput = '';
       await loadReplies();
     } catch (error) {
-      console.error('Failed to send reply:', error);
+      console.error('[ThreadPanel] Failed to send reply:', error);
     }
   }
 
