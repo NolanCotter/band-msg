@@ -3,7 +3,7 @@
   import { notificationStore } from '../stores/notificationStore';
   import { convexChannelStore } from '../stores/convexChannels';
   import { convex } from '../convex';
-  import { api } from '../../convex/_generated/api';
+  import { api } from '../../../convex/_generated/api';
   import { convexMessageStore } from '../stores/convexMessages';
   import Spinner from './Spinner.svelte';
   
