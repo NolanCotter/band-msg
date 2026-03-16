@@ -15,6 +15,24 @@ The `config.kit.files.appTemplate` option is deprecated, and will be removed in 
 Loading svelte-check in workspace: c:\Users\nolan\band-msg
 Getting Svelte diagnostics...
 
+c:\Users\nolan\band-msg\[32msvelte-src\routes\api\auth\google\callback\+server.ts[39m:92:56
+[31mError[39m: Property 'length' does not exist on type 'any[][] | Record<string, any>[] | FullQueryResults<boolean>'.
+  Property 'length' does not exist on type 'FullQueryResults<boolean>'. 
+[36m
+    console.log('Existing users found:', existingUsers.[35mlength[36m);[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\routes\api\auth\google\callback\+server.ts[39m:96:23
+[31mError[39m: Property 'length' does not exist on type 'any[][] | Record<string, any>[] | FullQueryResults<boolean>'.
+  Property 'length' does not exist on type 'FullQueryResults<boolean>'. 
+[36m    
+    if (existingUsers.[35mlength[36m > 0) {
+      user = existingUsers[0];[39m
+
+c:\Users\nolan\band-msg\[32mconvex\auth.ts[39m:2:27
+[31mError[39m: 'QueryCtx' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled. 
+[36mimport { v } from "convex/values";
+import { mutation, query, [35mQueryCtx[36m } from "./_generated/server";[39m
+
 c:\Users\nolan\band-msg\[32msvelte-src\routes\api\auth\set-username\+server.ts[39m:10:26
 [31mError[39m: Property 'session' does not exist on type 'Locals'. 
 [36mexport const POST: RequestHandler = async ({ request, locals }) => {
@@ -88,6 +106,57 @@ c:\Users\nolan\band-msg\[32msvelte-src\routes\api\reactions\+server.ts[39m:51:
       triggerReactionUpdate(result.value.[35mchannelId[36m, messageId, reactionsResult.value);
     }[39m
 
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AdminPanel.svelte[39m:34:11
+[31mError[39m: Argument of type '() => Promise<Unsubscriber>' is not assignable to parameter of type '() => Promise<never> | (() => any)'.
+  Type 'Promise<Unsubscriber>' is not assignable to type 'Promise<never> | (() => any)'.
+    Type 'Promise<Unsubscriber>' is not assignable to type 'Promise<never>'.
+      Type 'Unsubscriber' is not assignable to type 'never'. (ts)
+[36m
+  onMount([35masync () => {[36m
+    // Get session token from store[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AdminPanel.svelte[39m:101:88
+[31mError[39m: Type 'string' is not assignable to type 'Id<"signupRequests">'.
+  Type 'string' is not assignable to type '{ __tableName: "signupRequests"; }'. (ts)
+[36m    try {
+      const result = await convex.mutation(api.signupRequests.approve, { sessionToken, [35mrequestId[36m });
+      console.log('[AdminPanel] Signup request approved successfully:', result);[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AdminPanel.svelte[39m:116:87
+[31mError[39m: Type 'string' is not assignable to type 'Id<"signupRequests">'.
+  Type 'string' is not assignable to type '{ __tableName: "signupRequests"; }'. (ts)
+[36m    try {
+      const result = await convex.mutation(api.signupRequests.reject, { sessionToken, [35mrequestId[36m });
+      console.log('[AdminPanel] Signup request rejected successfully:', result);[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AdminPanel.svelte[39m:130:67
+[31mError[39m: Type 'string' is not assignable to type 'Id<"users">'.
+  Type 'string' is not assignable to type '{ __tableName: "users"; }'. (ts)
+[36m    try {
+      await convex.mutation(api.auth.approveUser, { sessionToken, [35muserId[36m });
+      await loadPendingUsers();[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AdminPanel.svelte[39m:142:66
+[31mError[39m: Type 'string' is not assignable to type 'Id<"users">'.
+  Type 'string' is not assignable to type '{ __tableName: "users"; }'. (ts)
+[36m    try {
+      await convex.mutation(api.auth.rejectUser, { sessionToken, [35muserId[36m });
+      await loadPendingUsers();[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AdminPanel.svelte[39m:154:67
+[31mError[39m: Type 'string' is not assignable to type 'Id<"users">'.
+  Type 'string' is not assignable to type '{ __tableName: "users"; }'. (ts)
+[36m    try {
+      await convex.mutation(api.auth.promoteUser, { sessionToken, [35muserId[36m });
+      await loadAllUsers();[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AdminPanel.svelte[39m:165:66
+[31mError[39m: Type 'string' is not assignable to type 'Id<"users">'.
+  Type 'string' is not assignable to type '{ __tableName: "users"; }'. (ts)
+[36m    try {
+      await convex.mutation(api.auth.demoteUser, { sessionToken, [35muserId[36m });
+      await loadAllUsers();[39m
+
 c:\Users\nolan\band-msg\[32msvelte-src\lib\components\Calendar.svelte[39m:141:17
 [33mWarn[39m: A form label must be associated with a control
 https://svelte.dev/e/a11y_label_has_associated_control (svelte)
@@ -109,6 +178,54 @@ https://svelte.dev/e/a11y_autofocus (svelte)
           [35mautofocus[36m
         />[39m
 
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AuthScreen.svelte[39m:128:13
+[33mWarn[39m: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+[36m            <span class="bar"></span>
+            [35m<label class="label">
+              <span class="label-char" style="--index: 0">U</span>
+              <span class="label-char" style="--index: 1">s</span>
+              <span class="label-char" style="--index: 2">e</span>
+              <span class="label-char" style="--index: 3">r</span>
+              <span class="label-char" style="--index: 4">n</span>
+              <span class="label-char" style="--index: 5">a</span>
+              <span class="label-char" style="--index: 6">m</span>
+              <span class="label-char" style="--index: 7">e</span>
+            </label>[36m
+          </div>[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\AuthScreen.svelte[39m:150:13
+[33mWarn[39m: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+[36m            <span class="bar"></span>
+            [35m<label class="label">
+              <span class="label-char" style="--index: 0">P</span>
+              <span class="label-char" style="--index: 1">a</span>
+              <span class="label-char" style="--index: 2">s</span>
+              <span class="label-char" style="--index: 3">s</span>
+              <span class="label-char" style="--index: 4">w</span>
+              <span class="label-char" style="--index: 5">o</span>
+              <span class="label-char" style="--index: 6">r</span>
+              <span class="label-char" style="--index: 7">d</span>
+            </label>[36m
+          </div>[39m
+
+c:\Users\nolan\band-msg\[32msvelte-src\lib\components\UsernameSetup.svelte[39m:112:13
+[33mWarn[39m: A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control (svelte)
+[36m            <span class="bar"></span>
+            [35m<label class="label">
+              <span class="label-char" style="--index: 0">U</span>
+              <span class="label-char" style="--index: 1">s</span>
+              <span class="label-char" style="--index: 2">e</span>
+              <span class="label-char" style="--index: 3">r</span>
+              <span class="label-char" style="--index: 4">n</span>
+              <span class="label-char" style="--index: 5">a</span>
+              <span class="label-char" style="--index: 6">m</span>
+              <span class="label-char" style="--index: 7">e</span>
+            </label>[36m
+          </div>[39m
+
 ====================================
-[31msvelte-check found 12 errors and 3 warnings in 7 files
+[31msvelte-check found 22 errors and 6 warnings in 12 files
 [39m

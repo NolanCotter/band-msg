@@ -1,21 +1,16 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getUserBySession, getSqlClient } from '$lib/server/db';
+import { getSqlClient } from '$lib/server/db';
 
 const sql = getSqlClient();
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const sessionToken = (locals as any).sessionToken;
+  const session = locals.session;
+  const user = locals.user;
 
-  if (!sessionToken) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const user = await getUserBySession(sessionToken);
-
-  if (!user) {
+  if (!session || !user) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -35,11 +30,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Check if username is already taken
-    const existingUsers = (await sql`
+    const existingUsers = await sql`
       SELECT id FROM users 
       WHERE LOWER(username) = ${trimmedUsername} AND id != ${user.id}
       LIMIT 1
-    `) as any[];
+    `;
 
     if (existingUsers.length > 0) {
       return json({ error: 'Username is already taken' }, { status: 400 });

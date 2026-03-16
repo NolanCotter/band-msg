@@ -100,7 +100,6 @@
           <!-- Username Input -->
           <div class="wave-group">
             <input
-              id="username-setup"
               required
               type="text"
               class="input"
@@ -110,7 +109,7 @@
               maxlength="20"
             />
             <span class="bar"></span>
-            <label class="label" for="username-setup">
+            <label class="label">
               <span class="label-char" style="--index: 0">U</span>
               <span class="label-char" style="--index: 1">s</span>
               <span class="label-char" style="--index: 2">e</span>

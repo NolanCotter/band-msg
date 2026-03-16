@@ -3,16 +3,11 @@ import type { RequestHandler } from './$types';
 import { getSqlClient } from '$lib/server/db';
 import { createSessionToken, setSessionCookie, expiresAtMs } from '$lib/server/auth';
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../../../../../convex/_generated/api";
+import { api } from "../../../../../../../convex/_generated/api";
 import crypto from 'node:crypto';
 
-const getConvex = () => {
-  const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "";
-  if (!CONVEX_URL) {
-    throw new Error("Missing CONVEX_URL");
-  }
-  return new ConvexHttpClient(CONVEX_URL);
-};
+const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "";
+const convex = new ConvexHttpClient(CONVEX_URL);
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
@@ -162,7 +157,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     // Sync to Convex
     console.log('Syncing to Convex...');
     try {
-      const convex = getConvex();
       await convex.mutation(api.auth.syncExternalUser, {
         username: user.username,
         externalId: user.google_id || '',

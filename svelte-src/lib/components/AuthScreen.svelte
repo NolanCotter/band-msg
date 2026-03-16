@@ -129,7 +129,6 @@
           <!-- Username Input -->
           <div class="wave-group">
             <input
-              id="auth-username"
               required
               type="text"
               class="input"
@@ -137,7 +136,7 @@
               on:keydown={handleKeyDown}
             />
             <span class="bar"></span>
-            <label class="label" for="auth-username">
+            <label class="label">
               <span class="label-char" style="--index: 0">U</span>
               <span class="label-char" style="--index: 1">s</span>
               <span class="label-char" style="--index: 2">e</span>
@@ -152,7 +151,6 @@
           <!-- Password Input -->
           <div class="wave-group">
             <input
-              id="auth-password"
               required
               type="password"
               class="input"
@@ -160,7 +158,7 @@
               on:keydown={handleKeyDown}
             />
             <span class="bar"></span>
-            <label class="label" for="auth-password">
+            <label class="label">
               <span class="label-char" style="--index: 0">P</span>
               <span class="label-char" style="--index: 1">a</span>
               <span class="label-char" style="--index: 2">s</span>

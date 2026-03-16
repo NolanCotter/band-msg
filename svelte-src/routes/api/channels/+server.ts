@@ -44,7 +44,8 @@ export const POST = async ({ locals, request }: any) => {
     sessionToken: locals.sessionToken,
     name,
     description,
-    isPrivate
+    isPrivate,
+    memberIds
   });
 
   if (result.ok === false) {
