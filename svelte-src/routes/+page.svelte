@@ -18,6 +18,7 @@
 
   let showPWAGuide = false;
   let showUsernameSetup = false;
+  let heartbeatInterval: any;
 
   onMount(async () => {
     // Set session token for Convex
@@ -70,11 +71,30 @@
         console.log('[Page] Loading messages for channel:', $convexChannelStore.selectedChannelId);
         await convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
       }
+
+      // Start heartbeat to keep user online
+      if (browser) {
+        const { convex } = await import('../lib/convex');
+        const { api } = await import('../../convex/_generated/api');
+        
+        heartbeatInterval = setInterval(async () => {
+          if (data.sessionToken) {
+            try {
+              await convex.mutation(api.auth.heartbeat, { sessionToken: data.sessionToken });
+            } catch (error) {
+              console.error('[Page] Heartbeat failed:', error);
+            }
+          }
+        }, 30000); // Every 30 seconds
+      }
     }
   });
 
   onDestroy(() => {
     pusherStore.disconnect();
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+    }
   });
 
   function handlePWAGuideComplete() {

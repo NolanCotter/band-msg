@@ -263,6 +263,12 @@ export const login = mutation({
       createdAt: Date.now(),
     });
 
+    // Set user to online
+    await ctx.db.patch(user._id, {
+      presenceStatus: "online",
+      lastSeen: Date.now(),
+    });
+
     return {
       id: user._id,
       username: user.username,
@@ -285,5 +291,40 @@ export const getLoginSalt = query({
       .first();
 
     return user?.passwordSalt || null;
+  },
+});
+
+// Update user presence status
+export const updatePresence = mutation({
+  args: {
+    sessionToken: v.string(),
+    status: v.string(), // "online" | "idle" | "dnd" | "offline"
+  },
+  handler: async (ctx, args) => {
+    const user = await getUserByToken(ctx, args.sessionToken);
+    if (!user) throw new Error("Unauthorized");
+
+    await ctx.db.patch(user._id, {
+      presenceStatus: args.status,
+      lastSeen: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Heartbeat to keep user online
+export const heartbeat = mutation({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, args) => {
+    const user = await getUserByToken(ctx, args.sessionToken);
+    if (!user) return { success: false };
+
+    await ctx.db.patch(user._id, {
+      presenceStatus: "online",
+      lastSeen: Date.now(),
+    });
+
+    return { success: true };
   },
 });
