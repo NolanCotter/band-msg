@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { getSqlClient } from '$lib/server/db';
 import { createSessionToken, setSessionCookie, expiresAtMs } from '$lib/server/auth';
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../../../../../../convex/_generated/api";
+import { api } from "../../../../../../convex/_generated/api";
 import crypto from 'node:crypto';
 
 const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "";
