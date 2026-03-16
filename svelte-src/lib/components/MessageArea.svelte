@@ -3,7 +3,7 @@
   import { Drawer } from 'vaul-svelte';
   import { authStore } from '../stores/auth';
   import { channelStore } from '../stores/channels';
-  import { messageStore } from '../stores/messages';
+  import { convexMessageStore as messageStore } from '../stores/convexMessages';
   import { memberStore } from '../stores/members';
   import { themeStore } from '../stores/theme';
   import MessageBubble from './MessageBubble.svelte';
@@ -79,13 +79,6 @@
   async function handleSend() {
     if (!messageInput.trim() || !$channelStore.selectedChannelId) return;
     
-    // Stop typing indicator
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-      typingTimeout = null;
-    }
-    await messageStore.stopTyping($channelStore.selectedChannelId);
-    
     const result = await messageStore.sendMessage(
       $channelStore.selectedChannelId,
       messageInput
@@ -100,13 +93,6 @@
     if (!$channelStore.selectedChannelId) return;
     showGiphy = false;
     
-    // Stop typing indicator
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-      typingTimeout = null;
-    }
-    await messageStore.stopTyping($channelStore.selectedChannelId);
-    
     // Send markdown image immediately
     await messageStore.sendMessage(
       $channelStore.selectedChannelId,
@@ -115,17 +101,7 @@
   }
 
   async function handleTyping() {
-    if (!$channelStore.selectedChannelId || !messageInput.trim()) return;
-    
-    await messageStore.startTyping($channelStore.selectedChannelId);
-    
-    if (typingTimeout) clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(async () => {
-      if ($channelStore.selectedChannelId) {
-        await messageStore.stopTyping($channelStore.selectedChannelId);
-      }
-      typingTimeout = null;
-    }, 3000);
+    // Typing indicators can be added later with Convex
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -314,14 +290,6 @@
       {@const showHeader = !prev || prev.author !== message.author || message.createdAt - prev.createdAt > 300000}
       <MessageBubble {message} {showHeader} onOpenThread={openThread} />
     {/each}
-
-    {#if $messageStore.typingUsers.length > 0}
-      <div class="px-4 md:px-5 mt-2">
-        <p class="text-sm text-white/40">
-          {$messageStore.typingUsers.join(', ')} {$messageStore.typingUsers.length === 1 ? 'is' : 'are'} typing...
-        </p>
-      </div>
-    {/if}
 
     <div class="h-4"></div>
   </div>
