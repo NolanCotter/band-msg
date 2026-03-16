@@ -89,11 +89,12 @@
   }
 
   function handleTouchStart(e: TouchEvent) {
-    // Only prevent default on non-scrollable elements
     const target = e.target as HTMLElement;
     const isScrollable = target.closest('.overflow-y-auto, .overflow-auto, [style*="overflow"]');
     
-    if (!isScrollable) {
+    // Always prevent default on images to stop copy behavior
+    // Only prevent on other elements if not scrollable
+    if (target.tagName === 'IMG' || !isScrollable) {
       e.preventDefault();
     }
     
@@ -388,3 +389,13 @@
     </div>
   </div>
 </div>
+
+<style>
+  /* Prevent context menu and selection on images in messages */
+  :global(.text-white\/80 img) {
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+    pointer-events: auto;
+  }
+</style>
