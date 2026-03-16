@@ -112,12 +112,14 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-end" on:click={onClose}>
+<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-end">
+  <!-- Overlay background - no click handler -->
+  <div class="absolute inset-0"></div>
+  
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div 
-    class="w-full max-w-2xl h-full bg-[#0a0a0a] border-l border-white/10 flex flex-col animate-slide-left"
-    on:click|stopPropagation
+    class="relative w-full max-w-2xl h-full bg-[#0a0a0a] border-l border-white/10 flex flex-col animate-slide-left z-10"
     style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);"
   >
     <!-- Header -->
