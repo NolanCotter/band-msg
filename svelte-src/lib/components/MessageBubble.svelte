@@ -89,13 +89,16 @@
   }
 
   function handleTouchStart(e: TouchEvent) {
-    // Prevent default on images to avoid download
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'IMG') {
-      e.preventDefault();
-    }
+    // Prevent default to stop iOS text selection
+    e.preventDefault();
     
     if (touchTimer) clearTimeout(touchTimer);
+    
+    // Get touch coordinates for menu positioning
+    const touch = e.touches[0];
+    contextMenuX = touch.clientX;
+    contextMenuY = touch.clientY;
+    
     touchTimer = setTimeout(() => {
       showContextMenu = true;
       if (navigator.vibrate) navigator.vibrate(50);
@@ -221,6 +224,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
   class="group relative px-4 md:px-5 {showHeader ? 'mt-4 pt-1' : 'mt-0.5'}"
+  style="user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;"
   on:touchstart={handleTouchStart}
   on:touchend={handleTouchEnd}
   on:touchmove={handleTouchMove}
