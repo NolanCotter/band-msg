@@ -90,14 +90,14 @@ export const handle = async ({ event, resolve }: any) => {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   
-  // Content Security Policy - allows Firebase and external resources
+  // Content Security Policy - allows Firebase, Convex and external resources
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://www.gstatic.com https://va.vercel-scripts.com", // Allow Firebase and Vercel scripts
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:", // Allow images from any HTTPS source
     "font-src 'self'",
-    "connect-src 'self' https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://va.vercel-scripts.com", // Allow Firebase API calls
+    "connect-src 'self' https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://va.vercel-scripts.com https://oceanic-barracuda-40.convex.cloud https://oceanic-barracuda-40.convex.site", // Allow Firebase, Convex API calls
     "media-src 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
