@@ -103,11 +103,27 @@ export const approve = mutation({
       throw new Error("Request not found");
     }
 
+    // Update the signup request
     await ctx.db.patch(args.requestId, {
       status: "approved",
       approvedAt: Date.now(),
       approvedBy: admin._id,
     });
+
+    // ALSO update the user status to approved
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", request.username))
+      .first();
+
+    if (user) {
+      console.log('[signupRequests.approve] Updating user status to approved:', user._id);
+      await ctx.db.patch(user._id, {
+        status: "approved",
+      });
+    } else {
+      console.log('[signupRequests.approve] WARNING: User not found for username:', request.username);
+    }
 
     console.log('[signupRequests.approve] Request approved successfully');
     return { success: true };
