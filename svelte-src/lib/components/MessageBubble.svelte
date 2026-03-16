@@ -187,7 +187,7 @@
           <span class="text-[14px] font-semibold" style="color: {getAvatarColor(message.author)};">
             {message.author}
           </span>
-          <span class="text-[11px] text-white/20 font-medium">
+          <span class="text-[11px] text-white/40 font-medium">
             {formatTime(message.createdAt)}
           </span>
         </div>

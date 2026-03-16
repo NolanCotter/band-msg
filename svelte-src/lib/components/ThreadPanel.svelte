@@ -145,7 +145,7 @@
             <span class="text-[14px] font-semibold" style="color: {getAvatarColor(parentMessage.author)};">
               {parentMessage.author}
             </span>
-            <span class="text-[11px] text-white/20 font-medium">
+            <span class="text-[11px] text-white/40 font-medium">
               {formatTime(parentMessage.createdAt)}
             </span>
           </div>
@@ -182,7 +182,7 @@
                   <span class="text-[13px] font-semibold" style="color: {getAvatarColor(reply.author)};">
                     {reply.author}
                   </span>
-                  <span class="text-[10px] text-white/20 font-medium">
+                  <span class="text-[10px] text-white/40 font-medium">
                     {formatTime(reply.createdAt)}
                   </span>
                 </div>

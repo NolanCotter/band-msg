@@ -10,6 +10,9 @@
   let showSettingsModal = false;
   let settingsChannel: any = null;
   let mutedChannelIds = new Set<string>();
+  let showDeleteConfirm = false;
+  let channelToDelete: any = null;
+  let touchTimer: ReturnType<typeof setTimeout> | null = null;
   
   import { onMount } from 'svelte';
   
@@ -52,6 +55,51 @@
   async function selectChannel(channelId: string) {
     convexChannelStore.selectChannel(channelId);
     await messageStore.loadMessages(channelId);
+  }
+
+  function handleContextMenu(e: MouseEvent, channel: any) {
+    if ($authStore.user?.role !== 'admin') return;
+    e.preventDefault();
+    channelToDelete = channel;
+    showDeleteConfirm = true;
+  }
+
+  function handleTouchStart(channel: any) {
+    if ($authStore.user?.role !== 'admin') return;
+    touchTimer = setTimeout(() => {
+      channelToDelete = channel;
+      showDeleteConfirm = true;
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 500);
+  }
+
+  function handleTouchEnd() {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      touchTimer = null;
+    }
+  }
+
+  async function deleteChannel() {
+    if (!channelToDelete) return;
+    
+    try {
+      const res = await apiPost(`/api/channels/${channelToDelete.id}/delete`, {});
+      if (res.ok) {
+        await convexChannelStore.loadChannels();
+        if ($convexChannelStore.selectedChannelId === channelToDelete.id) {
+          const firstChannel = $convexChannelStore.channels[0];
+          if (firstChannel) {
+            await selectChannel(firstChannel.id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete channel:', err);
+    } finally {
+      showDeleteConfirm = false;
+      channelToDelete = null;
+    }
   }
 </script>
 
@@ -101,11 +149,16 @@
       </div>
       <div class="space-y-0.5">
         {#each $convexChannelStore.channels as channel}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             role="button"
             tabindex="0"
             on:click={() => selectChannel(channel.id)}
             on:keydown={(e) => e.key === 'Enter' && selectChannel(channel.id)}
+            on:contextmenu={(e) => handleContextMenu(e, channel)}
+            on:touchstart={() => handleTouchStart(channel)}
+            on:touchend={handleTouchEnd}
+            on:touchcancel={handleTouchEnd}
             class="group flex items-center justify-between w-full px-2 py-1.5 rounded-lg transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-98 {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
           >
             <div class="flex items-center gap-2 truncate">
@@ -176,4 +229,35 @@
       settingsChannel = null;
     }}
   />
+{/if}
+
+{#if showDeleteConfirm && channelToDelete}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center" on:click={() => { showDeleteConfirm = false; channelToDelete = null; }}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 max-w-sm mx-4" on:click|stopPropagation>
+      <h3 class="text-lg font-bold text-white mb-2">Delete Channel</h3>
+      <p class="text-sm text-white/60 mb-4">
+        Are you sure you want to delete <span class="text-white font-semibold">#{channelToDelete.name}</span>? This action cannot be undone.
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          on:click={() => { showDeleteConfirm = false; channelToDelete = null; }}
+          class="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-colors text-sm font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          on:click={deleteChannel}
+          class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors text-sm font-medium"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
 {/if}
