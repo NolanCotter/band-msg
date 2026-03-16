@@ -68,7 +68,7 @@
   }
 
   // Auto-scroll when new messages arrive or when channel changes
-  $: if ($messageStore.messages.length > previousMessageCount || $channelStore.selectedChannelId) {
+  $: if ($messageStore.messages.length > previousMessageCount || $convexChannelStore.selectedChannelId) {
     previousMessageCount = $messageStore.messages.length;
     scrollToBottom(true); // Force scroll on new messages
   }
@@ -78,10 +78,10 @@
   });
 
   async function handleSend() {
-    if (!messageInput.trim() || !$channelStore.selectedChannelId) return;
+    if (!messageInput.trim() || !$convexChannelStore.selectedChannelId) return;
     
     const result = await messageStore.sendMessage(
-      $channelStore.selectedChannelId,
+      $convexChannelStore.selectedChannelId,
       messageInput
     );
     
@@ -91,12 +91,12 @@
   }
 
   async function handleGiphySelect(url: string) {
-    if (!$channelStore.selectedChannelId) return;
+    if (!$convexChannelStore.selectedChannelId) return;
     showGiphy = false;
     
     // Send markdown image immediately
     await messageStore.sendMessage(
-      $channelStore.selectedChannelId,
+      $convexChannelStore.selectedChannelId,
       `![GIF](${url})`
     );
   }
@@ -402,7 +402,7 @@
               <button
                 type="button"
                 on:click={() => selectChannel(channel.id)}
-                class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors {$channelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
+                class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
