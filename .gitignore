@@ -47,3 +47,7 @@ next-env.d.ts
 # discord-server-build-request (reference UI)
 /discord-server-build-request
 .env*.local
+
+# Firebase private keys
+firebase_key_*.txt
+temp_private_key.txt

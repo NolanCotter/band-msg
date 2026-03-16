@@ -213,5 +213,7 @@ async function signRS256(data: string, privateKey: string): Promise<string> {
   sign.update(data);
   sign.end();
   const signature = sign.sign(privateKey);
-  return base64UrlEncode(signature.toString("base64"));
+  // Convert buffer directly to base64url without double encoding
+  const base64 = signature.toString("base64");
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
