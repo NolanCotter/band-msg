@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as messages from "../messages.js";
+import type * as migrations from "../migrations.js";
 import type * as reactions from "../reactions.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   messages: typeof messages;
+  migrations: typeof migrations;
   reactions: typeof reactions;
 }>;
 
