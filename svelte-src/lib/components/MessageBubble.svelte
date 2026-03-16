@@ -106,6 +106,8 @@
     
     touchTimer = setTimeout(() => {
       showContextMenu = true;
+      tapCount = 0; // Reset tap count when menu shows
+      if (tapTimer) clearTimeout(tapTimer);
       if (navigator.vibrate) navigator.vibrate(50);
     }, 400);
   }
@@ -114,6 +116,11 @@
     // Only clear timer if menu hasn't been triggered yet
     if (touchTimer && !showContextMenu) {
       clearTimeout(touchTimer);
+    }
+    
+    // Don't handle double-tap if context menu is showing
+    if (showContextMenu) {
+      return;
     }
     
     // Handle double-tap on images
