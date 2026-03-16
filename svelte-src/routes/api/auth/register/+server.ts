@@ -3,8 +3,13 @@ import { getClientIp } from "$lib/server/request";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../convex/_generated/api";
 
-const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "";
-const convex = new ConvexHttpClient(CONVEX_URL);
+const getConvex = () => {
+  const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "";
+  if (!CONVEX_URL) {
+    throw new Error("Missing CONVEX_URL");
+  }
+  return new ConvexHttpClient(CONVEX_URL);
+};
 
 const REGISTER_MAX_ATTEMPTS = 8;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -56,6 +61,7 @@ export const POST = async ({ request }: any) => {
     }
 
     try {
+      const convex = getConvex();
       const result = await convex.mutation(api.auth.register, {
         username,
         passwordHash: hash,

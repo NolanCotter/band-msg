@@ -11,7 +11,7 @@ type AppUser = {
   customStatus?: string;
 };
 
-type Result<T> =
+export type Result<T> =
   | { ok: true; value: T }
   | { ok: false; code: number; error: string };
 
@@ -982,16 +982,17 @@ export async function addReaction(args: {
   sessionToken: string;
   messageId: string;
   emoji: string;
-}): Promise<Result<{ reactionId: string }>> {
+}): Promise<Result<{ reactionId: string; channelId: string }>> {
   const user = await getUserBySession(args.sessionToken);
   if (!user) {
     return { ok: false, code: 401, error: "Unauthorized" };
   }
 
-  const messageRows = await sql`SELECT id FROM messages WHERE id = ${args.messageId} LIMIT 1`;
+  const messageRows = (await sql`SELECT id, channel_id FROM messages WHERE id = ${args.messageId} LIMIT 1`) as any[];
   if (!messageRows[0]) {
     return { ok: false, code: 404, error: "Message not found" };
   }
+  const channelId = messageRows[0].channel_id;
 
   const id = crypto.randomUUID();
   try {
@@ -999,7 +1000,7 @@ export async function addReaction(args: {
       INSERT INTO message_reactions (id, message_id, user_id, emoji, created_at)
       VALUES (${id}, ${args.messageId}, ${user.id}, ${args.emoji}, ${Date.now()})
     `;
-    return { ok: true, value: { reactionId: id } };
+    return { ok: true, value: { reactionId: id, channelId } };
   } catch (error) {
     if (isUniqueViolation(error)) {
       return { ok: false, code: 409, error: "Reaction already exists" };
@@ -1012,17 +1013,23 @@ export async function removeReaction(args: {
   sessionToken: string;
   messageId: string;
   emoji: string;
-}): Promise<Result<{ ok: true }>> {
+}): Promise<Result<{ ok: true; channelId: string }>> {
   const user = await getUserBySession(args.sessionToken);
   if (!user) {
     return { ok: false, code: 401, error: "Unauthorized" };
   }
 
+  const messageRows = (await sql`SELECT channel_id FROM messages WHERE id = ${args.messageId} LIMIT 1`) as any[];
+  if (!messageRows[0]) {
+    return { ok: false, code: 404, error: "Message not found" };
+  }
+  const channelId = messageRows[0].channel_id;
+
   await sql`
     DELETE FROM message_reactions
     WHERE message_id = ${args.messageId} AND user_id = ${user.id} AND emoji = ${args.emoji}
   `;
-  return { ok: true, value: { ok: true } };
+  return { ok: true, value: { ok: true, channelId } };
 }
 
 export async function getMessageReactions(args: {

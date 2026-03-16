@@ -7,7 +7,7 @@ const sql = getSqlClient();
 const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const sessionToken = locals.sessionToken;
+  const sessionToken = (locals as any).sessionToken;
 
   if (!sessionToken) {
     return json({ error: 'Unauthorized' }, { status: 401 });

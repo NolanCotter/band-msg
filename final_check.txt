@@ -1,0 +1,25 @@
+
+> band-chat@0.1.0 check
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+The `config.kit.files.assets` option is deprecated, and will be removed in a future version
+The `config.kit.files.hooks.server` option is deprecated, and will be removed in a future version
+The `config.kit.files.lib` option is deprecated, and will be removed in a future version
+The `config.kit.files.routes` option is deprecated, and will be removed in a future version
+The `config.kit.files.appTemplate` option is deprecated, and will be removed in a future version
+The `config.kit.files.assets` option is deprecated, and will be removed in a future version
+The `config.kit.files.hooks.server` option is deprecated, and will be removed in a future version
+The `config.kit.files.lib` option is deprecated, and will be removed in a future version
+The `config.kit.files.routes` option is deprecated, and will be removed in a future version
+The `config.kit.files.appTemplate` option is deprecated, and will be removed in a future version
+Loading svelte-check in workspace: c:\Users\nolan\band-msg
+Getting Svelte diagnostics...
+
+c:\Users\nolan\band-msg\[32msvelte-src\routes\api\auth\set-username\+server.ts[39m:10:31
+[31mError[39m: Property 'sessionToken' does not exist on type 'Locals'. 
+[36mexport const POST: RequestHandler = async ({ request, locals }) => {
+  const sessionToken = locals.[35msessionToken[36m;[39m
+
+====================================
+[31msvelte-check found 1 error and 0 warnings in 1 file
+[39m

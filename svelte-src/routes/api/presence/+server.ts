@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { updatePresence } from '../../../lib/server/db';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-  const sessionToken = locals.sessionToken;
+  const sessionToken = (locals as any).sessionToken;
   
   if (!sessionToken) {
     return json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,7 +18,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     const result = await updatePresence({ sessionToken, status });
     
-    if (!result.ok) {
+    if (result.ok === false) {
       return json({ error: result.error }, { status: result.code });
     }
 

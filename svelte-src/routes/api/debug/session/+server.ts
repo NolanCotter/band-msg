@@ -6,7 +6,7 @@ export const GET: RequestHandler = async ({ cookies, locals }) => {
   const cookieToken = getSessionToken(cookies);
   
   return json({
-    hasLocalsSessionToken: !!locals.sessionToken,
+    hasLocalsSessionToken: !!(locals as any).sessionToken,
     hasCookieSessionToken: !!cookieToken,
     cookieNames: cookies.getAll().map(c => c.name),
     env: {

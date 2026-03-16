@@ -34,8 +34,8 @@ export async function POST({ request, cookies }: any) {
     
     // Get updated reactions and trigger Pusher event
     const reactionsResult = await getMessageReactions({ sessionToken, messageId });
-    if (reactionsResult.ok && result.value.channelId) {
-      triggerReactionUpdate(result.value.channelId, messageId, reactionsResult.value);
+    if (reactionsResult.ok) {
+      triggerReactionUpdate((result.value as any).channelId, messageId, reactionsResult.value);
     }
     
     return json(result.value);
@@ -47,8 +47,8 @@ export async function POST({ request, cookies }: any) {
     
     // Get updated reactions and trigger Pusher event
     const reactionsResult = await getMessageReactions({ sessionToken, messageId });
-    if (reactionsResult.ok && result.value.channelId) {
-      triggerReactionUpdate(result.value.channelId, messageId, reactionsResult.value);
+    if (reactionsResult.ok) {
+      triggerReactionUpdate((result.value as any).channelId, messageId, reactionsResult.value);
     }
     
     return json(result.value);

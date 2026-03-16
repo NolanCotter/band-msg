@@ -61,7 +61,6 @@
           on:input={handleInput}
           placeholder="Search GIPHY..."
           class="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-9 pr-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors"
-          autofocus
         />
       </div>
       <button
