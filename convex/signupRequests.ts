@@ -87,12 +87,18 @@ export const approve = mutation({
     requestId: v.id("signupRequests"),
   },
   handler: async (ctx, args) => {
+    console.log('[signupRequests.approve] Starting approval for:', args.requestId);
+    
     const admin = await getUserByToken(ctx, args.sessionToken);
+    console.log('[signupRequests.approve] Admin user:', admin?._id, admin?.role);
+    
     if (!admin || admin.role !== "admin") {
       throw new Error("Unauthorized");
     }
 
     const request = await ctx.db.get(args.requestId);
+    console.log('[signupRequests.approve] Request found:', request);
+    
     if (!request) {
       throw new Error("Request not found");
     }
@@ -103,6 +109,7 @@ export const approve = mutation({
       approvedBy: admin._id,
     });
 
+    console.log('[signupRequests.approve] Request approved successfully');
     return { success: true };
   },
 });

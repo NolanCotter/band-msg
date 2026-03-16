@@ -88,22 +88,28 @@
   async function approveSignupRequest(requestId: string) {
     if (!sessionToken) return;
     
+    console.log('[AdminPanel] Approving signup request:', requestId);
     try {
       await convex.mutation(api.signupRequests.approve, { sessionToken, requestId });
+      console.log('[AdminPanel] Signup request approved successfully');
       await loadSignupRequests();
     } catch (error) {
       console.error('[AdminPanel] Failed to approve signup request:', error);
+      alert('Failed to approve: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 
   async function rejectSignupRequest(requestId: string) {
     if (!sessionToken) return;
     
+    console.log('[AdminPanel] Rejecting signup request:', requestId);
     try {
       await convex.mutation(api.signupRequests.reject, { sessionToken, requestId });
+      console.log('[AdminPanel] Signup request rejected successfully');
       await loadSignupRequests();
     } catch (error) {
       console.error('[AdminPanel] Failed to reject signup request:', error);
+      alert('Failed to reject: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 
