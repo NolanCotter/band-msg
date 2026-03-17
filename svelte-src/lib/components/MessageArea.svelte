@@ -64,7 +64,7 @@
       if (messageContainer) {
         messageContainer.scrollTop = messageContainer.scrollHeight;
       }
-    }, 50);
+    }, 100); // Increased from 50ms to 100ms for better reliability
   }
 
   // Only auto-scroll when channel changes - let user scroll freely otherwise
