@@ -68,8 +68,15 @@ export async function requestNotificationPermission(): Promise<string | null> {
     console.log('[Firebase] Is iOS:', isIOS());
     
     // First, initialize Firebase before requesting permission
-    await initializeFirebase();
+    console.log('[Firebase] Initializing Firebase...');
+    const initResult = await initializeFirebase();
+    if (!initResult) {
+      console.error('[Firebase] Failed to initialize Firebase');
+      return null;
+    }
+    console.log('[Firebase] Firebase initialized successfully');
     
+    console.log('[Firebase] Requesting permission from browser...');
     const permission = await Notification.requestPermission();
     console.log('[Firebase] Permission result:', permission);
     
@@ -84,6 +91,7 @@ export async function requestNotificationPermission(): Promise<string | null> {
       
       // For iOS, we need to use the service worker's pushManager
       if (!swRegistration) {
+        console.log('[Firebase] Getting service worker registration...');
         swRegistration = await registerServiceWorker();
       }
       
@@ -145,7 +153,6 @@ export async function requestNotificationPermission(): Promise<string | null> {
     
     const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
     console.log('[Firebase] VAPID key available:', !!vapidKey);
-    console.log('[Firebase] VAPID key length:', vapidKey?.length);
     
     if (!vapidKey) {
       console.error('[Firebase] VAPID key is missing from environment variables');
@@ -154,8 +161,11 @@ export async function requestNotificationPermission(): Promise<string | null> {
     
     // Get FCM token with timeout
     console.log('[Firebase] Getting FCM token...');
-    const tokenPromise = getToken(messaging, { vapidKey, serviceWorkerRegistration: swRegistration || undefined });
-    const timeoutPromise = new Promise<null>((_, reject) => 
+    const tokenPromise = getToken(messaging, { 
+      vapidKey, 
+      serviceWorkerRegistration: swRegistration || undefined 
+    });
+    const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('FCM token request timed out after 10 seconds')), 10000)
     );
     
@@ -167,7 +177,6 @@ export async function requestNotificationPermission(): Promise<string | null> {
     console.error('[Firebase] Error getting FCM token:', error);
     if (error instanceof Error) {
       console.error('[Firebase] Error message:', error.message);
-      console.error('[Firebase] Error stack:', error.stack);
     }
     return null;
   }

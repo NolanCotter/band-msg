@@ -33,28 +33,24 @@
   onMount(() => {
     console.log('[AdminPanel] Component mounted');
     
-    // Try to get session token from store first
-    const unsubscribe = convexMessageStore.subscribe(async state => {
-      console.log('[AdminPanel] Store state changed:', {
-        hasSessionToken: !!state.sessionToken,
-        sessionTokenPreview: state.sessionToken ? state.sessionToken.substring(0, 10) + '...' : 'none'
-      });
+    // Get session token from store ONCE, don't subscribe
+    let sessionToken = '';
+    const unsubscribe = convexMessageStore.subscribe(state => {
       sessionToken = state.sessionToken;
-      if (sessionToken) {
-        console.log('[AdminPanel] Got session token from store, loading data...');
-        await loadData();
-      }
     });
+    unsubscribe(); // Immediately unsubscribe
     
-    // If no session token from store, try to get from cookies as fallback
-    if (!sessionToken) {
+    if (sessionToken) {
+      console.log('[AdminPanel] Got session token, loading data...');
+      loadData();
+    } else {
+      // If no session token from store, try cookies as fallback
       console.log('[AdminPanel] No session token from store, trying cookies...');
-      // Get session token from cookies as fallback
       const cookies = document.cookie.split(';');
       const sessionCookie = cookies.find(c => c.trim().startsWith('session='));
       if (sessionCookie) {
         sessionToken = sessionCookie.split('=')[1];
-        console.log('[AdminPanel] Got session token from cookies:', sessionToken ? sessionToken.substring(0, 10) + '...' : 'none');
+        console.log('[AdminPanel] Got session token from cookies');
         if (sessionToken) {
           loadData();
         }
@@ -62,8 +58,6 @@
         console.error('[AdminPanel] No session cookie found');
       }
     }
-    
-    return unsubscribe;
   });
 
   async function loadData() {

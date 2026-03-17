@@ -31,7 +31,19 @@ function createNotificationStore() {
       try {
         if ('Notification' in window) {
           const permission = Notification.permission;
-          const subscribed = await checkPushSubscribed();
+          console.log('[NotificationStore] Checking subscription status...');
+          
+          // Add timeout to subscription check
+          const subscriptionCheckPromise = checkPushSubscribed();
+          const timeoutPromise = new Promise<boolean>((resolve) => 
+            setTimeout(() => {
+              console.log('[NotificationStore] Subscription check timed out, assuming false');
+              resolve(false);
+            }, 5000)
+          );
+          
+          const subscribed = await Promise.race([subscriptionCheckPromise, timeoutPromise]);
+          console.log('[NotificationStore] Subscription status:', subscribed);
           
           update(state => ({
             ...state,
@@ -43,7 +55,10 @@ function createNotificationStore() {
         await this.loadMutedChannels();
       } catch (err) {
         console.error('[NotificationStore] Init error:', err);
+        // Make sure we clear loading state even on error
+        update(state => ({ ...state, isSubscribed: false }));
       } finally {
+        console.log('[NotificationStore] Init complete, clearing loading state');
         update(state => ({ ...state, isLoading: false }));
       }
     },
@@ -70,7 +85,17 @@ function createNotificationStore() {
       try {
         if (state.isSubscribed) {
           console.log('[NotificationStore] Unsubscribing from notifications...');
-          const result = await unsubscribeFromPushNotifications();
+          
+          // Add timeout to unsubscribe
+          const unsubscribePromise = unsubscribeFromPushNotifications();
+          const timeoutPromise = new Promise<{ success: boolean; error?: string }>((resolve) => 
+            setTimeout(() => {
+              console.log('[NotificationStore] Unsubscribe timed out');
+              resolve({ success: false, error: 'Request timed out' });
+            }, 8000)
+          );
+          
+          const result = await Promise.race([unsubscribePromise, timeoutPromise]);
           console.log('[NotificationStore] Unsubscribe result:', result);
           if (result.success) {
             update(s => ({ ...s, isSubscribed: false }));
@@ -83,11 +108,20 @@ function createNotificationStore() {
           // First check if permission is already denied
           if ('Notification' in window && Notification.permission === 'denied') {
             console.log('[NotificationStore] Permission already denied');
-            update(s => ({ ...s, permission: 'denied', error: 'Notifications are blocked. Please enable them in your browser settings.' }));
+            update(s => ({ ...s, permission: 'denied', error: 'Notifications are blocked. Please enable them in your browser settings.', isLoading: false }));
             return;
           }
           
-          const result = await subscribeToPushNotifications();
+          // Add timeout to subscribe
+          const subscribePromise = subscribeToPushNotifications();
+          const timeoutPromise = new Promise<{ success: boolean; error?: string }>((resolve) => 
+            setTimeout(() => {
+              console.log('[NotificationStore] Subscribe timed out');
+              resolve({ success: false, error: 'Request timed out. Please try again.' });
+            }, 15000) // 15 seconds for subscribe since it includes permission prompt
+          );
+          
+          const result = await Promise.race([subscribePromise, timeoutPromise]);
           console.log('[NotificationStore] Subscribe result:', result);
           if (result.success) {
             update(s => ({ ...s, isSubscribed: true, permission: 'granted' }));

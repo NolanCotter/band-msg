@@ -39,6 +39,8 @@
   let touchTimer: ReturnType<typeof setTimeout> | null = null;
   let tapCount = 0;
   let tapTimer: ReturnType<typeof setTimeout> | null = null;
+  let touchStartX = 0;
+  let touchStartY = 0;
   
   const QUICK_REACTIONS = [
     { emoji: '👍', name: 'thumbs-up' },
@@ -91,21 +93,17 @@
   function handleTouchStart(e: TouchEvent) {
     const target = e.target as HTMLElement;
     
-    // Don't interfere with scrolling
-    const isScrollable = target.closest('.overflow-y-auto, .overflow-auto, [style*="overflow"]');
-    if (isScrollable) {
-      return;
-    }
-    
-    // Don't prevent default on buttons or interactive elements
+    // Don't interfere with buttons or interactive elements
     if (target.closest('button, a, input, textarea, select')) {
       return;
     }
     
     if (touchTimer) clearTimeout(touchTimer);
     
-    // Get touch coordinates for menu positioning
+    // Get touch coordinates for menu positioning and movement tracking
     const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
     contextMenuX = touch.clientX;
     contextMenuY = touch.clientY;
     
@@ -114,7 +112,7 @@
       tapCount = 0; // Reset tap count when menu shows
       if (tapTimer) clearTimeout(tapTimer);
       if (navigator.vibrate) navigator.vibrate(50);
-    }, 500); // Increased to 500ms for more reliable detection
+    }, 400);
   }
 
   function handleTouchEnd(e: TouchEvent) {
@@ -153,10 +151,18 @@
     showContextMenu = true;
   }
 
-  function handleTouchMove() {
-    // Only cancel timer if menu isn't showing yet
+  function handleTouchMove(e: TouchEvent) {
+    // Cancel timer if user scrolls (moved more than 10px vertically or horizontally)
     if (touchTimer && !showContextMenu) {
-      clearTimeout(touchTimer);
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartX);
+      const deltaY = Math.abs(touch.clientY - touchStartY);
+      
+      // Cancel long-press if user is scrolling (more vertical movement)
+      if (deltaY > 10 || deltaX > 10) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
     }
   }
 
@@ -309,7 +315,6 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
   class="group relative px-4 md:px-5 {showHeader ? 'mt-4 pt-1' : 'mt-0.5'}"
-  style="-webkit-user-select: none; -webkit-touch-callout: none;"
   on:touchstart={handleTouchStart}
   on:touchend={handleTouchEnd}
   on:touchmove={handleTouchMove}

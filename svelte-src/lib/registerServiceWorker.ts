@@ -14,8 +14,16 @@ export async function registerServiceWorker() {
     
     console.log('Service Worker registered successfully:', registration);
     
-    // Wait for the service worker to be ready
-    await navigator.serviceWorker.ready;
+    // Wait for the service worker to be ready with timeout
+    const readyPromise = navigator.serviceWorker.ready;
+    const timeoutPromise = new Promise<ServiceWorkerRegistration>((_, reject) => 
+      setTimeout(() => reject(new Error('Service worker ready timeout')), 5000)
+    );
+    
+    await Promise.race([readyPromise, timeoutPromise]).catch(err => {
+      console.warn('Service Worker ready timeout, continuing anyway:', err);
+    });
+    
     console.log('Service Worker is ready');
     
     return registration;
