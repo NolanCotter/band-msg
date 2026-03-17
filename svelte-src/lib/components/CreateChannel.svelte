@@ -79,10 +79,10 @@
       transitionConfig={{ duration: 150 }}
     />
     <Drawer.Content
-      class="fixed bottom-0 left-0 right-0 z-[200] flex flex-col bg-[#2a2a2a] rounded-t-[20px] max-h-[96vh] md:hidden outline-none"
+      class="fixed bottom-0 left-0 right-0 z-[220] flex flex-col bg-[#2a2a2a] rounded-t-[20px] max-h-[96vh] md:hidden outline-none"
       style="padding-bottom: env(safe-area-inset-bottom);"
     >
-      <div class="flex-1 overflow-y-auto w-full relative px-4 pb-6">
+      <div class="flex-1 overflow-y-auto w-full relative px-4 pb-6" on:click|stopPropagation>
         <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3"></div>
         
         <div class="flex items-center justify-between mb-6">
@@ -305,14 +305,16 @@
           transitionConfig={{ duration: 150 }}
         />
         <Drawer.Content
-          class="fixed bottom-0 left-0 right-0 z-[300] flex flex-col bg-[#2a2a2a] rounded-t-[20px] h-[85vh] outline-none"
+          class="fixed bottom-0 left-0 right-0 z-[320] flex flex-col bg-[#2a2a2a] rounded-t-[20px] h-[85vh] outline-none"
           style="padding-bottom: env(safe-area-inset-bottom);"
         >
-          <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3"></div>
-          <MemberSelector 
-            bind:selectedMemberIds 
-            onClose={() => showMemberSelector = false}
-          />
+          <div class="flex-1 overflow-y-auto w-full relative px-4 pb-6" on:click|stopPropagation>
+            <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3"></div>
+            <MemberSelector 
+              bind:selectedMemberIds 
+              onClose={() => showMemberSelector = false}
+            />
+          </div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
