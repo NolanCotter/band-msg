@@ -1,0 +1,53 @@
+name: AI Tests
+
+on:
+  # Run after successful deployments
+  deployment_status:
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to test (defaults to production)'
+        required: false
+        default: 'https://band-msg.vercel.app'
+
+jobs:
+  ai-test:
+    name: Run AI Tests
+    runs-on: ubuntu-latest
+    
+    # Only run on successful deployments to production
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'production')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Wait for deployment to be ready
+        if: github.event_name != 'workflow_dispatch'
+        run: sleep 30
+
+      - name: Run AI Tests
+        env:
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PWD: ${{ secrets.TEST_PWD }}
+          TEST_URL: ${{ github.event.inputs.url || 'https://band-msg.vercel.app' }}
+        run: |
+          npx testers-ai scan $TEST_URL \
+            --custom-prompt "Login with user $TEST_USER and password $TEST_PWD. Test the following: 1) Login works correctly, 2) Can view channels, 3) Can send messages, 4) Can create new channels, 5) Settings menu is accessible"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-test-results
+          path: |
+            testers-ai-results/
+            *.log
+          retention-days: 30

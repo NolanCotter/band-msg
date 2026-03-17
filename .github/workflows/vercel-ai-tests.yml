@@ -1,0 +1,104 @@
+name: Vercel AI Tests
+
+on:
+  # Trigger when Vercel deployment completes
+  deployment_status:
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: 'Vercel deployment URL to test'
+        required: true
+
+jobs:
+  test-deployment:
+    name: Test Vercel Deployment
+    runs-on: ubuntu-latest
+    
+    # Only run on successful Vercel deployments
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Get deployment URL
+        id: deployment
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "url=${{ github.event.inputs.deployment_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=${{ github.event.deployment_status.target_url }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Wait for deployment to be fully ready
+        run: |
+          echo "Waiting for deployment at ${{ steps.deployment.outputs.url }}"
+          sleep 45
+          
+          # Check if deployment is accessible
+          for i in {1..10}; do
+            if curl -f -s -o /dev/null "${{ steps.deployment.outputs.url }}"; then
+              echo "Deployment is ready!"
+              break
+            fi
+            echo "Waiting for deployment... (attempt $i/10)"
+            sleep 10
+          done
+
+      - name: Run AI Tests on Deployment
+        env:
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PWD: ${{ secrets.TEST_PWD }}
+          DEPLOYMENT_URL: ${{ steps.deployment.outputs.url }}
+        run: |
+          echo "Testing deployment at: $DEPLOYMENT_URL"
+          
+          npx testers-ai scan "$DEPLOYMENT_URL" \
+            --custom-prompt "Login with user $TEST_USER and password $TEST_PWD. Perform comprehensive testing: 1) Verify login functionality, 2) Check channel navigation, 3) Test message sending, 4) Verify channel creation, 5) Test settings menu, 6) Check mobile responsiveness, 7) Test reactions and threads"
+        continue-on-error: true
+
+      - name: Comment on PR with test results
+        if: github.event.deployment_status.environment == 'Preview' && github.event.pull_request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentUrl = '${{ steps.deployment.outputs.url }}';
+            const comment = `## 🤖 AI Test Results
+            
+            Deployment URL: ${deploymentUrl}
+            
+            AI tests have been executed on this deployment. Check the workflow logs for detailed results.
+            
+            [View Test Results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vercel-ai-test-results-${{ github.run_number }}
+          path: |
+            testers-ai-results/
+            *.log
+            *.json
+          retention-days: 30
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::AI tests failed on deployment ${{ steps.deployment.outputs.url }}"
+          echo "Check the test results artifact for details"
