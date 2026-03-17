@@ -16,7 +16,6 @@
   let error = '';
   let isLoading = false;
   let drawerOpen = true;
-  let memberDrawerOpen = false;
 
   async function handleCreate() {
     error = '';
@@ -67,7 +66,6 @@
     isPrivate = !isPrivate;
     if (isPrivate) {
       showMemberSelector = true;
-      memberDrawerOpen = true;
     } else {
       selectedMemberIds = [];
     }
@@ -184,16 +182,23 @@
 </Drawer.Root>
 
 <!-- Desktop Modal Version -->
-<div class="hidden md:block">
-  <div class="fixed inset-0 z-[201] flex items-center justify-center p-4">
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div 
-      class="relative bg-[#2a2a2a] border border-white/30 w-full max-w-[400px] rounded-2xl shadow-2xl p-6"
-      role="dialog"
-      aria-modal="true"
-      on:click|stopPropagation
-    >
+<!-- Backdrop -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div 
+  class="hidden md:block fixed inset-0 bg-black/80 z-[200]"
+  on:click={onClose}
+></div>
+<!-- Modal Content -->
+<div class="hidden md:flex fixed inset-0 z-[201] items-center justify-center p-4 pointer-events-none">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div 
+    class="relative bg-[#2a2a2a] border border-white/30 w-full max-w-[400px] rounded-2xl shadow-2xl p-6 pointer-events-auto"
+    role="dialog"
+    aria-modal="true"
+    on:click|stopPropagation
+  >
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-[20px] font-bold text-white tracking-tight">Create Channel</h2>
       <button type="button" on:click={onClose} class="p-2 -mr-2 text-white/40 hover:text-white transition-colors bg-white/5 rounded-full" aria-label="Close modal">
@@ -288,63 +293,34 @@
       </button>
     </form>
   </div>
-  </div>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div 
-    class="fixed inset-0 bg-black/80 z-[200]"
-    on:click={onClose}
-  ></div>
 </div>
 
 <!-- Member Selector Modal (Mobile - Drawer) -->
 {#if showMemberSelector}
-  <div class="md:hidden">
-    <Drawer.Root bind:open={memberDrawerOpen} onOpenChange={(o) => { console.log('[CreateChannel] Member Drawer onOpenChange', o); if (!o) { memberDrawerOpen = false; showMemberSelector = false; } }}>
-      <Drawer.Portal>
-        <Drawer.Overlay
-          class="fixed inset-0 bg-black/80 z-[300]"
-          transition={fade}
-          transitionConfig={{ duration: 150 }}
-        />
-        <Drawer.Content
-          class="fixed bottom-0 left-0 right-0 z-[320] flex flex-col bg-[#2a2a2a] rounded-t-[20px] h-[85vh] outline-none"
-          style="padding-bottom: env(safe-area-inset-bottom);"
-        >
-          <div class="flex-1 overflow-y-auto w-full relative px-4 pb-6" on:click|stopPropagation>
-            <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3"></div>
-            <MemberSelector 
-              bind:selectedMemberIds 
-              onClose={() => showMemberSelector = false}
-            />
-          </div>
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
-  </div>
-  
-  <!-- Member Selector Modal (Desktop) -->
-  <div class="hidden md:block">
-    <div class="fixed inset-0 z-[301] flex items-center justify-center p-4">
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div 
-        class="relative bg-[#2a2a2a] border border-white/30 w-full max-w-[500px] h-[600px] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        on:click|stopPropagation
-      >
-        <MemberSelector 
-          bind:selectedMemberIds 
-          onClose={() => showMemberSelector = false}
-        />
+  <div>
+    <!-- Mobile member selector (bottom sheet) -->
+    <div class="md:hidden">
+      <div class="fixed inset-0 z-[300]">
+        <div class="absolute inset-0 bg-black/80" on:click={() => showMemberSelector = false}></div>
+        <div class="absolute bottom-0 left-0 right-0 z-[320] flex flex-col bg-[#2a2a2a] rounded-t-[20px] h-[85vh]" style="padding-bottom: env(safe-area-inset-bottom);" on:click|stopPropagation>
+          <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3"></div>
+          <MemberSelector bind:selectedMemberIds onClose={() => showMemberSelector = false} />
+        </div>
       </div>
     </div>
+
+    <!-- Desktop member selector (center modal) -->
+    <!-- Backdrop -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="fixed inset-0 bg-black/80 z-[300]"
-      on:click={() => showMemberSelector = false}
-    ></div>
+    <div class="hidden md:block fixed inset-0 bg-black/80 z-[300]" on:click={() => showMemberSelector = false}></div>
+    <!-- Modal Content -->
+    <div class="hidden md:flex fixed inset-0 z-[301] items-center justify-center p-4 pointer-events-none">
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="relative bg-[#2a2a2a] border border-white/30 w-full max-w-[500px] h-[600px] rounded-2xl shadow-2xl overflow-hidden flex flex-col pointer-events-auto" role="dialog" aria-modal="true" on:click|stopPropagation>
+        <MemberSelector bind:selectedMemberIds onClose={() => showMemberSelector = false} />
+      </div>
+    </div>
   </div>
 {/if}
