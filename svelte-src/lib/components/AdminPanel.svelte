@@ -31,23 +31,43 @@
   let sessionToken = '';
 
   onMount(() => {
+    // Try to get session token from store first
     const unsubscribe = convexMessageStore.subscribe(async state => {
       sessionToken = state.sessionToken;
       if (sessionToken) {
         await loadData();
       }
     });
+    
+    // If no session token from store, try to get from cookies as fallback
+    if (!sessionToken) {
+      // Get session token from cookies as fallback
+      const cookies = document.cookie.split(';');
+      const sessionCookie = cookies.find(c => c.trim().startsWith('session='));
+      if (sessionCookie) {
+        sessionToken = sessionCookie.split('=')[1];
+        if (sessionToken) {
+          loadData();
+        }
+      }
+    }
+    
     return unsubscribe;
   });
 
   async function loadData() {
-    if (!sessionToken) return;
+    if (!sessionToken) {
+      console.error('[AdminPanel] No session token available');
+      return;
+    }
+    console.log('[AdminPanel] Loading data with session token:', sessionToken.substring(0, 10) + '...');
     isLoading = true;
     try {
       const [requests, users] = await Promise.all([
         convex.query(api.signupRequests.getPending, { sessionToken }),
         convex.query(api.auth.getAllUsers, { sessionToken })
       ]);
+      console.log('[AdminPanel] Loaded data:', { requests: requests.length, users: users.length });
       signupRequests = requests;
       allUsers = users;
     } catch (error) {
@@ -181,37 +201,47 @@
           <!-- All Users -->
           <div>
             <h3 class="text-sm font-semibold text-white/60 mb-3">All Users ({allUsers.length})</h3>
-            <div class="space-y-2">
-              {#each allUsers as user}
-                <div class="bg-white/5 border border-white/8 rounded-xl p-3.5">
-                  <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2">
-                        <p class="font-medium text-white text-sm truncate">{user.username}</p>
-                        {#if user.role === 'admin'}
-                          <span class="px-1.5 py-0.5 bg-white/10 text-white/60 rounded text-xs font-medium">Admin</span>
-                        {/if}
+            {#if allUsers.length === 0}
+              <div class="bg-white/5 border border-white/8 rounded-xl p-4 text-center">
+                <p class="text-white/40 text-sm">No users found</p>
+                <p class="text-white/30 text-xs mt-1">Session token: {sessionToken ? 'Available' : 'Missing'}</p>
+                <button type="button" on:click={loadData} class="mt-2 px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs">
+                  Retry
+                </button>
+              </div>
+            {:else}
+              <div class="space-y-2">
+                {#each allUsers as user}
+                  <div class="bg-white/5 border border-white/8 rounded-xl p-3.5">
+                    <div class="flex items-center justify-between gap-3">
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                          <p class="font-medium text-white text-sm truncate">{user.username}</p>
+                          {#if user.role === 'admin'}
+                            <span class="px-1.5 py-0.5 bg-white/10 text-white/60 rounded text-xs font-medium">Admin</span>
+                          {/if}
+                        </div>
+                        <p class="text-xs text-white/35">{user.email || 'No email'} • {user.status}</p>
                       </div>
-                      <p class="text-xs text-white/35">{user.email || 'No email'} • {user.status}</p>
-                    </div>
-                    <div class="flex gap-2 shrink-0">
-                      {#if user.role === 'admin'}
-                        <button type="button" on:click|stopPropagation={() => demoteUser(user.id)} disabled={isLoading} class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50">
-                          Demote
+                      <div class="flex gap-2 shrink-0">
+                        {#if user.role === 'admin'}
+                          <button type="button" on:click|stopPropagation={() => demoteUser(user.id)} disabled={isLoading} class="px-3 py-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-xs font-medium disabled:opacity-50">
+                            Demote
+                          </button>
+                        {:else}
+                          <button type="button" on:click|stopPropagation={() => promoteUser(user.id)} disabled={isLoading} class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50">
+                            Promote
+                          </button>
+                        {/if}
+                        <button type="button" on:click|stopPropagation={() => removeUser(user.id, user.username)} disabled={isLoading} class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-xs font-medium disabled:opacity-50">
+                          Remove
                         </button>
-                      {:else}
-                        <button type="button" on:click|stopPropagation={() => promoteUser(user.id)} disabled={isLoading} class="px-3 py-1.5 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-xs font-semibold disabled:opacity-50">
-                          Promote
-                        </button>
-                      {/if}
-                      <button type="button" on:click|stopPropagation={() => removeUser(user.id, user.username)} disabled={isLoading} class="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-xs font-medium disabled:opacity-50">
-                        Remove
-                      </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              {/each}
-            </div>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/if}
       </div>
