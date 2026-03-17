@@ -23,6 +23,7 @@ function createConvexChannelStore() {
   });
 
   let currentSessionToken: string | null = null;
+  let unsubscribe: (() => void) | null = null;
 
   return {
     subscribe,
@@ -41,18 +42,33 @@ function createConvexChannelStore() {
       update(state => ({ ...state, isLoading: true }));
       
       try {
-        const channels = await convex.query(api.channels.list, {
-          sessionToken: currentSessionToken
-        });
-        
-        console.log('[Convex Channels] Loaded channels:', channels.length, 'channels');
-        
-        update(state => ({
-          ...state,
-          channels,
-          selectedChannelId: state.selectedChannelId || (channels[0]?.id ?? null),
-          isLoading: false,
-        }));
+        // Unsubscribe from previous subscription
+        if (unsubscribe) {
+          unsubscribe();
+          unsubscribe = null;
+        }
+
+        // Subscribe to real-time channel updates
+        unsubscribe = convex.onUpdate(
+          api.channels.list,
+          { sessionToken: currentSessionToken },
+          (channels) => {
+            console.log('[Convex Channels] Channels updated:', channels.length, 'channels');
+            
+            update(state => {
+              // If no channel is selected, select the first one
+              const newSelectedId = state.selectedChannelId || (channels[0]?.id ?? null);
+              console.log('[Convex Channels] Selected channel:', newSelectedId);
+              
+              return {
+                ...state,
+                channels,
+                selectedChannelId: newSelectedId,
+                isLoading: false,
+              };
+            });
+          }
+        );
       } catch (error) {
         console.error('[Convex Channels] Error loading channels:', error);
         update(state => ({ ...state, isLoading: false }));
@@ -60,8 +76,16 @@ function createConvexChannelStore() {
     },
 
     selectChannel(channelId: string) {
+      console.log('[Convex Channels] Selecting channel:', channelId);
       update(state => ({ ...state, selectedChannelId: channelId }));
     },
+
+    cleanup() {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+    }
   };
 }
 

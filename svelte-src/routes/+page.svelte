@@ -166,6 +166,8 @@
     pusherStore.disconnect();
     stopApprovalPolling();
     memberStore.stopPolling();
+    convexChannelStore.cleanup();
+    convexMessageStore.cleanup();
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);
     }
