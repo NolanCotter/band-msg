@@ -55,14 +55,14 @@ jobs:
 
       - name: Run AI Tests on Deployment
         env:
-          TEST_USER: ${{ secrets.TEST_USER }}
-          TEST_PWD: ${{ secrets.TEST_PWD }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           DEPLOYMENT_URL: ${{ steps.deployment.outputs.url }}
         run: |
           echo "Testing deployment at: $DEPLOYMENT_URL"
           
           npx testers-ai scan "$DEPLOYMENT_URL" \
-            --custom-prompt "Login with user $TEST_USER and password $TEST_PWD. Perform comprehensive testing: 1) Verify login functionality, 2) Check channel navigation, 3) Test message sending, 4) Verify channel creation, 5) Test settings menu, 6) Check mobile responsiveness, 7) Test reactions and threads"
+            --custom-prompt "Login with user $TEST_USERNAME and password $TEST_PASSWORD. Perform comprehensive testing: 1) Verify login functionality, 2) Check channel navigation, 3) Test message sending, 4) Verify channel creation, 5) Test settings menu, 6) Check mobile responsiveness, 7) Test reactions and threads"
         continue-on-error: true
 
       - name: Comment on PR with test results

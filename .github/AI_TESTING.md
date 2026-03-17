@@ -18,14 +18,14 @@ This repository uses automated AI testing with [testers-ai](https://www.npmjs.co
 
 Add these secrets to your GitHub repository:
 
-1. **TEST_USER** - Username for test account
+1. **TEST_USERNAME** - Username for test account
    - Go to: Settings → Secrets and variables → Actions → New repository secret
-   - Name: `TEST_USER`
+   - Name: `TEST_USERNAME`
    - Value: Your test user's username
 
-2. **TEST_PWD** - Password for test account
+2. **TEST_PASSWORD** - Password for test account
    - Go to: Settings → Secrets and variables → Actions → New repository secret
-   - Name: `TEST_PWD`
+   - Name: `TEST_PASSWORD`
    - Value: Your test user's password
 
 ## Setting Up Secrets
@@ -34,13 +34,13 @@ Add these secrets to your GitHub repository:
 1. Go to your repository on GitHub
 2. Click **Settings** → **Secrets and variables** → **Actions**
 3. Click **New repository secret**
-4. Add `TEST_USER` with your test username
-5. Add `TEST_PWD` with your test password
+4. Add `TEST_USERNAME` with your test username
+5. Add `TEST_PASSWORD` with your test password
 
 ### Via GitHub CLI:
 ```bash
-gh secret set TEST_USER --body "your-test-username"
-gh secret set TEST_PWD --body "your-test-password"
+gh secret set TEST_USERNAME --body "your-test-username"
+gh secret set TEST_PASSWORD --body "your-test-password"
 ```
 
 ## Manual Testing
@@ -83,7 +83,7 @@ Test results are uploaded as artifacts and can be viewed:
 ## Troubleshooting
 
 ### Tests failing?
-- Verify TEST_USER and TEST_PWD secrets are set correctly
+- Verify TEST_USERNAME and TEST_PASSWORD secrets are set correctly
 - Check that the test user account exists and is approved
 - Ensure the deployment is fully ready (workflows wait 30-45 seconds)
 

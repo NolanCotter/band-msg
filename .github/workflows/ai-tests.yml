@@ -35,12 +35,12 @@ jobs:
 
       - name: Run AI Tests
         env:
-          TEST_USER: ${{ secrets.TEST_USER }}
-          TEST_PWD: ${{ secrets.TEST_PWD }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_URL: ${{ github.event.inputs.url || 'https://band-msg.vercel.app' }}
         run: |
           npx testers-ai scan $TEST_URL \
-            --custom-prompt "Login with user $TEST_USER and password $TEST_PWD. Test the following: 1) Login works correctly, 2) Can view channels, 3) Can send messages, 4) Can create new channels, 5) Settings menu is accessible"
+            --custom-prompt "Login with user $TEST_USERNAME and password $TEST_PASSWORD. Test the following: 1) Login works correctly, 2) Can view channels, 3) Can send messages, 4) Can create new channels, 5) Settings menu is accessible"
 
       - name: Upload test results
         if: always()
