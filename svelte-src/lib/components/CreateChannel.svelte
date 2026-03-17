@@ -2,7 +2,10 @@
   import { Drawer } from 'vaul-svelte';
   import { convexChannelStore } from '../stores/convexChannels';
   import { authStore } from '../stores/auth';
-  import { apiPost } from '../utils/api';
+  import { convexMessageStore } from '../stores/convexMessages';
+  import { convex } from '../convex';
+  import { api } from '../../../convex/_generated/api';
+  import type { Id } from '../../../convex/_generated/dataModel';
   import MemberSelector from './MemberSelector.svelte';
 
   export let onClose: () => void;
@@ -35,26 +38,42 @@
     }
 
     isLoading = true;
+    
+    // Get session token
+    let sessionToken = '';
+    const unsubscribe = convexMessageStore.subscribe(state => {
+      sessionToken = state.sessionToken || '';
+    });
+    unsubscribe();
+    
+    if (!sessionToken) {
+      error = 'Not authenticated';
+      isLoading = false;
+      return;
+    }
+    
+    console.log('[CreateChannel] Creating channel:', cleanName);
+    console.log('[CreateChannel] Session token available:', !!sessionToken);
+    console.log('[CreateChannel] Is private:', isPrivate);
+    console.log('[CreateChannel] Selected members:', selectedMemberIds.length);
+    
     try {
-      const res = await apiPost('/api/channels', { 
-        name: cleanName, 
-        description: description.trim(), 
+      const result = await convex.mutation(api.channels.create, {
+        sessionToken,
+        name: cleanName,
+        description: description.trim(),
         isPrivate,
-        memberIds: isPrivate ? selectedMemberIds : []
+        memberIds: isPrivate ? selectedMemberIds.map(id => id as Id<"users">) : undefined,
       });
       
-      const data = await res.json();
-      
-      if (!res.ok) {
-        error = data.error || 'Failed to create channel';
-        return;
-      }
+      console.log('[CreateChannel] Channel created successfully:', result.channelId);
       
       await convexChannelStore.loadChannels();
-      convexChannelStore.selectChannel(data.id);
+      convexChannelStore.selectChannel(result.channelId);
       onClose();
     } catch (err: any) {
-      error = 'An unexpected error occurred';
+      console.error('[CreateChannel] Error creating channel:', err);
+      error = err.message || 'Failed to create channel';
     } finally {
       isLoading = false;
     }

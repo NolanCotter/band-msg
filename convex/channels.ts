@@ -60,6 +60,60 @@ export const list = query({
   },
 });
 
+export const create = mutation({
+  args: {
+    sessionToken: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    isPrivate: v.boolean(),
+    memberIds: v.optional(v.array(v.id("users"))),
+  },
+  handler: async (ctx, args) => {
+    const user = await getUserByToken(ctx, args.sessionToken);
+    if (!user) throw new Error("Unauthorized");
+
+    console.log('[Convex] Creating channel:', args.name, 'by user:', user.username);
+
+    // Create the channel
+    const channelId = await ctx.db.insert("channels", {
+      name: args.name,
+      description: args.description || "",
+      isPrivate: args.isPrivate,
+      createdBy: user._id,
+      createdAt: Date.now(),
+    });
+
+    console.log('[Convex] Channel created:', channelId);
+
+    // If private, add members
+    if (args.isPrivate) {
+      // Add creator as member
+      await ctx.db.insert("channelMembers", {
+        channelId,
+        userId: user._id,
+        canRead: true,
+        canWrite: true,
+        isMuted: false,
+      });
+
+      // Add selected members
+      if (args.memberIds && args.memberIds.length > 0) {
+        for (const memberId of args.memberIds) {
+          await ctx.db.insert("channelMembers", {
+            channelId,
+            userId: memberId,
+            canRead: true,
+            canWrite: true,
+            isMuted: false,
+          });
+        }
+      }
+    }
+
+    return { channelId };
+  },
+});
+
 export const remove = mutation({
   args: {
     channelId: v.id("channels"),
