@@ -317,13 +317,7 @@
   class="group relative px-4 md:px-5 {showHeader ? 'mt-4 pt-1' : 'mt-0.5'}"
   on:contextmenu={handleContextMenu}
 >
-  <div 
-    class="flex gap-3"
-    on:touchstart={handleTouchStart}
-    on:touchend={handleTouchEnd}
-    on:touchmove={handleTouchMove}
-    on:touchcancel={handleTouchEnd}
-  >
+  <div class="flex gap-3">
     <!-- Avatar -->
     {#if showHeader}
       <Avatar alt={message.author} size="md" status={null} />
