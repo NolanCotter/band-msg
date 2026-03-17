@@ -107,38 +107,38 @@
     contextMenuX = touch.clientX;
     contextMenuY = touch.clientY;
     
-    touchTimer = setTimeout(() => {
-      showContextMenu = true;
-      tapCount = 0; // Reset tap count when menu shows
-      if (tapTimer) clearTimeout(tapTimer);
-      if (navigator.vibrate) navigator.vibrate(50);
-    }, 400);
+    // Long press for thread reply (if available)
+    if (onOpenThread) {
+      touchTimer = setTimeout(() => {
+        onOpenThread(message);
+        tapCount = 0;
+        if (tapTimer) clearTimeout(tapTimer);
+        if (navigator.vibrate) navigator.vibrate(50);
+      }, 500);
+    }
   }
 
   function handleTouchEnd(e: TouchEvent) {
-    // Only clear timer if menu hasn't been triggered yet
-    if (touchTimer && !showContextMenu) {
+    // Clear long-press timer
+    if (touchTimer) {
       clearTimeout(touchTimer);
       touchTimer = null;
     }
     
-    // Don't handle double-tap if context menu is showing
-    if (showContextMenu) {
-      return;
-    }
-    
-    // Handle double-tap on images
+    // Handle single tap - show reaction picker
     const target = e.target as HTMLElement;
-    if (target.tagName === 'IMG') {
+    if (!target.closest('button, a, input, textarea, select')) {
       tapCount++;
       if (tapCount === 1) {
         tapTimer = setTimeout(() => {
           tapCount = 0;
         }, 300);
+        // Single tap - show reaction picker
+        showReactionPicker = true;
       } else if (tapCount === 2) {
+        // Double tap - add heart reaction
         if (tapTimer) clearTimeout(tapTimer);
         tapCount = 0;
-        // Double tap detected - add heart reaction
         handleReactionClick('❤️', 'heart');
       }
     }
