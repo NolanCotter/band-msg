@@ -38,13 +38,6 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="hidden md:block">
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 bg-black/80 z-[200]"
-    style="padding-top: env(safe-area-inset-top);"
-    on:click={onClose}
-  ></div>
   <div class="fixed inset-0 z-[201] flex items-end md:items-center md:justify-center animate-fade-in" style="padding-top: env(safe-area-inset-top);">
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -107,4 +100,11 @@
     </div>
   </div>
   </div>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="fixed inset-0 bg-black/80 z-[200]"
+    style="padding-top: env(safe-area-inset-top);"
+    on:click={onClose}
+  ></div>
 </div>
