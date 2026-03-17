@@ -134,6 +134,7 @@
       console.log('[AdminPanel] Loading all users...');
       const users = await convex.query(api.auth.getAllUsers, { sessionToken });
       console.log('[AdminPanel] All users loaded:', users);
+      console.log('[AdminPanel] User IDs and roles:', users.map(u => ({ id: u.id, username: u.username, role: u.role })));
       
       signupRequests = requests;
       allUsers = users;
@@ -183,10 +184,13 @@
   }
 
   async function promoteUser(userId: string) {
+    console.log('[AdminPanel] Promoting user:', userId);
     if (!sessionToken || isLoading) return;
     isLoading = true;
     try {
+      console.log('[AdminPanel] Calling promoteUser mutation...');
       await convex.mutation(api.auth.promoteUser, { sessionToken, userId: userId as Id<"users"> });
+      console.log('[AdminPanel] Promote successful, reloading data...');
       await loadData();
     } catch (error) {
       console.error('[AdminPanel] Failed to promote:', error);
@@ -196,10 +200,13 @@
   }
 
   async function demoteUser(userId: string) {
+    console.log('[AdminPanel] Demoting user:', userId);
     if (!sessionToken || isLoading) return;
     isLoading = true;
     try {
+      console.log('[AdminPanel] Calling demoteUser mutation...');
       await convex.mutation(api.auth.demoteUser, { sessionToken, userId: userId as Id<"users"> });
+      console.log('[AdminPanel] Demote successful, reloading data...');
       await loadData();
     } catch (error) {
       console.error('[AdminPanel] Failed to demote:', error);
