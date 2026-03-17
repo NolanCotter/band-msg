@@ -315,13 +315,15 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
   class="group relative px-4 md:px-5 {showHeader ? 'mt-4 pt-1' : 'mt-0.5'}"
-  on:touchstart={handleTouchStart}
-  on:touchend={handleTouchEnd}
-  on:touchmove={handleTouchMove}
-  on:touchcancel={handleTouchEnd}
   on:contextmenu={handleContextMenu}
 >
-  <div class="flex gap-3">
+  <div 
+    class="flex gap-3"
+    on:touchstart={handleTouchStart}
+    on:touchend={handleTouchEnd}
+    on:touchmove={handleTouchMove}
+    on:touchcancel={handleTouchEnd}
+  >
     <!-- Avatar -->
     {#if showHeader}
       <Avatar alt={message.author} size="md" status={null} />

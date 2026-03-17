@@ -5,7 +5,6 @@
   import { convex } from '../convex';
   import { api } from '../../../convex/_generated/api';
   import type { Id } from '../../../convex/_generated/dataModel';
-  import { convexMessageStore } from '../stores/convexMessages';
 
   export let onClose: () => void;
 
@@ -30,32 +29,20 @@
   let isLoading = false;
   let sessionToken = '';
 
-  onMount(() => {
+  onMount(async () => {
     console.log('[AdminPanel] Component mounted');
     
-    // Get session token from store ONCE, don't subscribe
-    const unsubscribe = convexMessageStore.subscribe(state => {
-      sessionToken = state.sessionToken; // Use component-level variable
-    });
-    unsubscribe(); // Immediately unsubscribe
-    
-    if (sessionToken) {
-      console.log('[AdminPanel] Got session token, loading data...');
-      loadData();
-    } else {
-      // If no session token from store, try cookies as fallback
-      console.log('[AdminPanel] No session token from store, trying cookies...');
-      const cookies = document.cookie.split(';');
-      const sessionCookie = cookies.find(c => c.trim().startsWith('session='));
-      if (sessionCookie) {
-        sessionToken = sessionCookie.split('=')[1];
-        console.log('[AdminPanel] Got session token from cookies');
-        if (sessionToken) {
-          loadData();
-        }
-      } else {
-        console.error('[AdminPanel] No session cookie found');
+    // Get session token from cookies directly - NO STORE SUBSCRIPTION
+    const cookies = document.cookie.split(';');
+    const sessionCookie = cookies.find(c => c.trim().startsWith('session='));
+    if (sessionCookie) {
+      sessionToken = sessionCookie.split('=')[1];
+      console.log('[AdminPanel] Got session token from cookies');
+      if (sessionToken) {
+        await loadData();
       }
+    } else {
+      console.error('[AdminPanel] No session cookie found');
     }
   });
 
