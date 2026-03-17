@@ -15,6 +15,8 @@
   let showMemberSelector = false;
   let error = '';
   let isLoading = false;
+  let drawerOpen = true;
+  let memberDrawerOpen = false;
 
   async function handleCreate() {
     error = '';
@@ -65,13 +67,14 @@
     isPrivate = !isPrivate;
     if (isPrivate) {
       showMemberSelector = true;
+      memberDrawerOpen = true;
     } else {
       selectedMemberIds = [];
     }
   }
 </script>
 
-<Drawer.Root open={true} onOpenChange={(o) => !o && onClose()}>
+<Drawer.Root bind:open={drawerOpen} onOpenChange={(o) => { if (!o) { drawerOpen = false; onClose(); } }}>
   <Drawer.Portal>
     <Drawer.Overlay
       class="fixed inset-0 bg-black/80 z-[200]"
@@ -297,7 +300,7 @@
 <!-- Member Selector Modal (Mobile - Drawer) -->
 {#if showMemberSelector}
   <div class="md:hidden">
-    <Drawer.Root open={true} onOpenChange={(o) => !o && (showMemberSelector = false)}>
+    <Drawer.Root bind:open={memberDrawerOpen} onOpenChange={(o) => { if (!o) { memberDrawerOpen = false; showMemberSelector = false; } }}>
       <Drawer.Portal>
         <Drawer.Overlay
           class="fixed inset-0 bg-black/80 z-[300]"
