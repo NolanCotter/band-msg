@@ -6,7 +6,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../../convex/_generated/api";
 import crypto from 'node:crypto';
 
-const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "";
+const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "https://zealous-heron-912.convex.cloud";
 const convex = new ConvexHttpClient(CONVEX_URL);
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';

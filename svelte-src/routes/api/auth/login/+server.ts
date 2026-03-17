@@ -3,7 +3,7 @@ import { delayMs, getClientIp } from "$lib/server/request";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../convex/_generated/api";
 
-const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "";
+const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "https://zealous-heron-912.convex.cloud";
 const convex = new ConvexHttpClient(CONVEX_URL);
 
 const LOGIN_IP_MAX_ATTEMPTS = 30;
