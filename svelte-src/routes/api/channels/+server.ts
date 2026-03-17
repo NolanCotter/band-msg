@@ -25,9 +25,9 @@ export const POST = async ({ locals, request }: any) => {
     return toJson({ error: "unauthorized" }, 401);
   }
 
-  // Only admins can create channels
-  if (locals.user?.role !== 'admin') {
-    return toJson({ error: "Only admins can create channels" }, 403);
+  // Allow all approved users to create channels
+  if (locals.user?.status !== 'approved') {
+    return toJson({ error: "Only approved users can create channels" }, 403);
   }
 
   const body = await request.json().catch(() => null);
