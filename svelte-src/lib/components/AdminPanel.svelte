@@ -5,8 +5,7 @@
   import { convex } from '../convex';
   import { api } from '../../../convex/_generated/api';
   import type { Id } from '../../../convex/_generated/dataModel';
-  import { get } from 'svelte/store';
-  import { convexMessageStore } from '../stores/convexMessages';
+
 
   export let onClose: () => void;
 
@@ -34,27 +33,17 @@
   onMount(async () => {
     console.log('[AdminPanel] Component mounted');
     
-    // Get session token using get() - no reactive subscription
-    const storeState = get(convexMessageStore);
-    sessionToken = storeState.sessionToken;
-    
-    if (sessionToken) {
-      console.log('[AdminPanel] Got session token from store');
-      await loadData();
-    } else {
-      // Fallback to cookies
-      console.log('[AdminPanel] No session token from store, trying cookies...');
-      const cookies = document.cookie.split(';');
-      const sessionCookie = cookies.find(c => c.trim().startsWith('session='));
-      if (sessionCookie) {
-        sessionToken = sessionCookie.split('=')[1];
-        console.log('[AdminPanel] Got session token from cookies');
-        if (sessionToken) {
-          await loadData();
-        }
-      } else {
-        console.error('[AdminPanel] No session cookie found');
+    // Get session token from cookies only - don't touch the store at all
+    const cookies = document.cookie.split(';');
+    const sessionCookie = cookies.find(c => c.trim().startsWith('session='));
+    if (sessionCookie) {
+      sessionToken = sessionCookie.split('=')[1];
+      console.log('[AdminPanel] Got session token from cookies');
+      if (sessionToken) {
+        await loadData();
       }
+    } else {
+      console.error('[AdminPanel] No session cookie found');
     }
   });
 
