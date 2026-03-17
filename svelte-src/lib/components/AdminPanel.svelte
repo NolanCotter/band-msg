@@ -201,6 +201,14 @@
 
   async function demoteUser(userId: string) {
     console.log('[AdminPanel] Demoting user:', userId);
+    
+    // Prevent self-demotion
+    const currentUser = allUsers.find(u => u.id === userId);
+    if (currentUser && currentUser.username.toLowerCase() === 'nolanc') {
+      alert('Cannot demote yourself! You need to remain admin.');
+      return;
+    }
+    
     if (!sessionToken || isLoading) return;
     isLoading = true;
     try {

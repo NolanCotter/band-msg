@@ -61,24 +61,32 @@ function createNotificationStore() {
     },
 
     async toggleNotifications() {
+      console.log('[NotificationStore] Toggle notifications called');
       const state = get({ subscribe });
+      console.log('[NotificationStore] Current state:', { isSubscribed: state.isSubscribed, permission: state.permission });
+      
       update(s => ({ ...s, isLoading: true, error: null }));
 
       try {
         if (state.isSubscribed) {
+          console.log('[NotificationStore] Unsubscribing from notifications...');
           const result = await unsubscribeFromPushNotifications();
+          console.log('[NotificationStore] Unsubscribe result:', result);
           if (result.success) {
             update(s => ({ ...s, isSubscribed: false }));
           } else {
             update(s => ({ ...s, error: result.error || 'Failed to unsubscribe' }));
           }
         } else {
+          console.log('[NotificationStore] Subscribing to notifications...');
           const result = await subscribeToPushNotifications();
+          console.log('[NotificationStore] Subscribe result:', result);
           if (result.success) {
             update(s => ({ ...s, isSubscribed: true, permission: 'granted' }));
           } else {
             // Permission might have been denied or prompt closed
             const currentPermission = 'Notification' in window ? Notification.permission : 'default';
+            console.log('[NotificationStore] Subscribe failed, current permission:', currentPermission);
             update(s => ({ 
               ...s, 
               permission: currentPermission,
@@ -90,6 +98,7 @@ function createNotificationStore() {
         console.error('[NotificationStore] Toggle error:', err);
         update(s => ({ ...s, error: 'An unexpected error occurred' }));
       } finally {
+        console.log('[NotificationStore] Toggle complete, setting loading to false');
         update(s => ({ ...s, isLoading: false }));
       }
     },
