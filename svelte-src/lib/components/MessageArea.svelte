@@ -171,7 +171,7 @@
   };
 </script>
 
-<div class="flex-1 flex flex-col min-w-0 message-area-container" style="padding-top: env(safe-area-inset-top);">
+<div class="flex-1 flex flex-col min-w-0 message-area-container" style="padding-top: env(safe-area-inset-top); height: 100vh; max-height: 100vh;">
   <!-- Header -->
   <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative message-area-header" style="z-index: 100;">
     <div class="flex items-center gap-3">
@@ -414,8 +414,8 @@
   <div 
     bind:this={messageContainer} 
     on:scroll={handleScroll} 
-    class="flex-1 overflow-y-scroll overflow-x-hidden py-3 message-area-messages" 
-    style="min-height: 0; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;"
+    class="overflow-y-scroll overflow-x-hidden py-3 message-area-messages" 
+    style="flex: 1 1 auto; min-height: 0; max-height: 100%; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;"
   >
     {#each $messageStore.messages as message, i (message.id)}
       {@const prev = i > 0 ? $messageStore.messages[i - 1] : null}
