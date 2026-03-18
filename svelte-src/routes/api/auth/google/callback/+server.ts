@@ -2,12 +2,11 @@ import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getSqlClient } from '$lib/server/db';
 import { createSessionToken, setSessionCookie, expiresAtMs } from '$lib/server/auth';
-import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../../convex/_generated/api";
 import crypto from 'node:crypto';
+import { getConvexHttpClient } from "$lib/server/convex";
 
-const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "https://zealous-heron-912.convex.cloud";
-const convex = new ConvexHttpClient(CONVEX_URL);
+const convex = getConvexHttpClient();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';

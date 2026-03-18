@@ -52,6 +52,7 @@ export default defineSchema({
     content: v.string(),
     replyToId: v.optional(v.id("messages")),
     createdAt: v.number(),
+    editedAt: v.optional(v.number()),
   })
     .index("by_channel", ["channelId", "createdAt"])
     .index("by_reply_to", ["replyToId"]),

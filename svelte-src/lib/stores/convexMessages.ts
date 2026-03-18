@@ -14,6 +14,7 @@ type Message = {
   author: string;
   content: string;
   createdAt: number;
+  editedAt?: number | null;
   reactions?: Reaction[];
   replyCount?: number;
 };
@@ -105,6 +106,23 @@ function createConvexMessageStore() {
         return { success: true };
       } catch (error) {
         return { success: false };
+      }
+    },
+
+    async editMessage(messageId: string, content: string) {
+      if (!currentSessionToken) {
+        return { success: false, error: "Not authenticated" };
+      }
+
+      try {
+        await convex.mutation(api.messages.update, {
+          messageId: messageId as Id<"messages">,
+          content,
+          sessionToken: currentSessionToken,
+        });
+        return { success: true };
+      } catch (error: any) {
+        return { success: false, error: error?.message || "Failed to edit message" };
       }
     },
 

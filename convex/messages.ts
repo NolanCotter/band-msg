@@ -79,6 +79,7 @@ export const list = query({
           content: msg.content,
           channelId: msg.channelId,
           createdAt: msg.createdAt,
+          editedAt: msg.editedAt ?? null,
           author: author?.username || "Unknown",
           reactions: Array.from(reactionMap.values()),
           replyCount: replies.length,
@@ -163,6 +164,37 @@ export const remove = mutation({
 
     await ctx.db.delete(args.messageId);
     return { deleted: true };
+  },
+});
+
+export const update = mutation({
+  args: {
+    messageId: v.id("messages"),
+    content: v.string(),
+    sessionToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await getUserByToken(ctx, args.sessionToken);
+    if (!user) throw new Error("Unauthorized");
+
+    const content = args.content.trim();
+    if (content.length === 0 || content.length > 4000) {
+      throw new Error("Message must be 1-4000 chars");
+    }
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    if (message.userId !== user._id && user.role !== "admin") {
+      throw new Error("Not authorized to edit this message");
+    }
+
+    await ctx.db.patch(args.messageId, {
+      content,
+      editedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });
 

@@ -59,6 +59,17 @@ function isIOS(): boolean {
          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 // Request notification permission and get FCM token
 export async function requestNotificationPermission(): Promise<string | null> {
   if (!browser) return null;
@@ -113,7 +124,7 @@ export async function requestNotificationPermission(): Promise<string | null> {
         
         subscription = await swRegistration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: vapidKey
+          applicationServerKey: urlBase64ToUint8Array(vapidKey) as unknown as BufferSource
         });
       }
       

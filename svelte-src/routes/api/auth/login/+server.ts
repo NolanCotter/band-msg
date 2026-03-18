@@ -1,10 +1,9 @@
 import { createSessionToken, expiresAtMs, hashPassword, setSessionCookie } from "$lib/server/auth";
 import { delayMs, getClientIp } from "$lib/server/request";
-import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../convex/_generated/api";
+import { getConvexHttpClient } from "$lib/server/convex";
 
-const CONVEX_URL = process.env.CONVEX_URL || process.env.PUBLIC_CONVEX_URL || "https://zealous-heron-912.convex.cloud";
-const convex = new ConvexHttpClient(CONVEX_URL);
+const convex = getConvexHttpClient();
 
 const LOGIN_IP_MAX_ATTEMPTS = 30;
 const LOGIN_ACCOUNT_MAX_ATTEMPTS = 10;

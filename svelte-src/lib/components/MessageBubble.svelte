@@ -20,6 +20,7 @@
 
   $: isOwn = message.author === $authStore.user?.username;
   $: parsedContent = parseMarkdown(message.content);
+  $: isEdited = !!message.editedAt;
 
   function formatTime(timestamp: number): string {
     const date = new Date(timestamp);
@@ -41,6 +42,8 @@
   let tapTimer: ReturnType<typeof setTimeout> | null = null;
   let touchStartX = 0;
   let touchStartY = 0;
+  let isEditing = false;
+  let editContent = '';
   
   const QUICK_REACTIONS = [
     { emoji: '👍', name: 'thumbs-up' },
@@ -107,15 +110,14 @@
     contextMenuX = touch.clientX;
     contextMenuY = touch.clientY;
     
-    // Long press for thread reply (if available)
-    if (onOpenThread) {
-      touchTimer = setTimeout(() => {
-        onOpenThread(message);
-        tapCount = 0;
-        if (tapTimer) clearTimeout(tapTimer);
-        if (navigator.vibrate) navigator.vibrate(50);
-      }, 500);
-    }
+    // Long press for actions menu
+    touchTimer = setTimeout(() => {
+      showContextMenu = true;
+      showReactionPicker = false;
+      tapCount = 0;
+      if (tapTimer) clearTimeout(tapTimer);
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, 500);
   }
 
   function handleTouchEnd(e: TouchEvent) {
@@ -125,7 +127,7 @@
       touchTimer = null;
     }
     
-    // Handle single tap - show reaction picker
+    // Handle double tap - quick react
     const target = e.target as HTMLElement;
     if (!target.closest('button, a, input, textarea, select')) {
       tapCount++;
@@ -133,10 +135,8 @@
         tapTimer = setTimeout(() => {
           tapCount = 0;
         }, 300);
-        // Single tap - show reaction picker
-        showReactionPicker = true;
       } else if (tapCount === 2) {
-        // Double tap - add heart reaction
+        // Double tap - quick like (heart)
         if (tapTimer) clearTimeout(tapTimer);
         tapCount = 0;
         handleReactionClick('❤️', 'heart');
@@ -183,6 +183,30 @@
   async function handleDelete() {
     if (!$convexChannelStore.selectedChannelId) return;
     await messageStore.deleteMessage(message.id, $convexChannelStore.selectedChannelId);
+  }
+
+  function startEdit() {
+    isEditing = true;
+    editContent = message.content;
+    showContextMenu = false;
+    showReactionPicker = false;
+  }
+
+  function cancelEdit() {
+    isEditing = false;
+    editContent = '';
+  }
+
+  async function saveEdit() {
+    const next = editContent.trim();
+    if (!next) return;
+    const result = await messageStore.editMessage(message.id, next);
+    if (result.success) {
+      isEditing = false;
+      editContent = '';
+    } else {
+      alert(result.error || 'Failed to edit message');
+    }
   }
 </script>
 
@@ -241,6 +265,14 @@
   
   <!-- Mobile: bottom sheet style -->
   <div class="fixed md:hidden left-4 right-4 bottom-4 z-50 bg-[#222] border border-white/10 rounded-xl shadow-2xl py-1 animate-slide-up">
+    <button
+      type="button"
+      on:click|stopPropagation={() => { showContextMenu = false; handleReactionClick('❤️', 'heart'); }}
+      class="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-3"
+    >
+      <span class="text-lg leading-none">❤️</span>
+      Like
+    </button>
     {#if onOpenThread}
       <button
         type="button"
@@ -269,6 +301,19 @@
     {#if isOwn}
       <button
         type="button"
+        on:click|stopPropagation={startEdit}
+        class="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-3"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+        Edit
+      </button>
+    {/if}
+    {#if isOwn}
+      <button
+        type="button"
         on:click|stopPropagation={() => { showContextMenu = false; handleDelete(); }}
         class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-white/10 transition-colors flex items-center gap-3"
       >
@@ -286,6 +331,14 @@
     class="hidden md:block fixed z-50 bg-[#222] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[160px] animate-scale-in"
     style="left: {contextMenuX}px; top: {contextMenuY}px;"
   >
+    <button
+      type="button"
+      on:click|stopPropagation={() => { showContextMenu = false; handleReactionClick('❤️', 'heart'); }}
+      class="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+    >
+      <span class="text-base leading-none">❤️</span>
+      Like
+    </button>
     {#if onOpenThread}
       <button
         type="button"
@@ -311,6 +364,19 @@
       </svg>
       Add reaction
     </button>
+    {#if isOwn}
+      <button
+        type="button"
+        on:click|stopPropagation={startEdit}
+        class="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+        Edit
+      </button>
+    {/if}
     {#if isOwn}
       <button
         type="button"
@@ -357,12 +423,42 @@
       {/if}
 
       <!-- Content -->
-      <div 
-        class="text-[14.5px] text-white/80 leading-relaxed break-words whitespace-pre-wrap"
-        style="-webkit-user-select: text; user-select: text; cursor: text;"
-      >
-        {@html parsedContent}
-      </div>
+      {#if isEditing}
+        <div class="mt-1">
+          <textarea
+            bind:value={editContent}
+            rows="3"
+            class="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/25 outline-none focus:border-white/30 resize-none transition-colors"
+          ></textarea>
+          <div class="flex gap-2 mt-2">
+            <button
+              type="button"
+              on:click|stopPropagation={cancelEdit}
+              class="flex-1 px-3 py-2 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              on:click|stopPropagation={saveEdit}
+              disabled={!editContent.trim()}
+              class="flex-1 px-3 py-2 bg-white text-black rounded-xl hover:bg-white/90 transition-all duration-200 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      {:else}
+        <div 
+          class="text-[14.5px] text-white/80 leading-relaxed break-words whitespace-pre-wrap"
+          style="-webkit-user-select: text; user-select: text; cursor: text;"
+        >
+          {@html parsedContent}
+        </div>
+        {#if isEdited}
+          <div class="mt-0.5 text-[11px] text-white/30">(edited)</div>
+        {/if}
+      {/if}
 
       <!-- Reactions -->
       {#if message.reactions && message.reactions.length > 0}

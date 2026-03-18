@@ -4,6 +4,7 @@ import {
   getSessionToken,
   setCsrfCookie
 } from "./lib/server/auth";
+import { getConvexHttpClient, getConvexUrl } from "$lib/server/convex";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -36,9 +37,8 @@ export const handle = async ({ event, resolve }: any) => {
   // Get user info from session token if available
   if (event.locals.sessionToken) {
     try {
-      const { ConvexHttpClient } = await import('convex/browser');
-      const convex = new ConvexHttpClient(process.env.VITE_CONVEX_URL || '');
       const { api } = await import('../convex/_generated/api');
+      const convex = getConvexHttpClient();
       
       const user = await convex.query(api.auth.getUser, { 
         sessionToken: event.locals.sessionToken 
@@ -110,13 +110,35 @@ export const handle = async ({ event, resolve }: any) => {
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   
   // Content Security Policy - allows Firebase, Convex and external resources
+  const convexUrl = (() => {
+    try {
+      return getConvexUrl();
+    } catch {
+      return "";
+    }
+  })();
+
+  const convexOrigins: string[] = [];
+  if (convexUrl) {
+    try {
+      const u = new URL(convexUrl);
+      convexOrigins.push(u.origin);
+      convexOrigins.push(`wss://${u.host}`);
+      if (u.host.endsWith(".convex.cloud")) {
+        convexOrigins.push(`https://${u.host.replace(/\\.convex\\.cloud$/, ".convex.site")}`);
+      }
+    } catch {
+      // ignore invalid URL
+    }
+  }
+
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://www.gstatic.com https://va.vercel-scripts.com", // Allow Firebase and Vercel scripts
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:", // Allow images from any HTTPS source
     "font-src 'self'",
-    "connect-src 'self' https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://va.vercel-scripts.com https://oceanic-barracuda-40.convex.cloud https://oceanic-barracuda-40.convex.site wss://oceanic-barracuda-40.convex.cloud wss://ws-us3.pusher.com https://sockjs-us3.pusher.com", // Allow Firebase, Convex, Pusher API calls and WebSockets
+    `connect-src 'self' https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com https://va.vercel-scripts.com ${convexOrigins.join(" ")} wss://ws-us3.pusher.com https://sockjs-us3.pusher.com`, // Allow Firebase, Convex, Pusher API calls and WebSockets
     "media-src 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",

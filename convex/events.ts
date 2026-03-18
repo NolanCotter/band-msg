@@ -74,7 +74,12 @@ export const update = mutation({
     if (!event) throw new Error("Event not found");
 
     // Only creator or admin can update
-    if (event.createdBy !== user._id && user.role !== "admin") {
+    const createdBy: unknown = (event as any).createdBy;
+    const isCreator =
+      createdBy === user._id ||
+      (typeof createdBy === "string" && createdBy === user.username);
+
+    if (!isCreator && user.role !== "admin") {
       throw new Error("Not authorized to update this event");
     }
 
@@ -104,7 +109,12 @@ export const remove = mutation({
     if (!event) throw new Error("Event not found");
 
     // Only creator or admin can delete
-    if (event.createdBy !== user._id && user.role !== "admin") {
+    const createdBy: unknown = (event as any).createdBy;
+    const isCreator =
+      createdBy === user._id ||
+      (typeof createdBy === "string" && createdBy === user.username);
+
+    if (!isCreator && user.role !== "admin") {
       throw new Error("Not authorized to delete this event");
     }
 
