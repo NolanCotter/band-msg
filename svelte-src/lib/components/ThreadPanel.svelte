@@ -66,27 +66,15 @@
   }
 
   async function sendReply() {
-    console.log('[ThreadPanel] sendReply called, replyInput:', replyInput);
-    
     if (!replyInput.trim()) {
-      console.log('[ThreadPanel] Empty reply input');
-      alert('Please enter a message');
       return;
     }
 
     try {
       if (!sessionToken) {
         console.error('[ThreadPanel] No session token');
-        alert('No session token - please refresh the page');
         return;
       }
-
-      console.log('[ThreadPanel] Sending reply:', {
-        channelId: parentMessage.channelId,
-        content: replyInput,
-        replyToId: parentMessage.id,
-        sessionToken: sessionToken.substring(0, 10) + '...'
-      });
 
       const result = await convex.mutation(api.messages.send, {
         channelId: parentMessage.channelId as Id<"channels">,
@@ -95,10 +83,8 @@
         replyToId: parentMessage.id as Id<"messages">
       });
 
-      console.log('[ThreadPanel] Reply sent successfully, result:', result);
       replyInput = '';
       await loadReplies();
-      alert('Reply sent!');
     } catch (error) {
       console.error('[ThreadPanel] Failed to send reply:', error);
       alert(`Failed to send reply: ${error instanceof Error ? error.message : String(error)}`);
@@ -218,9 +204,8 @@
           ></textarea>
           <button
             type="button"
-            on:click={() => { console.log('BUTTON CLICKED!'); sendReply(); }}
-            on:touchstart={() => console.log('BUTTON TOUCHED!')}
-            on:touchend|preventDefault={() => { console.log('BUTTON TOUCH END!'); sendReply(); }}
+            on:click={sendReply}
+            on:touchend|preventDefault={sendReply}
             disabled={!replyInput.trim()}
             class="p-3 rounded-xl transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 touch-manipulation {replyInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
             aria-label="Send reply"
@@ -339,9 +324,8 @@
         ></textarea>
         <button
           type="button"
-          on:click={() => { console.log('BUTTON CLICKED!'); sendReply(); }}
-          on:touchstart={() => console.log('BUTTON TOUCHED!')}
-          on:touchend|preventDefault={() => { console.log('BUTTON TOUCH END!'); sendReply(); }}
+          on:click={sendReply}
+          on:touchend|preventDefault={sendReply}
           disabled={!replyInput.trim()}
           class="p-3 rounded-xl transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 touch-manipulation {replyInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
           aria-label="Send reply"
