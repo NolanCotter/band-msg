@@ -129,6 +129,11 @@
   }
 
   function handleTouchEnd(e: TouchEvent) {
+    // Prevent text selection/context menu on tap
+    if (!movedTooMuch) {
+      e.preventDefault();
+    }
+    
     // Clear long-press timer
     if (touchTimer) {
       clearTimeout(touchTimer);
