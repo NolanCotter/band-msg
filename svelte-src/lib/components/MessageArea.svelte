@@ -76,10 +76,13 @@
     lastLoadedChannelId = $convexChannelStore.selectedChannelId;
     shouldAutoScroll = true; // Reset auto-scroll when changing channels
     previousMessageCount = 0; // Reset message count
-    setTimeout(() => scrollToBottom(true), 100); // Force scroll when channel changes
+    // Disabled auto-scroll for debugging
+    // setTimeout(() => scrollToBottom(true), 100); // Force scroll when channel changes
   }
   
   // Track message count changes and scroll when messages first load
+  // DISABLED FOR DEBUGGING - preventing all auto-scroll
+  /*
   $: if ($messageStore.messages.length > 0 && previousMessageCount === 0 && $convexChannelStore.selectedChannelId === lastLoadedChannelId) {
     previousMessageCount = $messageStore.messages.length;
     setTimeout(() => scrollToBottom(true), 100); // Force scroll when messages first load
@@ -89,6 +92,7 @@
       setTimeout(() => scrollToBottom(false), 50); // Auto-scroll only if user is near bottom
     }
   }
+  */
 
   async function handleSend() {
     if (!messageInput.trim() || !$convexChannelStore.selectedChannelId) return;
