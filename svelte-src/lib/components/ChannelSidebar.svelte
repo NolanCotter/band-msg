@@ -60,6 +60,9 @@
   }
 
   function handleTouchStart(e: TouchEvent, channel: any) {
+    // Prevent iOS text selection
+    e.preventDefault();
+    
     const touch = e.touches[0];
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
@@ -89,7 +92,10 @@
     }
   }
 
-  function handleTouchEnd() {
+  function handleTouchEnd(e: TouchEvent) {
+    // Prevent iOS text selection
+    e.preventDefault();
+    
     if (touchTimer) {
       clearTimeout(touchTimer);
       touchTimer = null;
@@ -222,6 +228,7 @@
             on:touchend={handleTouchEnd}
             on:touchcancel={handleTouchEnd}
             class="group flex items-center justify-between w-full px-2 py-1.5 rounded-lg transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-98 {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
+            style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"
           >
             <div class="flex items-center gap-2 truncate">
               {#if channel['isPrivate']}
