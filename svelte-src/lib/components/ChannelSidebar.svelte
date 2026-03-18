@@ -60,8 +60,9 @@
   }
 
   function handleTouchStart(e: TouchEvent, channel: any) {
-    // Prevent iOS text selection
+    // Aggressively prevent iOS text selection and context menu
     e.preventDefault();
+    e.stopPropagation();
     
     const touch = e.touches[0];
     touchStartX = touch.clientX;
@@ -92,13 +93,19 @@
     }
   }
 
-  function handleTouchEnd(e: TouchEvent) {
-    // Prevent iOS text selection
+  function handleTouchEnd(e: TouchEvent, channel: any) {
+    // Aggressively prevent iOS text selection and context menu
     e.preventDefault();
+    e.stopPropagation();
     
     if (touchTimer) {
       clearTimeout(touchTimer);
       touchTimer = null;
+    }
+    
+    // If not moved too much and not long-pressed, select the channel
+    if (!movedTooMuch && !showChannelMenu) {
+      selectChannel(channel.id);
     }
   }
 
@@ -220,15 +227,14 @@
           <div
             role="button"
             tabindex="0"
-            on:click={() => selectChannel(channel.id)}
             on:keydown={(e) => e.key === 'Enter' && selectChannel(channel.id)}
             on:contextmenu={(e) => handleContextMenu(e, channel)}
             on:touchstart={(e) => handleTouchStart(e, channel)}
             on:touchmove={handleTouchMove}
-            on:touchend={handleTouchEnd}
-            on:touchcancel={handleTouchEnd}
+            on:touchend={(e) => handleTouchEnd(e, channel)}
+            on:touchcancel={(e) => handleTouchEnd(e, channel)}
             class="group flex items-center justify-between w-full px-2 py-1.5 rounded-lg transition-all duration-200 overflow-hidden hover:scale-[1.02] active:scale-98 {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
-            style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"
+            style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;"
           >
             <div class="flex items-center gap-2 truncate">
               {#if channel['isPrivate']}
