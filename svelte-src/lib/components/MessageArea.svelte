@@ -187,7 +187,7 @@
   };
 </script>
 
-<div class="flex-1 flex flex-col min-w-0 message-area-container" style="padding-top: env(safe-area-inset-top); height: 100vh; max-height: 100vh;">
+<div class="flex-1 flex flex-col min-w-0 message-area-container" style="padding-top: env(safe-area-inset-top);">
   <!-- Header -->
   <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative message-area-header" style="z-index: 100;">
     <div class="flex items-center gap-3">
