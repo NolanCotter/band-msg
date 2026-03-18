@@ -66,18 +66,23 @@
   }
 
   async function sendReply() {
-    if (!replyInput.trim()) return;
+    if (!replyInput.trim()) {
+      console.log('[ThreadPanel] Empty reply input');
+      return;
+    }
 
     try {
       if (!sessionToken) {
         console.error('[ThreadPanel] No session token');
+        alert('No session token - please refresh the page');
         return;
       }
 
       console.log('[ThreadPanel] Sending reply:', {
         channelId: parentMessage.channelId,
         content: replyInput,
-        replyToId: parentMessage.id
+        replyToId: parentMessage.id,
+        sessionToken: sessionToken.substring(0, 10) + '...'
       });
 
       await convex.mutation(api.messages.send, {
@@ -87,10 +92,12 @@
         replyToId: parentMessage.id as Id<"messages">
       });
 
+      console.log('[ThreadPanel] Reply sent successfully');
       replyInput = '';
       await loadReplies();
     } catch (error) {
       console.error('[ThreadPanel] Failed to send reply:', error);
+      alert(`Failed to send reply: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
