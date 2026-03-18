@@ -204,21 +204,20 @@
       <!-- Reply Input -->
       <div class="px-4 pb-3 pt-2 border-t border-white/10 shrink-0">
         <div class="flex items-end gap-2">
-          <div class="flex-1">
-            <Input
-              type="text"
-              bind:value={replyInput}
-              on:keydown={handleKeyDown}
-              placeholder="Reply..."
-              maxlength={2000}
-              autocomplete="off"
-            />
-          </div>
+          <textarea
+            bind:value={replyInput}
+            on:keydown={handleKeyDown}
+            placeholder="Reply..."
+            maxrows="4"
+            class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 outline-none focus:border-white/30 resize-none transition-colors min-h-[44px] max-h-[120px]"
+            style="field-sizing: content;"
+          ></textarea>
           <button
             type="button"
             on:click={sendReply}
+            on:touchend|preventDefault={sendReply}
             disabled={!replyInput.trim()}
-            class="p-3 rounded-xl transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 {replyInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
+            class="p-3 rounded-xl transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 touch-manipulation {replyInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
             aria-label="Send reply"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -321,21 +320,20 @@
     <!-- Reply Input -->
     <div class="px-4 pb-3 pt-2 border-t border-white/10 shrink-0">
       <div class="flex items-end gap-2">
-        <div class="flex-1">
-          <Input
-            type="text"
-            bind:value={replyInput}
-            on:keydown={handleKeyDown}
-            placeholder="Reply to thread..."
-            maxlength={2000}
-            autocomplete="off"
-          />
-        </div>
+        <textarea
+          bind:value={replyInput}
+          on:keydown={handleKeyDown}
+          placeholder="Reply to thread..."
+          maxrows="4"
+          class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 outline-none focus:border-white/30 resize-none transition-colors min-h-[44px] max-h-[120px]"
+          style="field-sizing: content;"
+        ></textarea>
         <button
           type="button"
           on:click={sendReply}
+          on:touchend|preventDefault={sendReply}
           disabled={!replyInput.trim()}
-          class="p-3 rounded-xl transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 {replyInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
+          class="p-3 rounded-xl transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 touch-manipulation {replyInput.trim() ? 'bg-white text-black hover:bg-white/90' : 'bg-white/5 text-white/20 cursor-not-allowed'}"
           aria-label="Send reply"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
