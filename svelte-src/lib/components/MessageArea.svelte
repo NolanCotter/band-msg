@@ -31,6 +31,18 @@
   let previousMessageCount = 0;
   let showThread = false;
   let threadMessage: any = null;
+  
+  // Mobile channel menu
+  let showMobileChannelMenu = false;
+  let mobileMenuChannel: any = null;
+  let showMobileDeleteConfirm = false;
+  let mobileChannelToDelete: any = null;
+  let isMobileRenaming = false;
+  let mobileNewChannelName = '';
+  let mobileTouchTimer: ReturnType<typeof setTimeout> | null = null;
+  let mobileTouchStartX = 0;
+  let mobileTouchStartY = 0;
+  let mobileMovedTooMuch = false;
 
   function openThread(message: any) {
     threadMessage = message;
@@ -160,6 +172,123 @@
     convexChannelStore.selectChannel(channelId);
     await messageStore.loadMessages(channelId);
     showMobileChannels = false;
+  }
+
+  function handleMobileChannelTouchStart(e: TouchEvent, channel: any) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const touch = e.touches[0];
+    mobileTouchStartX = touch.clientX;
+    mobileTouchStartY = touch.clientY;
+    mobileMovedTooMuch = false;
+    
+    mobileTouchTimer = setTimeout(() => {
+      if (!mobileMovedTooMuch) {
+        mobileMenuChannel = channel;
+        mobileNewChannelName = channel.name;
+        showMobileChannelMenu = true;
+        showMobileChannels = false;
+        if (navigator.vibrate) navigator.vibrate(50);
+      }
+    }, 500);
+  }
+
+  function handleMobileChannelTouchMove(e: TouchEvent) {
+    if (mobileTouchTimer) {
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - mobileTouchStartX);
+      const deltaY = Math.abs(touch.clientY - mobileTouchStartY);
+      
+      if (deltaY > 10 || deltaX > 10) {
+        clearTimeout(mobileTouchTimer);
+        mobileTouchTimer = null;
+        mobileMovedTooMuch = true;
+      }
+    }
+  }
+
+  function handleMobileChannelTouchEnd(e: TouchEvent, channel: any) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (mobileTouchTimer) {
+      clearTimeout(mobileTouchTimer);
+      mobileTouchTimer = null;
+    }
+    
+    if (!mobileMovedTooMuch && !showMobileChannelMenu) {
+      selectChannel(channel.id);
+    }
+  }
+
+  async function renameMobileChannel() {
+    if (!mobileMenuChannel || !mobileNewChannelName.trim()) return;
+    
+    try {
+      const sessionToken = $messageStore.sessionToken;
+      if (!sessionToken) {
+        alert('No session token - please refresh the page');
+        return;
+      }
+
+      const { convex } = await import('../convex');
+      const { api } = await import('../../../convex/_generated/api');
+      
+      await convex.mutation(api.channels.update, {
+        channelId: mobileMenuChannel.id,
+        name: mobileNewChannelName.trim(),
+        sessionToken
+      });
+
+      await convexChannelStore.loadChannels();
+      isMobileRenaming = false;
+      showMobileChannelMenu = false;
+      mobileMenuChannel = null;
+    } catch (err) {
+      console.error('[MessageArea] Failed to rename channel:', err);
+      alert(`Failed to rename channel: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  }
+
+  function confirmMobileDelete() {
+    mobileChannelToDelete = mobileMenuChannel;
+    showMobileChannelMenu = false;
+    showMobileDeleteConfirm = true;
+  }
+
+  async function deleteMobileChannel() {
+    if (!mobileChannelToDelete) return;
+    
+    try {
+      const sessionToken = $messageStore.sessionToken;
+      if (!sessionToken) {
+        alert('No session token - please refresh the page');
+        return;
+      }
+
+      const { convex } = await import('../convex');
+      const { api } = await import('../../../convex/_generated/api');
+
+      await convex.mutation(api.channels.remove, {
+        channelId: mobileChannelToDelete.id,
+        sessionToken
+      });
+
+      await convexChannelStore.loadChannels();
+      if ($convexChannelStore.selectedChannelId === mobileChannelToDelete.id) {
+        const firstChannel = $convexChannelStore.channels[0];
+        if (firstChannel) {
+          await selectChannel(firstChannel.id);
+        }
+      }
+    } catch (err) {
+      console.error('[MessageArea] Failed to delete channel:', err);
+      alert(`Failed to delete channel: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      showMobileDeleteConfirm = false;
+      mobileChannelToDelete = null;
+    }
   }
 
   function getAvatarColor(name: string): string {
@@ -563,16 +692,20 @@
           </h3>
           <div class="space-y-1">
             {#each $convexChannelStore.channels as channel}
-              <button
-                type="button"
-                on:click={() => selectChannel(channel.id)}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
+                on:touchstart={(e) => handleMobileChannelTouchStart(e, channel)}
+                on:touchmove={handleMobileChannelTouchMove}
+                on:touchend={(e) => handleMobileChannelTouchEnd(e, channel)}
+                on:touchcancel={(e) => handleMobileChannelTouchEnd(e, channel)}
                 class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
+                style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
                 <span class="text-base font-medium truncate">{channel.name}</span>
-              </button>
+              </div>
             {/each}
           </div>
         </div>
@@ -635,3 +768,110 @@
     </Drawer.Content>
   </Drawer.Portal>
 </Drawer.Root>
+
+
+<!-- Mobile Channel Menu Drawer -->
+<Drawer.Root open={showMobileChannelMenu} onOpenChange={(open) => { showMobileChannelMenu = open; if (!open) { mobileMenuChannel = null; isMobileRenaming = false; } }}>
+  <Drawer.Portal>
+    <Drawer.Overlay class="fixed inset-0 bg-black/60 z-[100]" />
+    <Drawer.Content class="fixed bottom-0 left-0 right-0 z-[101] bg-[#1a1a1a] border-t border-white/10 rounded-t-2xl outline-none">
+      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/20 mt-4 mb-6" />
+      
+      {#if mobileMenuChannel}
+        <div class="px-6 pb-8">
+          <h3 class="text-xl font-bold text-white mb-1">#{mobileMenuChannel.name}</h3>
+          <p class="text-sm text-white/50 mb-6">Channel Options</p>
+          
+          {#if isMobileRenaming}
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-white/70 mb-2">New Channel Name</label>
+              <input
+                type="text"
+                bind:value={mobileNewChannelName}
+                placeholder="Enter new name..."
+                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 outline-none focus:border-white/30 transition-colors"
+                on:keydown={(e) => e.key === 'Enter' && renameMobileChannel()}
+              />
+              <div class="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  on:click={() => { isMobileRenaming = false; mobileNewChannelName = mobileMenuChannel.name; }}
+                  class="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-colors text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  on:click={renameMobileChannel}
+                  disabled={!mobileNewChannelName.trim() || mobileNewChannelName === mobileMenuChannel.name}
+                  class="flex-1 px-4 py-2.5 bg-white text-black rounded-xl hover:bg-white/90 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          {:else}
+            <div class="space-y-2">
+              <button
+                type="button"
+                on:click={() => isMobileRenaming = true}
+                class="w-full px-4 py-3 text-left text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors flex items-center gap-3"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                <span class="font-medium">Rename Channel</span>
+              </button>
+              
+              {#if $authStore.user?.role === 'admin'}
+                <button
+                  type="button"
+                  on:click={confirmMobileDelete}
+                  class="w-full px-4 py-3 text-left text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors flex items-center gap-3"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  <span class="font-medium">Delete Channel</span>
+                </button>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
+
+{#if showMobileDeleteConfirm && mobileChannelToDelete}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center" on:click={() => { showMobileDeleteConfirm = false; mobileChannelToDelete = null; }}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="bg-[#2a2a2a] border border-white/30 rounded-2xl p-6 max-w-sm mx-4" on:click|stopPropagation>
+      <h3 class="text-lg font-bold text-white mb-2">Delete Channel</h3>
+      <p class="text-sm text-white/60 mb-4">
+        Are you sure you want to delete <span class="text-white font-semibold">#{mobileChannelToDelete.name}</span>? This action cannot be undone.
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          on:click={() => { showMobileDeleteConfirm = false; mobileChannelToDelete = null; }}
+          class="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-colors text-sm font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          on:click={deleteMobileChannel}
+          class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors text-sm font-medium"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
