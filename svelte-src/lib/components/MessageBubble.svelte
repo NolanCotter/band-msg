@@ -108,6 +108,9 @@
       return;
     }
     
+    // Prevent iOS text selection immediately
+    e.preventDefault();
+    
     if (touchTimer) clearTimeout(touchTimer);
     longPressFired = false;
     movedTooMuch = false;
@@ -132,10 +135,8 @@
   }
 
   function handleTouchEnd(e: TouchEvent) {
-    // Prevent text selection/context menu on tap
-    if (!movedTooMuch) {
-      e.preventDefault();
-    }
+    // Always prevent default to stop iOS text selection
+    e.preventDefault();
     
     // Clear long-press timer
     if (touchTimer) {
@@ -249,11 +250,15 @@
     class="fixed inset-0 z-40" 
     on:click|stopPropagation={() => {
       // Prevent the same tap that opened the picker from also closing it
-      if (Date.now() - reactionPickerOpenedAt < 250) return;
+      if (Date.now() - reactionPickerOpenedAt < 500) return;
       showReactionPicker = false;
     }}
     on:touchstart|stopPropagation
-    on:touchend|stopPropagation
+    on:touchend|stopPropagation={(e) => {
+      e.preventDefault();
+      if (Date.now() - reactionPickerOpenedAt < 500) return;
+      showReactionPicker = false;
+    }}
   ></div>
   
   <!-- Mobile: bottom sheet style -->
@@ -324,11 +329,15 @@
     class="fixed inset-0 z-40" 
     on:click|stopPropagation={() => {
       // Prevent the same tap that opened the menu from also closing it
-      if (Date.now() - contextMenuOpenedAt < 250) return;
+      if (Date.now() - contextMenuOpenedAt < 500) return;
       showContextMenu = false;
     }}
     on:touchstart|stopPropagation
-    on:touchend|stopPropagation
+    on:touchend|stopPropagation={(e) => {
+      e.preventDefault();
+      if (Date.now() - contextMenuOpenedAt < 500) return;
+      showContextMenu = false;
+    }}
   ></div>
   
   <!-- Mobile: bottom sheet style -->
@@ -614,21 +623,39 @@
 
   /* iOS-specific fixes for text selection */
   @supports (-webkit-touch-callout: none) {
-    /* Allow text selection only on the content div */
+    /* Prevent text selection on the entire message bubble */
     .group {
-      -webkit-user-select: none;
-      user-select: none;
+      -webkit-user-select: none !important;
+      -webkit-touch-callout: none !important;
+      user-select: none !important;
     }
     
-    /* Enable text selection for message content */
+    /* Enable text selection for message content only when not interacting */
     .text-white\/80 {
       -webkit-user-select: text !important;
       user-select: text !important;
+      pointer-events: none;
     }
     
     /* Prevent tap highlight on buttons */
     button {
       -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    
+    /* Prevent selection on the entire message container during touch */
+    .group:active {
+      -webkit-user-select: none !important;
+      user-select: none !important;
+    }
+  }
+  
+  /* Force prevent selection on all touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    .group {
+      -webkit-user-select: none !important;
+      -webkit-touch-callout: none !important;
+      user-select: none !important;
     }
   }
 </style>
