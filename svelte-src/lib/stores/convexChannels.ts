@@ -24,6 +24,7 @@ function createConvexChannelStore() {
 
   let currentSessionToken: string | null = null;
   let unsubscribe: (() => void) | null = null;
+  let _selectedChannelId: string | null = null;
 
   return {
     subscribe,
@@ -48,7 +49,26 @@ function createConvexChannelStore() {
           unsubscribe = null;
         }
 
-        // Subscribe to real-time channel updates
+        // First, get initial channels with a query
+        const initialChannels = await convex.query(api.channels.list, {
+          sessionToken: currentSessionToken
+        });
+        console.log('[Convex Channels] Initial channels loaded:', initialChannels.length, 'channels');
+
+        // Select first channel if none selected
+        const selectedId = this._selectedChannelId || (initialChannels[0]?.id ?? null);
+        if (!this._selectedChannelId && initialChannels[0]?.id) {
+          this._selectedChannelId = initialChannels[0].id;
+        }
+
+        update(state => ({
+          ...state,
+          channels: initialChannels,
+          selectedChannelId: state.selectedChannelId || initialChannels[0]?.id || null,
+          isLoading: false,
+        }));
+
+        // Then subscribe to real-time updates
         unsubscribe = convex.onUpdate(
           api.channels.list,
           { sessionToken: currentSessionToken },
@@ -77,6 +97,7 @@ function createConvexChannelStore() {
 
     selectChannel(channelId: string) {
       console.log('[Convex Channels] Selecting channel:', channelId);
+      _selectedChannelId = channelId;
       update(state => ({ ...state, selectedChannelId: channelId }));
     },
 

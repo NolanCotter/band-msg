@@ -65,12 +65,20 @@ function createConvexMessageStore() {
           unsubscribe = null;
         }
 
-        // Subscribe to real-time messages
+        // First, get initial messages with a query
+        const initialMessages = await convex.query(api.messages.list, {
+          channelId: channelId as Id<"channels">,
+          sessionToken: currentSessionToken
+        });
+        console.log('[Convex] Initial messages loaded:', initialMessages.length, 'messages');
+        set({ messages: initialMessages, isLoading: false, sessionToken: currentSessionToken, typingUsers: [] });
+
+        // Then subscribe to real-time updates
         unsubscribe = convex.onUpdate(
           api.messages.list,
           { channelId: channelId as Id<"channels">, sessionToken: currentSessionToken },
           (messages) => {
-            console.log('[Convex] Loaded messages:', messages.length, 'messages');
+            console.log('[Convex] Messages updated:', messages.length, 'messages');
             set({ messages, isLoading: false, sessionToken: currentSessionToken, typingUsers: [] });
           }
         );
@@ -203,6 +211,15 @@ function createConvexMessageStore() {
         typingUnsubscribe();
       }
 
+      // First, get initial typing users
+      convex.query(api.typing.getTypingUsers, {
+        channelId: channelId as Id<"channels">,
+        sessionToken: currentSessionToken
+      }).then(usernames => {
+        update(state => ({ ...state, typingUsers: usernames || [] }));
+      }).catch(console.error);
+
+      // Then subscribe to updates
       typingUnsubscribe = convex.onUpdate(
         api.typing.getTypingUsers,
         { channelId: channelId as Id<"channels">, sessionToken: currentSessionToken },
