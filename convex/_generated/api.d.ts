@@ -22,6 +22,7 @@ import type * as reactions from "../reactions.js";
 import type * as signupRequests from "../signupRequests.js";
 import type * as testNotification from "../testNotification.js";
 import type * as typing from "../typing.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   signupRequests: typeof signupRequests;
   testNotification: typeof testNotification;
   typing: typeof typing;
+  users: typeof users;
 }>;
 
 /**
