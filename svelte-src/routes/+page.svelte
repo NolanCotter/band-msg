@@ -20,9 +20,10 @@
   let showUsernameSetup = false;
   let heartbeatInterval: any;
   let approvalPollInterval: any;
+  let appInitialized = false;
 
   // Watch for channel changes and reload messages
-  $: if ($convexChannelStore.selectedChannelId && $authStore.user?.status === 'approved' && $convexMessageStore.sessionToken) {
+  $: if (appInitialized && $convexChannelStore.selectedChannelId && $authStore.user?.status === 'approved' && $convexMessageStore.sessionToken) {
     convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
     convexMessageStore.subscribeToTyping($convexChannelStore.selectedChannelId);
   }
@@ -152,6 +153,7 @@
       startApprovalPolling();
     } else if ($authStore.user && $authStore.user.status === 'approved') {
       await initApp();
+      appInitialized = true;
     }
   });
 
@@ -182,6 +184,7 @@
 
     if ($authStore.user?.status === 'approved') {
       await initApp();
+      appInitialized = true;
     }
   }
 </script>

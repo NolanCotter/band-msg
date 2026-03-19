@@ -267,42 +267,37 @@
     z-index: 1;
   }
 
-  /* Submit Button - Uiverse style */
+  /* Submit Button */
   .submit-btn {
-    padding: 17px 40px;
-    border-radius: 10px;
-    border: 0;
-    background: linear-gradient(135deg, #ff3838 0%, #e63946 100%);
-    letter-spacing: 1.5px;
-    font-size: 15px;
+    width: 100%;
+    padding: 16px 32px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    font-size: 16px;
     font-weight: 600;
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: rgba(201, 46, 70, 1) 0px 10px 0px 0px;
     position: relative;
     overflow: hidden;
   }
 
   .submit-btn:hover {
-    box-shadow: rgba(201, 46, 70, 1) 0px 7px 0px 0px;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
   }
 
   .submit-btn:active {
-    background: linear-gradient(135deg, #ff3838 0%, #e63946 100%);
-    box-shadow: rgba(201, 46, 70, 1) 0px 0px 0px 0px;
-    transform: translateY(5px);
-    transition: 200ms;
-  }
-
-  .submit-btn:active {
-    transform: scale(0.98);
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
   }
 
   .submit-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
   }
 
   .submit-icon {
