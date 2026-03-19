@@ -16,7 +16,7 @@ function isApiMutation(event: any): boolean {
 }
 
 function isCsrfExemptPath(pathname: string): boolean {
-  return pathname === "/api/auth/login" || pathname === "/api/auth/register";
+  return pathname === "/api/auth/login" || pathname === "/api/auth/register" || pathname === "/api/reports";
 }
 
 function getBearerSessionToken(request: Request): string | null {
