@@ -21,21 +21,10 @@
   let heartbeatInterval: any;
   let approvalPollInterval: any;
 
-  // Reactive: Load messages when selected channel changes (only once per channel, not when sessionToken changes)
-  let previousChannelId = '';
-  $: if ($convexChannelStore.selectedChannelId && $authStore.user?.status === 'approved' && $convexMessageStore.sessionToken && $convexChannelStore.selectedChannelId !== previousChannelId) {
-    previousChannelId = $convexChannelStore.selectedChannelId;
-    console.log('[Page] Channel changed, loading messages for:', $convexChannelStore.selectedChannelId);
-    console.log('[Page] Session token available:', !!$convexMessageStore.sessionToken);
-    console.log('[Page] User status:', $authStore.user?.status);
+  // Watch for channel changes and reload messages
+  $: if ($convexChannelStore.selectedChannelId && $authStore.user?.status === 'approved' && $convexMessageStore.sessionToken) {
     convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
-  } else {
-    console.log('[Page] Message loading skipped:', {
-      hasChannel: !!$convexChannelStore.selectedChannelId,
-      isApproved: $authStore.user?.status === 'approved',
-      hasToken: !!$convexMessageStore.sessionToken,
-      channelChanged: $convexChannelStore.selectedChannelId !== previousChannelId
-    });
+    convexMessageStore.subscribeToTyping($convexChannelStore.selectedChannelId);
   }
 
   async function initApp() {
