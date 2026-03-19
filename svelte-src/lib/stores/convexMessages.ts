@@ -49,7 +49,14 @@ function createConvexMessageStore() {
     },
 
     async loadMessages(channelId: string) {
-      update(state => ({ ...state, isLoading: true }));
+      // Guard against duplicate loads
+      update(state => {
+        if (state.isLoading) {
+          console.log('[Convex] Messages already loading, skipping');
+          return state;
+        }
+        return { ...state, isLoading: true };
+      });
       
       if (!currentSessionToken) {
         console.error('[Convex] No session token available for loading messages');
