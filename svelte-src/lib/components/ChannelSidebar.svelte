@@ -9,6 +9,7 @@
   import { convex } from '../convex';
   import { api } from '../../../convex/_generated/api';
   import type { Id } from '../../../convex/_generated/dataModel';
+  import { vibrateMedium } from '../utils/haptics';
   import CreateChannel from './CreateChannel.svelte';
   import ChannelSettings from './ChannelSettings.svelte';
 
@@ -74,7 +75,7 @@
         menuChannel = channel;
         newChannelName = channel.name;
         showChannelMenu = true;
-        if (navigator.vibrate) navigator.vibrate(50);
+        vibrateMedium();
       }
     }, 500);
   }

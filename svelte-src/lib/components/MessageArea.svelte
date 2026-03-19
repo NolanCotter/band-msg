@@ -6,6 +6,7 @@
   import { convexMessageStore as messageStore } from '../stores/convexMessages';
   import { memberStore } from '../stores/members';
   import { themeStore } from '../stores/theme';
+  import { vibrateLight, vibrateMedium, vibrateSuccess } from '../utils/haptics';
   import MessageBubble from './MessageBubble.svelte';
   import AdminPanel from './AdminPanel.svelte';
   import Calendar from './Calendar.svelte';
@@ -138,6 +139,7 @@
       if (reportMessage) {
         try {
           await messageStore.createReport(reportMessage);
+          vibrateSuccess();
           ephemeralMessage = `Report submitted: "${reportMessage.slice(0, 50)}${reportMessage.length > 50 ? '...' : ''}"`;
           ephemeralTimeout = setTimeout(() => {
             ephemeralMessage = '';
@@ -166,6 +168,7 @@
     if (result.success) {
       messageInput = '';
       showMentionDropdown = false;
+      vibrateSuccess();
       messageStore.stopTyping($convexChannelStore.selectedChannelId);
     } else {
       console.error('[MessageArea] Failed to send:', result.error);
@@ -291,7 +294,7 @@
         mobileNewChannelName = channel.name;
         showMobileChannelMenu = true;
         showMobileChannels = false;
-        if (navigator.vibrate) navigator.vibrate(50);
+        vibrateMedium();
       }
     }, 500);
   }

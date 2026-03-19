@@ -55,16 +55,16 @@ function createConvexChannelStore() {
         });
         console.log('[Convex Channels] Initial channels loaded:', initialChannels.length, 'channels');
 
-        // Select first channel if none selected
-        const selectedId = this._selectedChannelId || (initialChannels[0]?.id ?? null);
-        if (!this._selectedChannelId && initialChannels[0]?.id) {
-          this._selectedChannelId = initialChannels[0].id;
+        // Preserve existing selection or select first channel
+        const shouldAutoSelect = !_selectedChannelId && initialChannels.length > 0;
+        if (shouldAutoSelect) {
+          _selectedChannelId = initialChannels[0].id;
         }
 
         update(state => ({
           ...state,
           channels: initialChannels,
-          selectedChannelId: state.selectedChannelId || initialChannels[0]?.id || null,
+          selectedChannelId: _selectedChannelId || state.selectedChannelId || initialChannels[0]?.id || null,
           isLoading: false,
         }));
 
@@ -75,18 +75,22 @@ function createConvexChannelStore() {
           (channels) => {
             console.log('[Convex Channels] Channels updated:', channels.length, 'channels');
             
-            update(state => {
-              // If no channel is selected, select the first one
-              const newSelectedId = state.selectedChannelId || (channels[0]?.id ?? null);
-              console.log('[Convex Channels] Selected channel:', newSelectedId);
-              
-              return {
-                ...state,
-                channels,
-                selectedChannelId: newSelectedId,
-                isLoading: false,
-              };
-            });
+            // Preserve current selection, only auto-select if nothing selected
+            const currentSelected = _selectedChannelId;
+            const newSelectedId = currentSelected || (channels[0]?.id ?? null);
+            
+            if (!currentSelected && channels.length > 0) {
+              _selectedChannelId = channels[0].id;
+            }
+            
+            console.log('[Convex Channels] Selected channel:', newSelectedId);
+            
+            update(state => ({
+              ...state,
+              channels,
+              selectedChannelId: _selectedChannelId || state.selectedChannelId || newSelectedId,
+              isLoading: false,
+            }));
           }
         );
       } catch (error) {

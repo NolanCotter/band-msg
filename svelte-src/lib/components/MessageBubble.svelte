@@ -3,6 +3,7 @@
   import { convexMessageStore as messageStore } from '../stores/convexMessages';
   import { convexChannelStore } from '../stores/convexChannels';
   import { parseMarkdown } from '$lib/markdown';
+  import { vibrateMedium, vibrateSuccess } from '../utils/haptics';
   import Avatar from './Avatar.svelte';
 
   export let message: any;
@@ -134,7 +135,7 @@
       contextMenuOpenedAt = Date.now();
       tapCount = 0;
       if (tapTimer) clearTimeout(tapTimer);
-      if (navigator.vibrate) navigator.vibrate(40);
+      vibrateMedium();
       longPressFired = true;
     }, LONG_PRESS_MS);
   }
