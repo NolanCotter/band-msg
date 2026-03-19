@@ -59,7 +59,14 @@
       convexMessageStore.subscribeToTyping($convexChannelStore.selectedChannelId);
       await convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
     } else {
-      console.log('[Page] No channel selected, skipping message load');
+      console.log('[Page] No channel selected, waiting for channel selection...');
+      // Fallback: try again after a short delay in case channels are still loading
+      setTimeout(async () => {
+        if ($convexChannelStore.selectedChannelId) {
+          console.log('[Page] Loading messages after fallback delay');
+          await convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
+        }
+      }, 500);
     }
     
     console.log('[Page] initApp completed');
@@ -204,7 +211,7 @@
 {:else if !$authStore.user || $authStore.user?.status === 'pending'}
   <AuthScreen on:pending={startApprovalPolling} />
 {:else}
-  <div class="fixed inset-0 flex overflow-hidden bg-black text-white antialiased">
+  <div class="fixed inset-0 flex overflow-hidden bg-black text-white antialiased" style="overscroll-behavior: none;">
     <!-- Channel Sidebar -->
     <ChannelSidebar />
 
