@@ -111,10 +111,16 @@ function createConvexMessageStore() {
         throw new Error('Not authenticated');
       }
 
-      await convex.mutation(api.users.createReport, {
-        sessionToken: currentSessionToken,
-        message,
+      // Use fetch to call the report API directly
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, sessionToken: currentSessionToken }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit report');
+      }
     },
 
     async deleteMessage(messageId: string, channelId: string) {
