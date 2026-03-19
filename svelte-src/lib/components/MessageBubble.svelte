@@ -305,7 +305,7 @@
   
   <!-- Mobile: bottom sheet style -->
   <div 
-    class="fixed md:hidden left-4 right-4 bottom-20 z-50 animate-slide-up"
+    class="fixed md:hidden left-4 right-4 bottom-20 z-50 bg-[#222] border border-white/10 rounded-xl shadow-2xl p-4 animate-slide-up"
     role="dialog"
     tabindex="-1"
     on:click|stopPropagation
@@ -313,7 +313,7 @@
     on:touchstart|stopPropagation
     on:touchend|stopPropagation
   >
-    <div class="hover:scale-x-105 transition-all duration-300 *:transition-all *:duration-300 flex justify-start text-2xl items-center shadow-xl z-10 bg-[#222] gap-2 p-2 rounded-full border border-white/10">
+    <div class="hover:scale-x-105 transition-all duration-300 *:transition-all *:duration-300 flex justify-start text-2xl items-center shadow-xl z-10 bg-[#1a1a1a] gap-2 p-2 rounded-full border border-white/10">
       {#each QUICK_REACTIONS as reaction}
         <button
           type="button"
@@ -352,7 +352,7 @@
   
   <!-- Desktop: near message -->
   <div class="hidden md:block absolute z-50 -top-10 left-12">
-    <div class="hover:scale-x-105 transition-all duration-300 *:transition-all *:duration-300 flex justify-start text-xl items-center shadow-xl z-10 bg-[#222] gap-1 p-1.5 rounded-full border border-white/10">
+    <div class="hover:scale-x-105 transition-all duration-300 *:transition-all *:duration-300 flex justify-start text-xl items-center shadow-xl z-10 bg-[#1a1a1a] gap-1 p-1.5 rounded-full border border-white/10">
       {#each QUICK_REACTIONS as reaction}
         <button
           type="button"
@@ -363,43 +363,6 @@
         </button>
       {/each}
     </div>
-  </div>
-    
-    <!-- Custom emoji input -->
-    <div class="flex gap-2">
-      <input
-        type="text"
-        bind:value={customEmojiInput}
-        placeholder="Type any emoji..."
-        class="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/30 outline-none focus:border-white/30"
-        on:keydown={(e) => e.key === 'Enter' && handleCustomEmoji()}
-        on:click|stopPropagation
-        on:touchstart|stopPropagation
-        on:touchend|stopPropagation
-      />
-      <button
-        type="button"
-        on:click|stopPropagation={handleCustomEmoji}
-        on:touchend|stopPropagation|preventDefault={handleCustomEmoji}
-        disabled={!customEmojiInput.trim()}
-        class="px-4 py-2 bg-white text-black rounded-lg font-medium text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-all"
-      >
-        Add
-      </button>
-    </div>
-  </div>
-  
-  <!-- Desktop: near message -->
-  <div class="hidden md:block absolute z-50 -top-10 left-12 flex items-center gap-1 bg-[#222] border border-white/10 rounded-full px-2 py-1.5 shadow-2xl animate-scale-in">
-    {#each QUICK_REACTIONS as reaction}
-      <button
-        type="button"
-        on:click|stopPropagation={() => handleReactionClick(reaction.emoji, reaction.name)}
-        class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-all duration-200 transform hover:scale-110 active:scale-95 touch-manipulation origin-center text-white"
-      >
-        {@html getReactionSvg(reaction.name)}
-      </button>
-    {/each}
   </div>
 {/if}
 
