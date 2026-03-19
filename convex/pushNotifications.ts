@@ -80,11 +80,17 @@ export const sendPushNotifications = action({
 
       console.log("[sendPushNotifications] Access token obtained successfully");
 
-      // Send to each FCM token
+      // Send to each subscription
       const results = await Promise.allSettled(
         subscriptions.map(async (sub) => {
           try {
             const endpoint = sub.endpoint;
+            
+            // Skip Apple Web Push endpoints - they require APNS, not FCM
+            if (endpoint.includes("web.push.apple.com")) {
+              console.log(`[sendPushNotifications] Skipping Apple Web Push endpoint (APNS not supported via FCM)`);
+              return;
+            }
             
             console.log(`[sendPushNotifications] Sending to FCM: ${endpoint.substring(0, 30)}...`);
 

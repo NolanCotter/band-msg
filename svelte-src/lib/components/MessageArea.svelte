@@ -77,10 +77,6 @@
             if (messageInputEl) {
               messageInputEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
-            // Also scroll message container to show recent messages
-            if (messageContainer) {
-              messageContainer.scrollTop = messageContainer.scrollHeight;
-            }
           }, 100);
         }
       };

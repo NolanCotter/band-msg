@@ -107,8 +107,9 @@ function createConvexMessageStore() {
     },
 
     async createReport(message: string) {
+      console.log('[createReport] Starting, sessionToken:', currentSessionToken ? 'exists' : 'null');
       if (!currentSessionToken) {
-        throw new Error('Not authenticated');
+        throw new Error('Not authenticated - session token is null');
       }
 
       // Use fetch to call the report API directly
@@ -117,6 +118,7 @@ function createConvexMessageStore() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, sessionToken: currentSessionToken }),
       });
+      console.log('[createReport] Response:', response.status);
 
       if (!response.ok) {
         throw new Error('Failed to submit report');
