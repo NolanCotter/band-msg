@@ -52,6 +52,9 @@
   let mobileTouchStartX = 0;
   let mobileTouchStartY = 0;
   let mobileMovedTooMuch = false;
+  let touchFired = false; // Prevent double-fire on touch devices
+  let isKeyboardVisible = false;
+  let messageInputEl: HTMLInputElement | HTMLTextAreaElement;
 
   function openThread(message: any) {
     threadMessage = message;
@@ -60,6 +63,36 @@
   
   onMount(() => {
     themeStore.init();
+    
+    // Handle visual viewport changes (keyboard opening/closing on mobile)
+    if (typeof visualViewport !== 'undefined') {
+      const handleViewportChange = () => {
+        const viewport = visualViewport!;
+        const keyboardHeight = window.innerHeight - viewport.height;
+        isKeyboardVisible = keyboardHeight > 100;
+        
+        // Adjust scroll when keyboard opens
+        if (isKeyboardVisible) {
+          setTimeout(() => {
+            if (messageInputEl) {
+              messageInputEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+            // Also scroll message container to show recent messages
+            if (messageContainer) {
+              messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
+          }, 100);
+        }
+      };
+      
+      visualViewport.addEventListener('resize', handleViewportChange);
+      visualViewport.addEventListener('scroll', handleViewportChange);
+      
+      return () => {
+        visualViewport.removeEventListener('resize', handleViewportChange);
+        visualViewport.removeEventListener('scroll', handleViewportChange);
+      };
+    }
   });
 
   $: selectedChannel = $convexChannelStore.channels.find(
@@ -322,7 +355,12 @@
       mobileTouchTimer = null;
     }
     
+    // Mark that touch fired - this prevents click from also firing
+    touchFired = true;
+    setTimeout(() => { touchFired = false; }, 100);
+    
     if (!mobileMovedTooMuch && !showMobileChannelMenu) {
+      vibrateMedium();
       selectChannel(channel.id);
     }
   }
@@ -437,7 +475,24 @@
   };
 </script>
 
-<div class="flex-1 flex flex-col min-w-0 message-area-container" style="padding-top: env(safe-area-inset-top);">
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div 
+  class="flex-1 flex flex-col min-w-0 message-area-container" 
+  style="padding-top: env(safe-area-inset-top);"
+  on:click={(e) => {
+    // Dismiss keyboard and dropdowns when tapping message area
+    const target = e.target as HTMLElement;
+    if (!target.closest('input, textarea, button, .mention-dropdown')) {
+      // @ts-ignore
+      if (document.activeElement) {
+        // @ts-ignore
+        document.activeElement.blur();
+      }
+      showMentionDropdown = false;
+    }
+  }}
+>
   <!-- Header -->
   <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0 relative message-area-header" style="z-index: 100;">
     <div class="flex items-center gap-3">
@@ -735,14 +790,18 @@
         GIF
       </button>
 
-      <div class="flex-1 relative">
+        <div class="flex-1 relative">
         {#if showMentionDropdown && filteredMembers.length > 0}
-          <div class="absolute bottom-full left-0 mb-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+          <!-- Position above keyboard on mobile -->
+          <div 
+            class="absolute left-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[300] max-h-64 overflow-y-auto"
+            style="bottom: calc(100% + 8px);"
+          >
             {#each filteredMembers as member}
               <button
                 type="button"
                 on:click={() => insertMention(member.username)}
-                class="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors flex items-center gap-3"
+                class="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors flex items-center gap-3 active:bg-white/10"
               >
                 <Avatar alt={member.username} size="xs" status={null} />
                 <span class="text-sm text-white">{member.username}</span>
@@ -755,9 +814,21 @@
         {/if}
         <Input
           type="text"
+          bind:this={messageInputEl}
           bind:value={messageInput}
           on:input={handleInput}
           on:keydown={handleKeyDown}
+          on:focus={() => {
+            // Scroll input into view when focused on mobile
+            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+              setTimeout(() => {
+                messageInputEl?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                if (messageContainer) {
+                  messageContainer.scrollTop = messageContainer.scrollHeight;
+                }
+              }, 300);
+            }
+          }}
           placeholder="Message the band... (type !report [message] to report an issue)"
           maxlength={2000}
           autocomplete="off"
@@ -877,13 +948,18 @@
             {#each $convexChannelStore.channels as channel}
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <div
-                on:click={() => selectChannel(channel.id)}
+                on:click={() => {
+                  // Skip if touch just fired to prevent double-fire
+                  if (touchFired) return;
+                  vibrateMedium();
+                  selectChannel(channel.id);
+                }}
                 on:touchstart={(e) => handleMobileChannelTouchStart(e, channel)}
                 on:touchmove={handleMobileChannelTouchMove}
                 on:touchend={(e) => handleMobileChannelTouchEnd(e, channel)}
                 on:touchcancel={(e) => handleMobileChannelTouchEnd(e, channel)}
-                class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors cursor-pointer {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
-                style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;"
+                class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors cursor-pointer active:bg-white/10 {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
+                style="-webkit-tap-highlight-color: transparent;"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />

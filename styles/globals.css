@@ -87,3 +87,45 @@ button,
     -ms-user-select: text;
     user-select: text;
 }
+
+/* Touch feedback for buttons */
+@media (hover: none) and (pointer: coarse) {
+    /* Add subtle background change on active state for touch */
+    button:active,
+    [role="button"]:active {
+        opacity: 0.8;
+    }
+    
+    /* Prevent double-tap zoom */
+    button,
+    input,
+    textarea {
+        touch-action: manipulation;
+    }
+    
+    /* Remove tap highlight on interactive elements */
+    button,
+    [role="button"],
+    a,
+    input,
+    textarea,
+    select {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* Smooth scroll behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Fix for iOS input zoom */
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    textarea {
+        font-size: 16px !important;
+    }
+}
