@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth';
   import { browser } from '$app/environment';
@@ -8,6 +8,8 @@
   let displayName = '';
   let isLoading = false;
   let error = '';
+  let pollInterval: ReturnType<typeof setInterval> | null = null;
+  let hasBeenApproved = false;
 
   onMount(async () => {
     await authStore.checkAuth();
@@ -21,7 +23,34 @@
     // Pre-fill with existing username
     username = $authStore.user?.username || '';
     displayName = $authStore.user?.display_name || '';
+
+    // Start polling for approval status
+    pollInterval = setInterval(async () => {
+      await authStore.refreshUser();
+      
+      // Check if user is now approved
+      const currentUser = $authStore.user;
+      if (currentUser && currentUser.status === 'approved') {
+        hasBeenApproved = true;
+        stopPolling();
+        // Redirect to home after a brief moment to show success
+        setTimeout(() => {
+          goto('/');
+        }, 1500);
+      }
+    }, 2000);
   });
+
+  onDestroy(() => {
+    stopPolling();
+  });
+
+  function stopPolling() {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+  }
 
   async function updateProfile() {
     if (!username.trim()) {
@@ -53,6 +82,7 @@
   }
 
   async function logout() {
+    stopPolling();
     try {
       const { apiPost } = await import('$lib/utils/api');
       await apiPost('/api/auth/logout', {});
@@ -83,19 +113,35 @@
       </div>
 
       <!-- Pending Status Banner -->
-      <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
-        <div class="flex items-center gap-3">
-          <div class="flex-shrink-0">
-            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <p class="text-yellow-400 font-medium text-sm">Awaiting Admin Approval</p>
-            <p class="text-yellow-400/70 text-xs mt-0.5">An admin will review your account soon</p>
+      {#if hasBeenApproved}
+        <div class="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="flex-shrink-0">
+              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-green-400 font-medium text-sm">You're approved!</p>
+              <p class="text-green-400/70 text-xs mt-0.5">Redirecting you to the chat...</p>
+            </div>
           </div>
         </div>
-      </div>
+      {:else}
+        <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="flex-shrink-0">
+              <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-yellow-400 font-medium text-sm">Awaiting Admin Approval</p>
+              <p class="text-yellow-400/70 text-xs mt-0.5">An admin will review your account soon</p>
+            </div>
+          </div>
+        </div>
+      {/if}
 
       <!-- Profile Form -->
       <form on:submit|preventDefault={updateProfile} class="space-y-5">

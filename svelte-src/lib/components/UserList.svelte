@@ -1,8 +1,13 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
   import { memberStore } from '../stores/members';
+  import { authStore } from '../stores/auth';
   import Avatar from './Avatar.svelte';
 
+  const dispatch = createEventDispatcher();
+
   $: allUsers = $memberStore.members;
+  $: currentUser = $authStore.user;
 </script>
 
 <style>
@@ -43,7 +48,11 @@
         </h4>
         <div class="space-y-0.5">
           {#each allUsers as user}
-            <button type="button" class="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 group hover:scale-[1.02] active:scale-98">
+            <button 
+              type="button" 
+              class="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 group hover:scale-[1.02] active:scale-98"
+              on:click={() => dispatch('selectUser', { user, isOwnProfile: user.username === currentUser?.username })}
+            >
               <Avatar
                 alt={user.username}
                 size="sm"
@@ -52,6 +61,9 @@
               <div class="flex-1 min-w-0 text-left">
                 <p class="text-[13px] font-medium truncate text-white/70">
                   {user.username}
+                  {#if user.username === currentUser?.username}
+                    <span class="text-white/30">(you)</span>
+                  {/if}
                 </p>
                 <p class="text-[10px] text-white/20 truncate">{user.role}</p>
               </div>

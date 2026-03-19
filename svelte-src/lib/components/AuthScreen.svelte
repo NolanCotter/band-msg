@@ -151,16 +151,7 @@
               bind:value={username}
               on:keydown={handleKeyDown}
             />
-            <label>
-              <span style="transition-delay:0ms">U</span>
-              <span style="transition-delay:50ms">s</span>
-              <span style="transition-delay:100ms">e</span>
-              <span style="transition-delay:150ms">r</span>
-              <span style="transition-delay:200ms">n</span>
-              <span style="transition-delay:250ms">a</span>
-              <span style="transition-delay:300ms">m</span>
-              <span style="transition-delay:350ms">e</span>
-            </label>
+            <label>Username</label>
           </div>
 
           <!-- Password Input -->
@@ -171,16 +162,7 @@
               bind:value={password}
               on:keydown={handleKeyDown}
             />
-            <label>
-              <span style="transition-delay:0ms">P</span>
-              <span style="transition-delay:50ms">a</span>
-              <span style="transition-delay:100ms">s</span>
-              <span style="transition-delay:150ms">s</span>
-              <span style="transition-delay:200ms">w</span>
-              <span style="transition-delay:250ms">o</span>
-              <span style="transition-delay:300ms">r</span>
-              <span style="transition-delay:350ms">d</span>
-            </label>
+            <label>Password</label>
           </div>
 
           {#if mode === 'register'}
@@ -237,12 +219,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 12px 24px;
+    gap: 10px;
+    padding: 10px 16px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    font-size: 15px;
+    border-radius: 10px;
+    font-size: 14px;
     font-weight: 600;
     color: white;
     cursor: pointer;
@@ -269,6 +251,7 @@
   .google-text {
     position: relative;
     z-index: 1;
+    white-space: nowrap;
   }
 
   /* Submit Button */
@@ -343,22 +326,18 @@
 
   .form-control label {
     position: absolute;
-    top: 15px;
+    top: 12px;
     left: 0;
-    pointer-events: none;
-  }
-
-  .form-control label span {
-    display: inline-block;
-    font-size: 18px;
-    min-width: 5px;
+    font-size: 16px;
     color: #fff;
+    pointer-events: none;
     transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 
-  .form-control input:focus+label span,
-  .form-control input:valid+label span {
+  .form-control input:focus+label,
+  .form-control input:valid+label {
     color: #8b5cf6;
-    transform: translateY(-30px);
+    transform: translateY(-24px);
+    font-size: 12px;
   }
 </style>

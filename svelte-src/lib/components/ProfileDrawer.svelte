@@ -13,6 +13,7 @@
 
   let username = '';
   let bio = '';
+  let avatarUrl = '';
   let isLoading = false;
   let error = '';
   let success = false;
@@ -20,6 +21,7 @@
   $: if (open && $authStore.user) {
     username = $authStore.user.username || '';
     bio = $authStore.user.bio || '';
+    avatarUrl = $authStore.user.avatarUrl || '';
   }
 
   async function saveProfile() {
@@ -37,11 +39,13 @@
         sessionToken: $convexMessageStore.sessionToken,
         username: username.trim() || undefined,
         bio: bio.trim() || undefined,
+        avatarUrl: avatarUrl.trim() || undefined,
       });
 
       authStore.updateUser({
         username: username.trim(),
         bio: bio.trim() || null,
+        avatarUrl: avatarUrl.trim() || null,
       });
 
       success = true;
@@ -97,6 +101,18 @@
         {/if}
 
         <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-white/70 mb-2">Avatar URL</label>
+            <input
+              type="url"
+              bind:value={avatarUrl}
+              disabled={isLoading}
+              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 outline-none focus:border-white/30 transition-colors disabled:opacity-50"
+              placeholder="https://example.com/avatar.jpg"
+            />
+            <p class="text-xs text-white/30 mt-1">Link to your profile picture</p>
+          </div>
+
           <div>
             <label class="block text-sm font-medium text-white/70 mb-2">Username</label>
             <input

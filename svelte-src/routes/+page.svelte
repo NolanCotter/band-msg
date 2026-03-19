@@ -8,6 +8,7 @@
   import PWAInstallGuide from '../lib/components/PWAInstallGuide.svelte';
   import UsernameSetup from '../lib/components/UsernameSetup.svelte';
   import PendingSetup from '../lib/components/PendingSetup.svelte';
+  import ProfileDrawer from '../lib/components/ProfileDrawer.svelte';
   import { authStore } from '../lib/stores/auth';
   import { convexChannelStore } from '../lib/stores/convexChannels';
   import { convexMessageStore } from '../lib/stores/convexMessages';
@@ -16,6 +17,8 @@
   import { pusherStore } from '../lib/stores/pusher';
 
   export let data;
+
+  let showProfileDrawer = false;
 
   let showPWAGuide = false;
   let showUsernameSetup = false;
@@ -216,6 +219,12 @@
     <MessageArea />
 
     <!-- User List -->
-    <UserList />
+    <UserList on:selectUser={(e) => { if (e.detail.isOwnProfile) showProfileDrawer = true; }} />
   </div>
+
+  <!-- Profile Drawer -->
+  <ProfileDrawer
+    open={showProfileDrawer}
+    onClose={() => showProfileDrawer = false}
+  />
 {/if}

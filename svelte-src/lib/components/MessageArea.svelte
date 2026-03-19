@@ -513,14 +513,6 @@
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </div>
-      <button
-        type="button"
-        on:click={() => showProfileDrawer = true}
-        class="p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-        aria-label="Open profile"
-      >
-        <Avatar alt={$authStore.user?.username || 'User'} size="sm" status="online" />
-      </button>
       <div>
         <h3 class="text-[15px] font-semibold text-white tracking-tight leading-tight">
           #{selectedChannel?.name || 'general'}
