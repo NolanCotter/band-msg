@@ -28,7 +28,6 @@
   let showCreateChannel = false;
   let showSettingsMenu = false;
   let shouldAutoScroll = true;
-  let previousMessageCount = 0;
   let showThread = false;
   let threadMessage: any = null;
   
@@ -84,47 +83,37 @@
 
   // Only auto-scroll when channel changes - let user scroll freely otherwise
   let lastLoadedChannelId = '';
-  let hasScrolledToBottomForChannel = false;
   
   $: if ($convexChannelStore.selectedChannelId && $convexChannelStore.selectedChannelId !== lastLoadedChannelId) {
     lastLoadedChannelId = $convexChannelStore.selectedChannelId;
     shouldAutoScroll = true;
-    previousMessageCount = 0;
-    hasScrolledToBottomForChannel = false; // Reset for new channel
     console.log('[MessageArea] Channel changed to:', $convexChannelStore.selectedChannelId);
   }
   
-  // Only scroll to bottom ONCE when messages first load for a channel
-  $: if ($messageStore.messages.length > 0 && !hasScrolledToBottomForChannel && $convexChannelStore.selectedChannelId === lastLoadedChannelId) {
-    console.log('[MessageArea] Messages loaded, scrolling to bottom. Count:', $messageStore.messages.length);
-    hasScrolledToBottomForChannel = true;
-    setTimeout(() => {
-      if (messageContainer) {
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-        console.log('[MessageArea] Initial scroll to bottom for channel, scrollHeight:', messageContainer.scrollHeight);
-      }
-    }, 150); // Increased timeout to ensure DOM is ready
-  }
-  
   // Track new messages and auto-scroll ONLY if user is already at bottom
-  $: if ($messageStore.messages.length > previousMessageCount && previousMessageCount > 0 && hasScrolledToBottomForChannel) {
-    const oldCount = previousMessageCount;
-    previousMessageCount = $messageStore.messages.length;
+  let lastMessageCount = 0;
+  $: if ($messageStore.messages.length !== lastMessageCount) {
+    const oldCount = lastMessageCount;
+    lastMessageCount = $messageStore.messages.length;
     
-    // Only auto-scroll if user is near bottom (within 150px)
-    if (shouldAutoScroll && messageContainer) {
+    // Scroll on first load
+    if (oldCount === 0 && $messageStore.messages.length > 0) {
       setTimeout(() => {
         if (messageContainer) {
           messageContainer.scrollTop = messageContainer.scrollHeight;
-          console.log('[MessageArea] Auto-scrolled for new message (user was at bottom)');
+          console.log('[MessageArea] Initial scroll to bottom');
+        }
+      }, 100);
+    }
+    // Only auto-scroll for new messages if user is near bottom (within 150px)
+    else if (oldCount > 0 && shouldAutoScroll && messageContainer) {
+      setTimeout(() => {
+        if (messageContainer) {
+          messageContainer.scrollTop = messageContainer.scrollHeight;
+          console.log('[MessageArea] Auto-scrolled for new message');
         }
       }, 50);
-    } else {
-      console.log('[MessageArea] New message arrived but user scrolled up, not auto-scrolling');
     }
-  } else if ($messageStore.messages.length > 0 && previousMessageCount === 0) {
-    // Update count for first load
-    previousMessageCount = $messageStore.messages.length;
   }
 
   async function handleSend() {
@@ -173,8 +162,7 @@
     
     // Reset scroll state for new channel
     shouldAutoScroll = true;
-    previousMessageCount = 0;
-    hasScrolledToBottomForChannel = false;
+    lastMessageCount = 0; // Reset so initial load scroll triggers
     
     convexChannelStore.selectChannel(channelId);
     await messageStore.loadMessages(channelId);
@@ -294,8 +282,7 @@
       
       // Reset scroll state
       shouldAutoScroll = true;
-      previousMessageCount = 0;
-      hasScrolledToBottomForChannel = false;
+      lastMessageCount = 0;
       
       if ($convexChannelStore.selectedChannelId === mobileChannelToDelete.id) {
         const firstChannel = $convexChannelStore.channels[0];

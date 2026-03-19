@@ -90,10 +90,8 @@ export const sendPushNotifications = action({
         subscriptions.map(async (sub) => {
           try {
             const endpoint = sub.endpoint;
-            
-            // Detect if this is a native Web Push subscription (iOS) or FCM token
-            const isNativeWebPush = endpoint.startsWith('https://');
-            const isFCMToken = !isNativeWebPush;
+            const isFCMToken = sub.p256dhKey === 'fcm' && sub.authKey === 'fcm';
+            const isNativeWebPush = !isFCMToken;
             
             console.log(`[sendPushNotifications] Sending to ${isNativeWebPush ? 'native Web Push' : 'FCM'}: ${endpoint.substring(0, 30)}...`);
 
