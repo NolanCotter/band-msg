@@ -13,7 +13,6 @@
 
   let username = '';
   let bio = '';
-  let location = '';
   let isLoading = false;
   let error = '';
   let success = false;
@@ -21,7 +20,6 @@
   $: if (open && $authStore.user) {
     username = $authStore.user.username || '';
     bio = $authStore.user.bio || '';
-    location = $authStore.user.location || '';
   }
 
   async function saveProfile() {
@@ -39,13 +37,11 @@
         sessionToken: $convexMessageStore.sessionToken,
         username: username.trim() || undefined,
         bio: bio.trim() || undefined,
-        location: location.trim() || undefined,
       });
 
       authStore.updateUser({
         username: username.trim(),
         bio: bio.trim() || null,
-        location: location.trim() || null,
       });
 
       success = true;
@@ -125,18 +121,6 @@
               placeholder="Tell others about yourself..."
             ></textarea>
             <p class="text-xs text-white/30 mt-1">{bio.length}/160 characters</p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-white/70 mb-2">Location</label>
-            <input
-              type="text"
-              bind:value={location}
-              disabled={isLoading}
-              maxlength="50"
-              class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 outline-none focus:border-white/30 transition-colors disabled:opacity-50"
-              placeholder="Where are you located?"
-            />
           </div>
 
           <button

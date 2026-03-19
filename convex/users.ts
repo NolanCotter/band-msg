@@ -7,7 +7,6 @@ export const updateProfile = mutation({
     sessionToken: v.string(),
     username: v.optional(v.string()),
     bio: v.optional(v.string()),
-    location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await getUserByToken(ctx, args.sessionToken);
@@ -16,7 +15,6 @@ export const updateProfile = mutation({
     const updates: Record<string, any> = {};
     if (args.username !== undefined) updates.username = args.username;
     if (args.bio !== undefined) updates.bio = args.bio;
-    if (args.location !== undefined) updates.location = args.location;
 
     await ctx.db.patch(user._id, updates);
     return { success: true };
@@ -43,7 +41,6 @@ export const getUserProfile = query({
     return {
       username: user.username,
       bio: user.bio || null,
-      location: user.location || null,
       role: user.role,
       presenceStatus: user.presenceStatus,
     };
