@@ -5,32 +5,23 @@ import { createSessionToken, setSessionCookie, expiresAtMs } from '$lib/server/a
 import { api } from "../../../../../../convex/_generated/api";
 import crypto from 'node:crypto';
 import { getConvexHttpClient } from "$lib/server/convex";
+import { env } from '$env/dynamic/private';
 
 const convex = getConvexHttpClient();
-
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5173/api/auth/google/callback';
-
 const sql = getSqlClient();
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
-  console.log('=== Google OAuth Callback ===');
+  const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID || '';
+  const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET || '';
+  const GOOGLE_REDIRECT_URI = `${url.origin}/api/auth/google/callback`;
   
   const code = url.searchParams.get('code');
   const error = url.searchParams.get('error');
-
-  console.log('Callback received - code exists:', !!code);
-  console.log('Callback received - error:', error);
 
   if (error || !code) {
     console.error('OAuth error or no code:', error);
     throw redirect(302, '/?error=google_auth_failed');
   }
-
-  console.log('GOOGLE_CLIENT_ID exists:', !!GOOGLE_CLIENT_ID);
-  console.log('GOOGLE_CLIENT_SECRET exists:', !!GOOGLE_CLIENT_SECRET);
-  console.log('GOOGLE_REDIRECT_URI:', GOOGLE_REDIRECT_URI);
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     console.error('Missing Google OAuth credentials');
@@ -38,8 +29,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   }
 
   try {
-    console.log('Exchanging code for tokens...');
-    
     // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -53,8 +42,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
       })
     });
 
-    console.log('Token response status:', tokenResponse.status);
-
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
       console.error('Token exchange failed:', errorData);
@@ -62,48 +49,32 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     }
 
     const tokens = await tokenResponse.json();
-    console.log('Tokens received, access_token exists:', !!tokens.access_token);
 
     // Get user info
-    console.log('Fetching user info...');
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` }
     });
 
-    console.log('User info response status:', userInfoResponse.status);
-
     if (!userInfoResponse.ok) {
-      const errorData = await userInfoResponse.text();
-      console.error('User info fetch failed:', errorData);
       throw new Error('Failed to get user info');
     }
 
     const googleUser = await userInfoResponse.json();
-    console.log('Google user received:', {
-      id: googleUser.id,
-      email: googleUser.email,
-      name: googleUser.name
-    });
 
     // Check if user exists by Google ID or email
-    console.log('Checking if user exists...');
     const existingUsers = (await sql`
       SELECT * FROM users 
       WHERE google_id = ${googleUser.id} OR username = ${googleUser.email}
       LIMIT 1
     `) as any[];
 
-    console.log('Existing users found:', existingUsers.length);
-
     let user;
     
     if (existingUsers.length > 0) {
       user = existingUsers[0];
-      console.log('Existing user found:', user.id);
       
       // Update Google ID if not set
       if (!user.google_id) {
-        console.log('Linking Google ID to existing user...');
         await sql`
           UPDATE users 
           SET google_id = ${googleUser.id}
@@ -113,16 +84,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
       }
     } else {
       // Create new user with temporary username
-      console.log('Creating new user...');
       const userId = crypto.randomUUID();
       const now = Date.now();
       const tempUsername = `user_${googleUser.id.substring(0, 8)}`;
-      
-      console.log('New user details:', {
-        userId,
-        tempUsername,
-        googleId: googleUser.id
-      });
       
       await sql`
         INSERT INTO users (id, username, google_id, role, status, needs_username_setup, created_at)
@@ -137,12 +101,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
         status: 'pending',
         needs_username_setup: true
       };
-      
-      console.log('New user created successfully (pending approval)');
     }
 
     // Create session
-    console.log('Creating session...');
     const sessionToken = createSessionToken();
     const expiresAt = expiresAtMs();
     
@@ -151,10 +112,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
       VALUES (${sessionToken}, ${user.id}, ${expiresAt}, ${Date.now()})
     `;
     
-    console.log('Session created in SQL:', sessionToken.substring(0, 10) + '...');
-    
     // Sync to Convex
-    console.log('Syncing to Convex...');
     try {
       await convex.mutation(api.auth.syncExternalUser, {
         username: user.username,
@@ -165,21 +123,14 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
         sessionToken,
         expiresAt
       });
-      console.log('Convex sync successful');
     } catch (syncError) {
       console.error('Convex sync failed:', syncError);
-      // We still set the cookie and redirect, but the user might have issues until they retry
     }
     
     setSessionCookie(cookies, sessionToken);
-
-    console.log('Session cookie set, redirecting to home');
     throw redirect(302, '/');
   } catch (error) {
-    console.error('=== Google OAuth Error ===');
-    console.error('Error type:', error?.constructor?.name);
-    console.error('Error message:', error instanceof Error ? error.message : String(error));
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Google OAuth Error:', error);
     throw redirect(302, '/?error=google_auth_error');
   }
 };
