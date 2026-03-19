@@ -274,11 +274,11 @@
   /* Submit Button */
   .submit-btn {
     width: 100%;
-    padding: 12px 24px;
-    border-radius: 10px;
+    padding: 10px 20px;
+    border-radius: 8px;
     border: none;
     background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: white;
     cursor: pointer;
@@ -320,7 +320,7 @@
   /* Floating Label Inputs */
   .form-control {
     position: relative;
-    margin: 20px 0 40px;
+    margin: 15px 0 25px;
     width: 100%;
   }
 
@@ -330,8 +330,8 @@
     border-bottom: 2px #fff solid;
     display: block;
     width: 100%;
-    padding: 15px 0;
-    font-size: 18px;
+    padding: 12px 0;
+    font-size: 16px;
     color: #fff;
   }
 
