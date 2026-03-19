@@ -21,6 +21,7 @@ import type * as pushSubscriptions from "../pushSubscriptions.js";
 import type * as reactions from "../reactions.js";
 import type * as signupRequests from "../signupRequests.js";
 import type * as testNotification from "../testNotification.js";
+import type * as typing from "../typing.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   reactions: typeof reactions;
   signupRequests: typeof signupRequests;
   testNotification: typeof testNotification;
+  typing: typeof typing;
 }>;
 
 /**

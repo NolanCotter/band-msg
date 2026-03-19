@@ -23,17 +23,21 @@ type MessageState = {
   messages: Message[];
   isLoading: boolean;
   sessionToken: string | null;
+  typingUsers: string[];
 };
 
 function createConvexMessageStore() {
   const { subscribe, set, update } = writable<MessageState>({
     messages: [],
     isLoading: false,
-    sessionToken: null
+    sessionToken: null,
+    typingUsers: []
   });
 
   let unsubscribe: (() => void) | null = null;
+  let typingUnsubscribe: (() => void) | null = null;
   let currentSessionToken: string | null = null;
+  let typingTimer: ReturnType<typeof setTimeout> | null = null;
 
   return {
     subscribe,
@@ -67,7 +71,7 @@ function createConvexMessageStore() {
           { channelId: channelId as Id<"channels">, sessionToken: currentSessionToken },
           (messages) => {
             console.log('[Convex] Loaded messages:', messages.length, 'messages');
-            set({ messages, isLoading: false, sessionToken: currentSessionToken });
+            set({ messages, isLoading: false, sessionToken: currentSessionToken, typingUsers: [] });
           }
         );
       } catch (error) {
@@ -152,6 +156,67 @@ function createConvexMessageStore() {
       } catch (error) {
         console.error('Failed to remove reaction:', error);
       }
+    },
+
+    async setTyping(channelId: string) {
+      if (!currentSessionToken) return;
+
+      try {
+        await convex.mutation(api.typing.setTyping, {
+          channelId: channelId as Id<"channels">,
+          sessionToken: currentSessionToken
+        });
+
+        // Reset the typing timeout
+        if (typingTimer) {
+          clearTimeout(typingTimer);
+        }
+        typingTimer = setTimeout(() => {
+          this.stopTyping(channelId);
+        }, 3000);
+      } catch (error) {
+        console.error('Failed to set typing:', error);
+      }
+    },
+
+    async stopTyping(channelId: string) {
+      if (!currentSessionToken) return;
+
+      try {
+        if (typingTimer) {
+          clearTimeout(typingTimer);
+          typingTimer = null;
+        }
+        await convex.mutation(api.typing.stopTyping, {
+          channelId: channelId as Id<"channels">,
+          sessionToken: currentSessionToken
+        });
+      } catch (error) {
+        console.error('Failed to stop typing:', error);
+      }
+    },
+
+    subscribeToTyping(channelId: string) {
+      if (!currentSessionToken) return () => {};
+
+      if (typingUnsubscribe) {
+        typingUnsubscribe();
+      }
+
+      typingUnsubscribe = convex.onUpdate(
+        api.typing.getTypingUsers,
+        { channelId: channelId as Id<"channels">, sessionToken: currentSessionToken },
+        (usernames) => {
+          update(state => ({ ...state, typingUsers: usernames || [] }));
+        }
+      );
+
+      return () => {
+        if (typingUnsubscribe) {
+          typingUnsubscribe();
+          typingUnsubscribe = null;
+        }
+      };
     },
 
     cleanup() {

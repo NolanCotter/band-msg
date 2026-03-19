@@ -130,6 +130,8 @@
     
     if (result.success) {
       messageInput = '';
+      // Stop typing indicator after sending
+      messageStore.stopTyping($convexChannelStore.selectedChannelId);
     } else {
       console.error('[MessageArea] Failed to send:', result.error);
     }
@@ -146,8 +148,10 @@
     );
   }
 
-  async function handleTyping() {
-    // Typing indicators can be added later with Convex
+  function handleTyping() {
+    if ($convexChannelStore.selectedChannelId) {
+      messageStore.setTyping($convexChannelStore.selectedChannelId);
+    }
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -163,6 +167,9 @@
     // Reset scroll state for new channel
     shouldAutoScroll = true;
     lastMessageCount = 0; // Reset so initial load scroll triggers
+    
+    // Subscribe to typing indicators
+    messageStore.subscribeToTyping(channelId);
     
     convexChannelStore.selectChannel(channelId);
     await messageStore.loadMessages(channelId);
@@ -589,6 +596,28 @@
 
     <div class="h-4"></div>
   </div>
+
+  <!-- Typing indicator -->
+  {#if $messageStore.typingUsers && $messageStore.typingUsers.length > 0}
+    <div class="px-4 pb-1 shrink-0">
+      <div class="flex items-center gap-2 text-xs text-white/40">
+        <div class="flex gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style="animation-delay: 0ms;"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style="animation-delay: 150ms;"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style="animation-delay: 300ms;"></span>
+        </div>
+        <span>
+          {#if $messageStore.typingUsers.length === 1}
+            {$messageStore.typingUsers[0]} is typing...
+          {:else if $messageStore.typingUsers.length === 2}
+            {$messageStore.typingUsers[0]} and {$messageStore.typingUsers[1]} are typing...
+          {:else}
+            Several people are typing...
+          {/if}
+        </span>
+      </div>
+    </div>
+  {/if}
 
   <!-- Input area -->
   <div class="px-4 pb-3 md:pb-4 shrink-0">
