@@ -224,8 +224,8 @@
       </div>
     </div>
 
-    <p class="text-center text-white/20 text-xs mt-6 animate-fade-in" style="animation-delay: 200ms;">
-      Band Chat - Secure Team Communication
+    <p class="text-center text-white/40 text-xs mt-6">
+      built by <a href="https://github.com/NolanCotter" target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:text-purple-300 underline underline-offset-2 transition-colors">nolan</a>
     </p>
   </div>
 </div>
@@ -274,11 +274,11 @@
   /* Submit Button */
   .submit-btn {
     width: 100%;
-    padding: 16px 32px;
-    border-radius: 12px;
+    padding: 12px 24px;
+    border-radius: 10px;
     border: none;
     background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: white;
     cursor: pointer;
