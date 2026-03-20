@@ -203,7 +203,6 @@
 
   async function approveUser(userId: string) {
     console.log('[AdminPanel] Approving user:', userId);
-    console.log('[AdminPanel] Session token:', sessionToken?.substring(0, 10));
     if (!sessionToken || isLoading) {
       console.error('[AdminPanel] Cannot approve - no session token or loading');
       return;
@@ -211,12 +210,15 @@
     isLoading = true;
     try {
       console.log('[AdminPanel] Calling approveUser mutation...');
-      await convex.mutation(api.auth.approveUser, { sessionToken, userId: userId as Id<"users"> });
-      console.log('[AdminPanel] Approve successful, reloading data...');
+      const result = await convex.mutation(api.auth.approveUser, { sessionToken, userId: userId as Id<"users"> });
+      console.log('[AdminPanel] Approve result:', result);
+      console.log('[AdminPanel] Reloading data...');
       await loadData();
       console.log('[AdminPanel] Data reloaded');
     } catch (error: any) {
       console.error('[AdminPanel] Failed to approve user:', error?.message || error);
+      console.error('[AdminPanel] Error details:', error);
+      alert('Failed to approve user: ' + (error?.message || 'Unknown error'));
     } finally {
       isLoading = false;
     }

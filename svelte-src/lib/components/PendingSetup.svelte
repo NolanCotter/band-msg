@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
-  import { authStore } from '$lib/stores/auth';
   import { browser } from '$app/environment';
 
   let username = '';
@@ -10,44 +9,48 @@
   let error = '';
   let pollInterval: ReturnType<typeof setInterval> | null = null;
   let hasBeenApproved = false;
+  let currentStatus = 'pending';
+
+  async function checkApprovalStatus() {
+    console.log('[PendingSetup] Checking for approval status...');
+    try {
+      const res = await fetch('/api/auth/me', {
+        credentials: 'same-origin'
+      });
+      
+      if (res.ok) {
+        const user = await res.json();
+        console.log('[PendingSetup] User status from API:', user.status);
+        currentStatus = user.status || 'pending';
+        
+        if (currentStatus === 'approved') {
+          hasBeenApproved = true;
+          stopPolling();
+          console.log('[PendingSetup] User approved! Redirecting...');
+          setTimeout(() => {
+            goto('/');
+          }, 1500);
+        }
+      } else {
+        console.log('[PendingSetup] Auth check failed:', res.status);
+      }
+    } catch (err) {
+      console.error('[PendingSetup] Error checking status:', err);
+    }
+  }
 
   onMount(async () => {
-    await authStore.checkAuth();
+    // Check initial status
+    await checkApprovalStatus();
     
-    // If not pending or already approved, redirect away
-    if (!$authStore.user || $authStore.user.status === 'approved') {
+    // If already approved, redirect away
+    if (currentStatus === 'approved') {
       goto('/');
       return;
     }
 
-    // Pre-fill with existing username
-    username = $authStore.user?.username || '';
-    displayName = $authStore.user?.display_name || '';
-
     // Start polling for approval status - check every 2 seconds
-    pollInterval = setInterval(async () => {
-      console.log('[PendingSetup] Checking for approval status...');
-      await authStore.checkAuth(); // Full auth check, not just refresh
-      
-      // Subscribe to get current value after checkAuth completes
-      let currentStatus: string | undefined;
-      const unsubscribe = authStore.subscribe(state => {
-        currentStatus = state.user?.status;
-      });
-      unsubscribe();
-      
-      console.log('[PendingSetup] Current status:', currentStatus);
-      
-      if (currentStatus === 'approved') {
-        hasBeenApproved = true;
-        stopPolling();
-        console.log('[PendingSetup] User approved! Redirecting...');
-        // Redirect to home after a brief moment to show success
-        setTimeout(() => {
-          goto('/');
-        }, 1500);
-      }
-    }, 2000);
+    pollInterval = setInterval(checkApprovalStatus, 2000);
   });
 
   onDestroy(() => {
@@ -77,10 +80,16 @@
         displayName: displayName.trim()
       });
 
-      if (result.success) {
-        await authStore.checkAuth();
+      if (result.ok) {
+        const data = await result.json();
+        if (data.success) {
+          // Don't need to check auth here - just wait for polling
+        } else {
+          error = data.error || 'Failed to update profile';
+        }
       } else {
-        error = result.error || 'Failed to update profile';
+        const data = await result.json();
+        error = data.error || 'Failed to update profile';
       }
     } catch (err) {
       error = 'Failed to update profile';
@@ -95,11 +104,11 @@
     try {
       const { apiPost } = await import('$lib/utils/api');
       await apiPost('/api/auth/logout', {});
-      goto('/');
     } catch (err) {
       console.error('Logout failed:', err);
-      goto('/');
     }
+    // Force redirect to clear any state
+    window.location.href = '/';
   }
 </script>
 
