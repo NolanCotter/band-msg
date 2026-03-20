@@ -33,6 +33,10 @@
       lastChannelId = channelId;
       convexMessageStore.loadMessages(channelId);
       convexMessageStore.subscribeToTyping(channelId);
+    } else if (!channelId && lastChannelId) {
+      lastChannelId = '';
+      convexMessageStore.unsubscribeFromTyping();
+      convexMessageStore.clearMessages();
     }
   }
 
@@ -50,23 +54,6 @@
     await memberStore.loadMembers();
     console.log('[Page] Members loaded');
 
-    // Load messages for selected channel
-    if ($convexChannelStore.selectedChannelId) {
-      console.log('[Page] Loading messages for channel:', $convexChannelStore.selectedChannelId);
-      console.log('[Page] Session token available:', !!$convexMessageStore.sessionToken);
-      convexMessageStore.subscribeToTyping($convexChannelStore.selectedChannelId);
-      await convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
-    } else {
-      console.log('[Page] No channel selected, waiting for channel selection...');
-      // Fallback: try again after a short delay in case channels are still loading
-      setTimeout(async () => {
-        if ($convexChannelStore.selectedChannelId) {
-          console.log('[Page] Loading messages after fallback delay');
-          await convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
-        }
-      }, 500);
-    }
-    
     console.log('[Page] initApp completed');
 
     // Start heartbeat to keep user online

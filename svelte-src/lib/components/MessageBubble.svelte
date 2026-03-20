@@ -1,12 +1,13 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+  import { Drawer } from 'vaul-svelte';
   import { authStore } from '../stores/auth';
   import { convexMessageStore as messageStore } from '../stores/convexMessages';
   import { convexChannelStore } from '../stores/convexChannels';
   import { parseMarkdown } from '$lib/markdown';
-  import { vibrateMedium, vibrateSuccess } from '../utils/haptics';
+  import { vibrateMedium } from '../utils/haptics';
   import Avatar from './Avatar.svelte';
-  import { fade, fly } from 'svelte/transition';
-  import { flip } from 'svelte/animate';
+  import { fly } from 'svelte/transition';
 
   export let message: any;
   export let showHeader: boolean;
@@ -44,20 +45,19 @@
 
   let showReactionPicker = false;
   let showContextMenu = false;
+  let showMobileMenu = false;
+  let mobileMenuMode: 'actions' | 'reactions' = 'actions';
   let contextMenuX = 0;
   let contextMenuY = 0;
-  let touchTimer: ReturnType<typeof setTimeout> | null = null;
-  let tapCount = 0;
-  let tapTimer: ReturnType<typeof setTimeout> | null = null;
+  let pressTimer: ReturnType<typeof setTimeout> | null = null;
   let touchStartX = 0;
   let touchStartY = 0;
   let isEditing = false;
   let editContent = '';
-  let reactionPickerOpenedAt = 0;
-  let contextMenuOpenedAt = 0;
   let longPressFired = false;
   let movedTooMuch = false;
   let customEmojiInput = '';
+  let editTextarea: HTMLTextAreaElement | null = null;
   const LONG_PRESS_MS = 650;
   const MOVE_CANCEL_PX = 12;
   
@@ -108,111 +108,81 @@
     return emojiToSvgMap[emoji] || null;
   }
 
-  function handleTouchStart(e: TouchEvent) {
-    const target = e.target as HTMLElement;
-    
-    // Skip touch tracking entirely for interactive elements - let them handle their own events
-    if (target.closest('button, a, input, textarea, select')) {
+  function closeMenus() {
+    showContextMenu = false;
+    showReactionPicker = false;
+    showMobileMenu = false;
+    mobileMenuMode = 'actions';
+  }
+
+  function isInteractiveTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement && !!target.closest('button, a, input, textarea, select');
+  }
+
+  function clearPressTimer() {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+  }
+
+  function handlePointerDown(e: PointerEvent) {
+    if (e.pointerType === 'mouse') {
       return;
     }
-    
-    e.preventDefault();
-    
-    if (touchTimer) clearTimeout(touchTimer);
+
+    if (isInteractiveTarget(e.target)) return;
+
+    clearPressTimer();
     longPressFired = false;
     movedTooMuch = false;
-    
-    // Get touch coordinates for menu positioning and movement tracking
-    const touch = e.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    contextMenuX = touch.clientX;
-    contextMenuY = touch.clientY;
-    
-    // Long press for actions menu
-    touchTimer = setTimeout(() => {
-      showContextMenu = true;
-      showReactionPicker = false;
-      contextMenuOpenedAt = Date.now();
-      tapCount = 0;
-      if (tapTimer) clearTimeout(tapTimer);
+    touchStartX = e.clientX;
+    touchStartY = e.clientY;
+
+    pressTimer = setTimeout(() => {
       vibrateMedium();
       longPressFired = true;
+      showMobileMenu = true;
+      mobileMenuMode = 'actions';
     }, LONG_PRESS_MS);
   }
 
-  function handleTouchEnd(e: TouchEvent) {
-    const target = e.target as HTMLElement;
-    
-    // Allow buttons/inputs to handle their own touch events without interference
-    if (target.closest('button, a, input, textarea, select')) {
-      return;
-    }
-    
-    e.preventDefault();
-    
-    // Clear long-press timer
-    if (touchTimer) {
-      clearTimeout(touchTimer);
-      touchTimer = null;
-    }
-    
-    // If long-press fired (or user was scrolling), don't treat as a tap.
-    if (longPressFired || movedTooMuch) {
-      tapCount = 0;
-      if (tapTimer) clearTimeout(tapTimer);
+  function handlePointerMove(e: PointerEvent) {
+    if (e.pointerType === 'mouse' || !pressTimer || showMobileMenu) {
       return;
     }
 
-    // Handle double tap - quick react
-    if (!target.closest('button, a, input, textarea, select')) {
-      tapCount++;
-      if (tapCount === 1) {
-        tapTimer = setTimeout(() => {
-          tapCount = 0;
-        }, 300);
-      } else if (tapCount === 2) {
-        // Double tap - quick like (heart)
-        if (tapTimer) clearTimeout(tapTimer);
-        tapCount = 0;
-        handleReactionClick('❤️', 'heart');
-      }
+    const deltaX = Math.abs(e.clientX - touchStartX);
+    const deltaY = Math.abs(e.clientY - touchStartY);
+
+    if (deltaY > MOVE_CANCEL_PX || deltaX > MOVE_CANCEL_PX) {
+      clearPressTimer();
+      movedTooMuch = true;
     }
+  }
+
+  function handlePointerUp(e: PointerEvent) {
+    if (e.pointerType === 'mouse') {
+      return;
+    }
+
+    clearPressTimer();
+    longPressFired = false;
   }
 
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
+
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return;
+    }
     contextMenuX = e.clientX;
     contextMenuY = e.clientY;
     showContextMenu = true;
   }
 
-  function handleTouchMove(e: TouchEvent) {
-    const target = e.target as HTMLElement;
-    
-    // Skip move tracking for interactive elements
-    if (target.closest('button, a, input, textarea, select')) {
-      return;
-    }
-    
-    // Cancel timer if user scrolls (moved more than 10px vertically or horizontally)
-    if (touchTimer && !showContextMenu) {
-      const touch = e.touches[0];
-      const deltaX = Math.abs(touch.clientX - touchStartX);
-      const deltaY = Math.abs(touch.clientY - touchStartY);
-      
-      // Cancel long-press if user is scrolling (more vertical movement)
-      if (deltaY > MOVE_CANCEL_PX || deltaX > MOVE_CANCEL_PX) {
-        clearTimeout(touchTimer);
-        touchTimer = null;
-        movedTooMuch = true;
-      }
-    }
-  }
-
-  async function handleReactionClick(emoji: string, name?: string) {
-    showReactionPicker = false;
-    showContextMenu = false;
+  async function handleReactionClick(emoji: string) {
+    closeMenus();
     customEmojiInput = '';
     if (!$convexChannelStore.selectedChannelId) return;
     
@@ -230,12 +200,9 @@
     const emoji = customEmojiInput.trim();
     if (!emoji) return;
     
-    // Close menus and clear input first
     customEmojiInput = '';
-    showReactionPicker = false;
-    showContextMenu = false;
+    closeMenus();
     
-    // Then add the reaction
     if (!$convexChannelStore.selectedChannelId) return;
     
     const reaction = message.reactions?.find((r: any) => r.emoji === emoji);
@@ -249,24 +216,18 @@
   }
 
   async function handleDelete() {
+    closeMenus();
     if (!$convexChannelStore.selectedChannelId) return;
     await messageStore.deleteMessage(message.id, $convexChannelStore.selectedChannelId);
   }
 
-  function startEdit() {
+  async function startEdit() {
     isEditing = true;
     editContent = message.content;
-    showContextMenu = false;
-    showReactionPicker = false;
-    
-    // Focus the edit textarea after it's rendered
-    setTimeout(() => {
-      const textarea = document.querySelector(`[data-message-id="${message.id}"] textarea`);
-      if (textarea instanceof HTMLTextAreaElement) {
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-      }
-    }, 50);
+    closeMenus();
+    await tick();
+    editTextarea?.focus();
+    editTextarea?.setSelectionRange(editTextarea.value.length, editTextarea.value.length);
   }
 
   function cancelEdit() {
@@ -288,71 +249,8 @@
 </script>
 
 {#if showReactionPicker}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div 
-    class="fixed inset-0 z-40" 
-    on:click|stopPropagation={() => {
-      // Prevent the same tap that opened the picker from also closing it
-      if (Date.now() - reactionPickerOpenedAt < 500) return;
-      showReactionPicker = false;
-    }}
-    on:touchstart|stopPropagation
-    on:touchend|stopPropagation={(e) => {
-      e.preventDefault();
-      if (Date.now() - reactionPickerOpenedAt < 500) return;
-      showReactionPicker = false;
-    }}
-  ></div>
-  
-  <!-- Mobile: bottom sheet style -->
-  <div 
-    class="fixed md:hidden left-4 right-4 bottom-20 z-50 bg-[#222] border border-white/10 rounded-xl shadow-2xl p-4 animate-slide-up"
-    role="dialog"
-    tabindex="-1"
-    on:click|stopPropagation
-    on:keydown|stopPropagation={() => {}}
-    on:touchstart|stopPropagation
-    on:touchend|stopPropagation
-  >
-    <div class="hover:scale-x-105 transition-all duration-300 *:transition-all *:duration-300 flex justify-start text-2xl items-center shadow-xl z-10 bg-[#1a1a1a] gap-2 p-2 rounded-full border border-white/10">
-      {#each QUICK_REACTIONS as reaction}
-        <button
-          type="button"
-          on:click|stopPropagation={() => handleReactionClick(reaction.emoji)}
-          on:touchend|stopPropagation|preventDefault={() => handleReactionClick(reaction.emoji)}
-          class="relative before:hidden hover:before:flex before:justify-center before:items-center before:h-4 before:text-[.6rem] before:px-1 before:content-['{reaction.name}'] before:bg-black before:text-white before:absolute before:-top-7 before:rounded-lg hover:-translate-y-5 cursor-pointer hover:scale-125 bg-white/10 rounded-full p-2 px-3 text-white transition-all duration-200"
-        >
-          {reaction.emoji}
-        </button>
-      {/each}
-    </div>
-    
-    <!-- Custom emoji input -->
-    <div class="flex gap-2 mt-3">
-      <input
-        type="text"
-        bind:value={customEmojiInput}
-        placeholder="Type any emoji..."
-        class="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/30 outline-none focus:border-white/30"
-        on:keydown={(e) => e.key === 'Enter' && handleCustomEmoji()}
-        on:click|stopPropagation
-        on:touchstart|stopPropagation
-        on:touchend|stopPropagation
-      />
-      <button
-        type="button"
-        on:click|stopPropagation={handleCustomEmoji}
-        on:touchend|stopPropagation|preventDefault={handleCustomEmoji}
-        disabled={!customEmojiInput.trim()}
-        class="px-4 py-2 bg-white text-black rounded-lg font-medium text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-all"
-      >
-        Add
-      </button>
-    </div>
-  </div>
-  
-  <!-- Desktop: near message -->
+  <button type="button" class="fixed inset-0 z-40 hidden md:block cursor-default" on:click={() => showReactionPicker = false} aria-label="Close reaction picker"></button>
+
   <div class="hidden md:block absolute z-50 -top-10 left-12">
     <div class="hover:scale-x-105 transition-all duration-300 *:transition-all *:duration-300 flex justify-start text-xl items-center shadow-xl z-10 bg-[#1a1a1a] gap-1 p-1.5 rounded-full border border-white/10">
       {#each QUICK_REACTIONS as reaction}
@@ -369,101 +267,15 @@
 {/if}
 
 {#if showContextMenu}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div 
-    class="fixed inset-0 z-40" 
-    on:click|stopPropagation={() => {
-      // Prevent the same tap that opened the menu from also closing it
-      if (Date.now() - contextMenuOpenedAt < 500) return;
-      showContextMenu = false;
-    }}
-    on:touchstart|stopPropagation
-    on:touchend|stopPropagation={(e) => {
-      e.preventDefault();
-      if (Date.now() - contextMenuOpenedAt < 500) return;
-      showContextMenu = false;
-    }}
-  ></div>
-  
-  <!-- Mobile: bottom sheet style -->
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="fixed md:hidden left-4 right-4 bottom-20 z-50 bg-[#222] border border-white/10 rounded-xl shadow-2xl py-1 animate-slide-up" role="menu" tabindex="-1" on:click|stopPropagation on:touchstart|stopPropagation on:touchend|stopPropagation>
-    <button
-      type="button"
-      on:click|stopPropagation={() => { showContextMenu = false; handleReactionClick('❤️', 'heart'); }}
-      on:touchend|stopPropagation|preventDefault={() => { showContextMenu = false; handleReactionClick('❤️', 'heart'); }}
-      class="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-3"
-    >
-      {@html getReactionSvg('heart')}
-      Like
-    </button>
-    <button
-      type="button"
-      on:click|stopPropagation={() => { showContextMenu = false; reactionPickerOpenedAt = Date.now(); showReactionPicker = true; }}
-      on:touchend|stopPropagation|preventDefault={() => { showContextMenu = false; reactionPickerOpenedAt = Date.now(); showReactionPicker = true; }}
-      class="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-3"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-        <line x1="9" y1="9" x2="9.01" y2="9"/>
-        <line x1="15" y1="9" x2="15.01" y2="9"/>
-      </svg>
-      Add reaction
-    </button>
-    {#if onOpenThread}
-      <button
-        type="button"
-        on:click|stopPropagation={() => { showContextMenu = false; onOpenThread && onOpenThread(message); }}
-        on:touchend|stopPropagation|preventDefault={() => { showContextMenu = false; onOpenThread && onOpenThread(message); }}
-        class="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-3"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-        Reply in thread
-      </button>
-    {/if}
-    {#if isOwn}
-      <button
-        type="button"
-        on:click|stopPropagation={startEdit}
-        on:touchend|stopPropagation|preventDefault={startEdit}
-        class="w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-3"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-        </svg>
-        Edit
-      </button>
-    {/if}
-    {#if isOwn}
-      <button
-        type="button"
-        on:click|stopPropagation={() => { showContextMenu = false; handleDelete(); }}
-        on:touchend|stopPropagation|preventDefault={() => { showContextMenu = false; handleDelete(); }}
-        class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-white/10 transition-colors flex items-center gap-3"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6" />
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        </svg>
-        Delete message
-      </button>
-    {/if}
-  </div>
+  <button type="button" class="fixed inset-0 z-40 hidden md:block cursor-default" on:click={() => showContextMenu = false} aria-label="Close message menu"></button>
 
-  <!-- Desktop: at cursor position -->
-  <div 
+  <div
     class="hidden md:block fixed z-50 bg-[#222] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[160px] animate-scale-in"
     style="left: {contextMenuX}px; top: {contextMenuY}px;"
   >
     <button
       type="button"
-      on:click|stopPropagation={() => { showContextMenu = false; handleReactionClick('❤️', 'heart'); }}
+      on:click|stopPropagation={() => handleReactionClick('❤️', 'heart')}
       class="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
     >
       <span class="text-base leading-none">❤️</span>
@@ -472,7 +284,10 @@
     {#if onOpenThread}
       <button
         type="button"
-        on:click|stopPropagation={() => { showContextMenu = false; onOpenThread && onOpenThread(message); }}
+        on:click|stopPropagation={() => {
+          showContextMenu = false;
+          onOpenThread?.(message);
+        }}
         class="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -483,7 +298,10 @@
     {/if}
     <button
       type="button"
-      on:click|stopPropagation={() => { showContextMenu = false; reactionPickerOpenedAt = Date.now(); showReactionPicker = true; }}
+      on:click|stopPropagation={() => {
+        showContextMenu = false;
+        showReactionPicker = true;
+      }}
       class="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -506,11 +324,9 @@
         </svg>
         Edit
       </button>
-    {/if}
-    {#if isOwn}
       <button
         type="button"
-        on:click|stopPropagation={() => { showContextMenu = false; handleDelete(); }}
+        on:click|stopPropagation={handleDelete}
         class="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10 transition-colors flex items-center gap-2"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -522,14 +338,134 @@
     {/if}
   </div>
 {/if}
+
+<Drawer.Root open={showMobileMenu} onOpenChange={(open) => { showMobileMenu = open; if (!open) mobileMenuMode = 'actions'; }}>
+  <Drawer.Portal>
+    <Drawer.Overlay class="fixed inset-0 bg-black/60 z-40 md:hidden" />
+    <Drawer.Content class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-[#222] border-t border-white/10 rounded-t-2xl outline-none" style="padding-bottom: env(safe-area-inset-bottom);">
+      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/20 mt-4 mb-6"></div>
+
+      <div class="px-4 pb-6">
+        {#if mobileMenuMode === 'actions'}
+          <div class="space-y-2">
+            <button
+              type="button"
+              on:click={() => handleReactionClick('❤️', 'heart')}
+              class="w-full px-4 py-3 text-left text-sm text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors flex items-center gap-3"
+            >
+              {@html getReactionSvg('heart')}
+              Like
+            </button>
+            <button
+              type="button"
+              on:click={() => { mobileMenuMode = 'reactions'; }}
+              class="w-full px-4 py-3 text-left text-sm text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors flex items-center gap-3"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+              </svg>
+              Add reaction
+            </button>
+            {#if onOpenThread}
+              <button
+                type="button"
+                on:click={() => {
+                  closeMenus();
+                  onOpenThread?.(message);
+                }}
+                class="w-full px-4 py-3 text-left text-sm text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors flex items-center gap-3"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Reply in thread
+              </button>
+            {/if}
+            {#if isOwn}
+              <button
+                type="button"
+                on:click={startEdit}
+                class="w-full px-4 py-3 text-left text-sm text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors flex items-center gap-3"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Edit
+              </button>
+              <button
+                type="button"
+                on:click={handleDelete}
+                class="w-full px-4 py-3 text-left text-sm text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors flex items-center gap-3"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Delete message
+              </button>
+            {/if}
+          </div>
+        {:else}
+          <div class="flex items-center justify-between mb-4">
+            <button type="button" on:click={() => { mobileMenuMode = 'actions'; }} class="text-sm text-white/60 hover:text-white transition-colors">
+              Back
+            </button>
+            <h3 class="text-sm font-semibold text-white">Add Reaction</h3>
+            <div class="w-10"></div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 mb-4">
+            {#each QUICK_REACTIONS as reaction}
+              <button
+                type="button"
+                on:click={() => handleReactionClick(reaction.emoji)}
+                class="bg-white/10 rounded-full px-4 py-3 text-2xl text-white transition-transform duration-200 active:scale-95"
+                aria-label={reaction.name}
+              >
+                {reaction.emoji}
+              </button>
+            {/each}
+          </div>
+
+          <div class="flex gap-2">
+            <input
+              type="text"
+              bind:value={customEmojiInput}
+              placeholder="Type any emoji..."
+              class="flex-1 px-3 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/30 outline-none focus:border-white/30"
+              on:keydown={(e) => e.key === 'Enter' && handleCustomEmoji()}
+            />
+            <button
+              type="button"
+              on:click={handleCustomEmoji}
+              disabled={!customEmojiInput.trim()}
+              class="px-4 py-3 bg-white text-black rounded-lg font-medium text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-all"
+            >
+              Add
+            </button>
+          </div>
+        {/if}
+      </div>
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
-  class="group relative px-4 md:px-5 {showHeader ? 'mt-4 pt-1' : 'mt-0.5'} {(showContextMenu || showReactionPicker || isEditing) ? 'bg-white/5' : ''} rounded-xl"
+  class="group message-bubble relative px-4 md:px-5 {showHeader ? 'mt-4 pt-1' : 'mt-0.5'} {(showContextMenu || showReactionPicker || showMobileMenu || isEditing) ? 'bg-white/5' : ''} rounded-xl"
   data-message-id={message.id}
   on:contextmenu={handleContextMenu}
-  on:touchstart={handleTouchStart}
-  on:touchend={handleTouchEnd}
-  on:touchmove={handleTouchMove}
+  on:pointerdown={handlePointerDown}
+  on:pointermove={handlePointerMove}
+  on:pointerup={handlePointerUp}
+  on:pointercancel={() => {
+    clearPressTimer();
+    movedTooMuch = true;
+    longPressFired = false;
+  }}
   in:fly={{ y: 20, duration: 200 }}
   style="-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"
 >
@@ -558,6 +494,7 @@
       {#if isEditing}
         <div class="mt-1">
           <textarea
+            bind:this={editTextarea}
             bind:value={editContent}
             rows="3"
             class="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/25 outline-none focus:border-white/30 resize-none transition-colors"
@@ -582,8 +519,7 @@
         </div>
       {:else}
         <div 
-          class="text-[14.5px] text-white/80 leading-relaxed break-words whitespace-pre-wrap"
-          style="-webkit-user-select: text; user-select: text; cursor: text;"
+          class="message-content text-[14.5px] text-white/80 leading-relaxed break-words whitespace-pre-wrap"
         >
           {@html highlightedContent}
         </div>
@@ -599,6 +535,7 @@
             {@const hasReacted = reaction.users.includes($authStore.user?.username)}
             {@const svgName = getSvgNameForEmoji(reaction.emoji) || reaction.emoji}
             <button
+              type="button"
               on:click={() => handleReactionClick(reaction.emoji, svgName)}
               class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all duration-200 border transform hover:scale-105 active:scale-95 {hasReacted ? 'bg-white/20 border-white/40 text-white' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}"
             >
@@ -616,6 +553,7 @@
       <!-- Thread Reply Button -->
       {#if onOpenThread && message.replyCount > 0}
         <button
+          type="button"
           on:click={() => onOpenThread && onOpenThread(message)}
           class="flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-lg text-xs text-white/50 hover:text-white hover:bg-white/5 transition-all duration-200"
         >
@@ -663,46 +601,25 @@
 </div>
 
 <style>
-  /* Prevent context menu and selection on images in messages */
-  :global(.text-white\/80 img) {
+  :global(.message-content img) {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     user-select: none;
     pointer-events: auto;
   }
 
-  /* iOS-specific fixes for text selection */
-  @supports (-webkit-touch-callout: none) {
-    /* Prevent text selection on the entire message bubble */
-    .group {
-      -webkit-user-select: none !important;
-      -webkit-touch-callout: none !important;
-      user-select: none !important;
-    }
-    
-    /* Enable text selection for message content only when not interacting */
-    .text-white\/80 {
-      -webkit-user-select: text !important;
-      user-select: text !important;
-      pointer-events: none;
-    }
-    
-    /* Prevent tap highlight on buttons */
-    button {
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-    }
-    
-    /* Prevent selection on the entire message container during touch */
-    .group:active {
-      -webkit-user-select: none !important;
-      user-select: none !important;
-    }
+  .message-content {
+    -webkit-user-select: text;
+    user-select: text;
   }
-  
-  /* Force prevent selection on all touch devices */
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   @media (hover: none) and (pointer: coarse) {
-    .group {
+    .message-bubble,
+    .message-bubble * {
       -webkit-user-select: none !important;
       -webkit-touch-callout: none !important;
       user-select: none !important;

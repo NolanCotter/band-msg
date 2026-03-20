@@ -4,7 +4,7 @@ import { env } from '$env/dynamic/private';
 
 export const GET: RequestHandler = async ({ url }) => {
   const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID || '';
-  const redirectUri = `${url.origin}/api/auth/google/callback`;
+  const redirectUri = env.GOOGLE_REDIRECT_URI || `${url.origin}/api/auth/google/callback`;
   
   if (!GOOGLE_CLIENT_ID) {
     console.error('ERROR: GOOGLE_CLIENT_ID is not set');

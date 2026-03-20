@@ -3,8 +3,6 @@ import { getSessionToken } from "$lib/server/auth";
 import { api } from "../../../../convex/_generated/api";
 import { getConvexHttpClient } from "$lib/server/convex";
 
-const convex = getConvexHttpClient();
-
 export async function GET({ url, cookies, locals }: any) {
   const sessionToken = locals.sessionToken ?? getSessionToken(cookies);
   if (!sessionToken) {
@@ -12,6 +10,7 @@ export async function GET({ url, cookies, locals }: any) {
   }
 
   try {
+    const convex = getConvexHttpClient();
     // Fetch all approved users from Convex
     const users = await convex.query(api.auth.getApprovedUsers, { sessionToken });
     

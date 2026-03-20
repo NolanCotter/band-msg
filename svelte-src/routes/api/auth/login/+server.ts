@@ -3,8 +3,6 @@ import { delayMs, getClientIp } from "$lib/server/request";
 import { api } from "../../../../../convex/_generated/api";
 import { getConvexHttpClient } from "$lib/server/convex";
 
-const convex = getConvexHttpClient();
-
 const LOGIN_IP_MAX_ATTEMPTS = 30;
 const LOGIN_ACCOUNT_MAX_ATTEMPTS = 10;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -42,6 +40,7 @@ const toJson = (body: unknown, status = 200) =>
 
 export const POST = async ({ request, cookies }: any) => {
   try {
+    const convex = getConvexHttpClient();
     const body = await request.json().catch(() => null);
     const username = typeof body?.username === "string" ? body.username : "";
     const password = typeof body?.password === "string" ? body.password : "";

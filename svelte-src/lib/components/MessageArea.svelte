@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, afterUpdate } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { Drawer } from 'vaul-svelte';
   import { authStore } from '../stores/auth';
   import { convexChannelStore } from '../stores/convexChannels';
@@ -52,7 +52,7 @@
   let mobileTouchStartX = 0;
   let mobileTouchStartY = 0;
   let mobileMovedTooMuch = false;
-  let touchFired = false; // Prevent double-fire on touch devices
+  let mobileLongPressTriggered = false;
   let isKeyboardVisible = false;
   let messageInputEl: HTMLInputElement | HTMLTextAreaElement;
 
@@ -95,65 +95,47 @@
     c => c.id === $convexChannelStore.selectedChannelId
   );
 
-  // Load messages when channel changes
-  $: if ($convexChannelStore.selectedChannelId) {
-    messageStore.loadMessages($convexChannelStore.selectedChannelId);
-  }
-
   // Check if user is near bottom to enable auto-scroll
   function handleScroll() {
     if (!messageContainer) return;
     const { scrollTop, scrollHeight, clientHeight } = messageContainer;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
     shouldAutoScroll = distanceFromBottom < 100;
-    console.log('[MessageArea] Scroll position:', { scrollTop, scrollHeight, clientHeight, distanceFromBottom, shouldAutoScroll });
   }
 
-  function scrollToBottom(force = false) {
+  async function scrollToBottom(force = false) {
+    await tick();
+
     if (!force && !shouldAutoScroll) return;
-    
-    requestAnimationFrame(() => {
-      if (messageContainer) {
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-        console.log('[MessageArea] Scrolled to bottom, force:', force);
-      }
-    });
+
+    if (messageContainer) {
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
   }
 
-  // Only auto-scroll when channel changes - let user scroll freely otherwise
-  let lastLoadedChannelId = '';
-  
-  $: if ($convexChannelStore.selectedChannelId && $convexChannelStore.selectedChannelId !== lastLoadedChannelId) {
-    lastLoadedChannelId = $convexChannelStore.selectedChannelId;
-    shouldAutoScroll = true;
-    console.log('[MessageArea] Channel changed to:', $convexChannelStore.selectedChannelId);
-    messageStore.subscribeToTyping($convexChannelStore.selectedChannelId);
-    messageStore.loadMessages($convexChannelStore.selectedChannelId);
-  }
-  
-  // Track new messages and auto-scroll ONLY if user is already at bottom
+  let scrolledChannelId = '';
   let lastMessageCount = 0;
-  $: if ($messageStore.messages.length !== lastMessageCount) {
-    const oldCount = lastMessageCount;
-    lastMessageCount = $messageStore.messages.length;
-    
-    // Scroll on first load
-    if (oldCount === 0 && $messageStore.messages.length > 0) {
-      setTimeout(() => {
-        if (messageContainer) {
-          messageContainer.scrollTop = messageContainer.scrollHeight;
-          console.log('[MessageArea] Initial scroll to bottom');
-        }
-      }, 100);
-    }
-    // Only auto-scroll for new messages if user is near bottom (within 150px)
-    else if (oldCount > 0 && shouldAutoScroll && messageContainer) {
-      setTimeout(() => {
-        if (messageContainer) {
-          messageContainer.scrollTop = messageContainer.scrollHeight;
-          console.log('[MessageArea] Auto-scrolled for new message');
-        }
-      }, 50);
+
+  $: if (($convexChannelStore.selectedChannelId ?? '') !== scrolledChannelId) {
+    scrolledChannelId = $convexChannelStore.selectedChannelId ?? '';
+    shouldAutoScroll = true;
+    lastMessageCount = 0;
+  }
+
+  $: {
+    const selectedChannelId = $convexChannelStore.selectedChannelId;
+    const messageCount = $messageStore.messages.length;
+
+    if (!selectedChannelId) {
+      lastMessageCount = messageCount;
+    } else if (messageCount > 0 && lastMessageCount === 0) {
+      lastMessageCount = messageCount;
+      void scrollToBottom(true);
+    } else if (messageCount > lastMessageCount) {
+      lastMessageCount = messageCount;
+      void scrollToBottom(false);
+    } else if (messageCount < lastMessageCount) {
+      lastMessageCount = messageCount;
     }
   }
 
@@ -287,79 +269,68 @@
   }
 
   async function selectChannel(channelId: string) {
-    console.log('[MessageArea] Selecting channel:', channelId);
-    
-    // Reset scroll state for new channel
     shouldAutoScroll = true;
-    lastMessageCount = 0; // Reset so initial load scroll triggers
-    
-    // Subscribe to typing indicators
-    messageStore.subscribeToTyping(channelId);
-    
+    lastMessageCount = 0;
     convexChannelStore.selectChannel(channelId);
-    await messageStore.loadMessages(channelId);
     showMobileChannels = false;
-    
-    // Force scroll to bottom after messages load
-    setTimeout(() => {
-      if (messageContainer) {
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-        console.log('[MessageArea] Forced scroll to bottom after channel selection');
-      }
-    }, 200);
   }
 
-  function handleMobileChannelTouchStart(e: TouchEvent, channel: any) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const touch = e.touches[0];
-    mobileTouchStartX = touch.clientX;
-    mobileTouchStartY = touch.clientY;
+  function clearMobileLongPress() {
+    if (mobileTouchTimer) {
+      clearTimeout(mobileTouchTimer);
+      mobileTouchTimer = null;
+    }
+  }
+
+  function handleMobileChannelPointerDown(e: PointerEvent, channel: any) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    mobileTouchStartX = e.clientX;
+    mobileTouchStartY = e.clientY;
     mobileMovedTooMuch = false;
-    
+    mobileLongPressTriggered = false;
+
+    clearMobileLongPress();
     mobileTouchTimer = setTimeout(() => {
       if (!mobileMovedTooMuch) {
+        mobileLongPressTriggered = true;
         mobileMenuChannel = channel;
         mobileNewChannelName = channel.name;
+        isMobileRenaming = false;
         showMobileChannelMenu = true;
         showMobileChannels = false;
         vibrateMedium();
       }
-    }, 500);
+    }, 550);
   }
 
-  function handleMobileChannelTouchMove(e: TouchEvent) {
+  function handleMobileChannelPointerMove(e: PointerEvent) {
     if (mobileTouchTimer) {
-      const touch = e.touches[0];
-      const deltaX = Math.abs(touch.clientX - mobileTouchStartX);
-      const deltaY = Math.abs(touch.clientY - mobileTouchStartY);
+      const deltaX = Math.abs(e.clientX - mobileTouchStartX);
+      const deltaY = Math.abs(e.clientY - mobileTouchStartY);
       
       if (deltaY > 10 || deltaX > 10) {
-        clearTimeout(mobileTouchTimer);
-        mobileTouchTimer = null;
+        clearMobileLongPress();
         mobileMovedTooMuch = true;
       }
     }
   }
 
-  function handleMobileChannelTouchEnd(e: TouchEvent, channel: any) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (mobileTouchTimer) {
-      clearTimeout(mobileTouchTimer);
-      mobileTouchTimer = null;
-    }
-    
-    // Mark that touch fired - this prevents click from also firing
-    touchFired = true;
-    setTimeout(() => { touchFired = false; }, 100);
-    
-    if (!mobileMovedTooMuch && !showMobileChannelMenu) {
+  function handleMobileChannelPointerUp(channel: any) {
+    clearMobileLongPress();
+
+    if (!mobileMovedTooMuch && !mobileLongPressTriggered) {
       vibrateMedium();
-      selectChannel(channel.id);
+      void selectChannel(channel.id);
     }
+
+    mobileLongPressTriggered = false;
+  }
+
+  function handleMobileChannelPointerCancel() {
+    clearMobileLongPress();
+    mobileMovedTooMuch = true;
+    mobileLongPressTriggered = false;
   }
 
   async function renameMobileChannel() {
@@ -416,22 +387,8 @@
       });
 
       await convexChannelStore.loadChannels();
-      
-      // Reset scroll state
-      shouldAutoScroll = true;
-      lastMessageCount = 0;
-      
-      if ($convexChannelStore.selectedChannelId === mobileChannelToDelete.id) {
-        const firstChannel = $convexChannelStore.channels[0];
-        if (firstChannel) {
-          await selectChannel(firstChannel.id);
-          // Force scroll to bottom after a delay
-          setTimeout(() => {
-            if (messageContainer) {
-              messageContainer.scrollTop = messageContainer.scrollHeight;
-            }
-          }, 200);
-        }
+      if ($convexChannelStore.channels.length > 0 && !$convexChannelStore.selectedChannelId) {
+        await selectChannel($convexChannelStore.channels[0].id);
       }
     } catch (err) {
       console.error('[MessageArea] Failed to delete channel:', err);
@@ -935,26 +892,21 @@
           </h3>
           <div class="space-y-1">
             {#each $convexChannelStore.channels as channel}
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <div
-                on:click={() => {
-                  // Skip if touch just fired to prevent double-fire
-                  if (touchFired) return;
-                  vibrateMedium();
-                  selectChannel(channel.id);
-                }}
-                on:touchstart={(e) => handleMobileChannelTouchStart(e, channel)}
-                on:touchmove={handleMobileChannelTouchMove}
-                on:touchend={(e) => handleMobileChannelTouchEnd(e, channel)}
-                on:touchcancel={(e) => handleMobileChannelTouchEnd(e, channel)}
-                class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors cursor-pointer active:bg-white/10 {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
-                style="-webkit-tap-highlight-color: transparent;"
+              <button
+                type="button"
+                on:pointerdown={(e) => handleMobileChannelPointerDown(e, channel)}
+                on:pointermove={handleMobileChannelPointerMove}
+                on:pointerup={() => handleMobileChannelPointerUp(channel)}
+                on:pointercancel={handleMobileChannelPointerCancel}
+                on:contextmenu|preventDefault
+                class="flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-colors active:bg-white/10 {$convexChannelStore.selectedChannelId === channel.id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/70'}"
+                style="-webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
                 <span class="text-base font-medium truncate">{channel.name}</span>
-              </div>
+              </button>
             {/each}
           </div>
         </div>
@@ -1024,7 +976,7 @@
   <Drawer.Portal>
     <Drawer.Overlay class="fixed inset-0 bg-black/60 z-[100]" />
     <Drawer.Content class="fixed bottom-0 left-0 right-0 z-[101] bg-[#1a1a1a] border-t border-white/10 rounded-t-2xl outline-none">
-      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/20 mt-4 mb-6" />
+      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/20 mt-4 mb-6"></div>
       
       {#if mobileMenuChannel}
         <div class="px-6 pb-8">
@@ -1033,8 +985,9 @@
           
           {#if isMobileRenaming}
             <div class="mb-4">
-              <label class="block text-sm font-medium text-white/70 mb-2">New Channel Name</label>
+              <label for="mobile-channel-name" class="block text-sm font-medium text-white/70 mb-2">New Channel Name</label>
               <input
+                id="mobile-channel-name"
                 type="text"
                 bind:value={mobileNewChannelName}
                 placeholder="Enter new name..."

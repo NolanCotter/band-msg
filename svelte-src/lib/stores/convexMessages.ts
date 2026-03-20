@@ -39,6 +39,7 @@ function createConvexMessageStore() {
   let currentSessionToken: string | null = null;
   let typingTimer: ReturnType<typeof setTimeout> | null = null;
   let currentTypingChannelId: string | null = null;
+  let currentMessageChannelId: string | null = null;
 
   return {
     subscribe,
@@ -49,20 +50,18 @@ function createConvexMessageStore() {
     },
 
     async loadMessages(channelId: string) {
-      // Guard against duplicate loads
-      update(state => {
-        if (state.isLoading) {
-          console.log('[Convex] Messages already loading, skipping');
-          return state;
-        }
-        return { ...state, isLoading: true };
-      });
-      
       if (!currentSessionToken) {
         console.error('[Convex] No session token available for loading messages');
         update(state => ({ ...state, isLoading: false }));
         return;
       }
+
+      if (currentMessageChannelId === channelId && unsubscribe) {
+        return;
+      }
+
+      currentMessageChannelId = channelId;
+      update(state => ({ ...state, messages: [], isLoading: true }));
 
       console.log('[Convex] Loading messages for channel:', channelId, 'with session token:', currentSessionToken.substring(0, 10) + '...');
 
@@ -94,6 +93,15 @@ function createConvexMessageStore() {
         console.error('[Convex] Error loading messages:', error);
         update(state => ({ ...state, isLoading: false }));
       }
+    },
+
+    clearMessages() {
+      currentMessageChannelId = null;
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      update(state => ({ ...state, messages: [], isLoading: false }));
     },
 
     async sendMessage(channelId: string, content: string) {
@@ -292,6 +300,7 @@ function createConvexMessageStore() {
         typingUnsubscribe = null;
       }
       currentTypingChannelId = null;
+      currentMessageChannelId = null;
     }
   };
 }

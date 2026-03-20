@@ -4,12 +4,11 @@ import { getSqlClient, getUserBySession } from '$lib/server/db';
 import { getConvexHttpClient } from "$lib/server/convex";
 import { api } from "../../../../../convex/_generated/api";
 
-const sql = getSqlClient();
-const convex = getConvexHttpClient();
-
 const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+  const sql = getSqlClient();
+  const convex = getConvexHttpClient();
   const sessionToken = (locals as any).sessionToken;
   if (!sessionToken) {
     return json({ error: 'Unauthorized' }, { status: 401 });

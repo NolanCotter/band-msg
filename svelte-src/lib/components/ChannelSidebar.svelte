@@ -45,12 +45,6 @@
   async function selectChannel(channelId: string) {
     console.log('[ChannelSidebar] Selecting channel:', channelId);
     convexChannelStore.selectChannel(channelId);
-    try {
-      await convexMessageStore.loadMessages(channelId);
-      console.log('[ChannelSidebar] Messages loaded for channel:', channelId);
-    } catch (error) {
-      console.error('[ChannelSidebar] Error loading messages:', error);
-    }
   }
 
   function handleContextMenu(e: MouseEvent, channel: any) {
@@ -323,7 +317,7 @@
   <Drawer.Portal>
     <Drawer.Overlay class="fixed inset-0 bg-black/60 z-[100]" />
     <Drawer.Content class="fixed bottom-0 left-0 right-0 z-[101] bg-[#1a1a1a] border-t border-white/10 rounded-t-2xl outline-none">
-      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/20 mt-4 mb-6" />
+      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/20 mt-4 mb-6"></div>
       
       {#if menuChannel}
         <div class="px-6 pb-8">
@@ -332,8 +326,9 @@
           
           {#if isRenaming}
             <div class="mb-4">
-              <label class="block text-sm font-medium text-white/70 mb-2">New Channel Name</label>
+              <label for="desktop-channel-name" class="block text-sm font-medium text-white/70 mb-2">New Channel Name</label>
               <input
+                id="desktop-channel-name"
                 type="text"
                 bind:value={newChannelName}
                 placeholder="Enter new name..."
@@ -386,17 +381,19 @@
                 </button>
               {/if}
               
-              <button
-                type="button"
-                on:click={confirmDelete}
-                class="w-full px-4 py-3 text-left text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors flex items-center gap-3"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                <span class="font-medium">Delete Channel</span>
-              </button>
+              {#if $authStore.user?.role === 'admin'}
+                <button
+                  type="button"
+                  on:click={confirmDelete}
+                  class="w-full px-4 py-3 text-left text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors flex items-center gap-3"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  <span class="font-medium">Delete Channel</span>
+                </button>
+              {/if}
             </div>
           {/if}
         </div>

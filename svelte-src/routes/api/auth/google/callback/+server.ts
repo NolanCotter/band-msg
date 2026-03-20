@@ -7,13 +7,10 @@ import crypto from 'node:crypto';
 import { getConvexHttpClient } from "$lib/server/convex";
 import { env } from '$env/dynamic/private';
 
-const convex = getConvexHttpClient();
-const sql = getSqlClient();
-
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const GOOGLE_CLIENT_ID = env.GOOGLE_CLIENT_ID || '';
   const GOOGLE_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET || '';
-  const GOOGLE_REDIRECT_URI = `${url.origin}/api/auth/google/callback`;
+  const GOOGLE_REDIRECT_URI = env.GOOGLE_REDIRECT_URI || `${url.origin}/api/auth/google/callback`;
   
   const code = url.searchParams.get('code');
   const error = url.searchParams.get('error');
@@ -29,6 +26,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   }
 
   try {
+    const convex = getConvexHttpClient();
+    const sql = getSqlClient();
+
     // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',

@@ -97,9 +97,9 @@
   }
 
   function scrollToBottom() {
-    if (messageContainer) {
-      messageContainer.scrollTop = messageContainer.scrollHeight;
-    }
+    document.querySelectorAll<HTMLElement>('[data-thread-scroll]').forEach((container) => {
+      container.scrollTop = container.scrollHeight;
+    });
   }
 
   onMount(() => {
@@ -151,7 +151,7 @@
         </div>
       </div>
 
-      <div bind:this={messageContainer} class="flex-1 overflow-y-auto py-2 scrollbar-hide">
+      <div bind:this={messageContainer} data-thread-scroll class="flex-1 overflow-y-auto py-2 scrollbar-hide">
         {#if isLoading}
           <div class="flex items-center justify-center py-8">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20"></div>
@@ -187,7 +187,7 @@
         {/if}
       </div>
 
-      <div class="px-4 pb-4 pt-2 border-t border-white/10 shrink-0">
+      <form class="px-4 pb-4 pt-2 border-t border-white/10 shrink-0" on:submit|preventDefault={sendReply}>
         <div class="flex items-end gap-2">
           <textarea
             bind:value={replyInput}
@@ -197,8 +197,7 @@
             class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 outline-none focus:border-white/30 resize-none transition-colors min-h-[44px] max-h-[120px]"
           ></textarea>
           <button
-            type="button"
-            on:click={sendReply}
+            type="submit"
             disabled={!replyInput.trim()}
             class="p-3 rounded-xl transition-all duration-200 shrink-0 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed {replyInput.trim() ? 'bg-white text-black active:bg-white/90' : 'bg-white/5 text-white/20'}"
             aria-label="Send reply"
@@ -209,15 +208,15 @@
             </svg>
           </button>
         </div>
-      </div>
+      </form>
     </Drawer.Content>
   </Drawer.Portal>
 </Drawer.Root>
 
 <!-- Desktop: Side panel -->
-<div class="hidden md:flex fixed inset-0 z-[200]">
+<div class="hidden md:flex fixed inset-0 z-[200] pointer-events-none">
   <div 
-    class="absolute inset-0 bg-black/60"
+    class="absolute inset-0 bg-black/60 pointer-events-auto"
     on:click={onClose}
     on:keydown={(e) => e.key === 'Escape' && onClose()}
     role="button"
@@ -225,7 +224,7 @@
     aria-label="Close thread"
   ></div>
   
-  <div class="absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-[#1a1a1a] border-l border-white/10 flex flex-col animate-slide-left" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
+  <div class="absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-[#1a1a1a] border-l border-white/10 flex flex-col animate-slide-left pointer-events-auto" style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
     <div class="h-14 flex items-center justify-between px-4 border-b border-white/10 shrink-0">
       <h3 class="text-[15px] font-semibold text-white">Thread</h3>
       <button
@@ -263,7 +262,7 @@
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto py-3 scrollbar-hide">
+    <div data-thread-scroll class="flex-1 overflow-y-auto py-3 scrollbar-hide">
       {#if isLoading}
         <div class="flex items-center justify-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20"></div>
@@ -299,7 +298,7 @@
       {/if}
     </div>
 
-    <div class="px-4 pb-4 pt-2 border-t border-white/10 shrink-0">
+    <form class="px-4 pb-4 pt-2 border-t border-white/10 shrink-0" on:submit|preventDefault={sendReply}>
       <div class="flex items-end gap-2">
         <textarea
           bind:value={replyInput}
@@ -309,8 +308,7 @@
           class="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 outline-none focus:border-white/30 resize-none transition-colors min-h-[44px] max-h-[120px]"
         ></textarea>
         <button
-          type="button"
-          on:click={sendReply}
+          type="submit"
           disabled={!replyInput.trim()}
           class="p-3 rounded-xl transition-all duration-200 shrink-0 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed {replyInput.trim() ? 'bg-white text-black active:bg-white/90' : 'bg-white/5 text-white/20'}"
           aria-label="Send reply"
@@ -321,7 +319,7 @@
           </svg>
         </button>
       </div>
-    </div>
+    </form>
   </div>
 </div>
 

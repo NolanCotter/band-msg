@@ -4,8 +4,6 @@ import { getSessionToken } from '$lib/server/auth';
 import { api } from "../../../../../convex/_generated/api";
 import { getConvexHttpClient } from "$lib/server/convex";
 
-const convex = getConvexHttpClient();
-
 export const GET: RequestHandler = async ({ cookies }) => {
   const sessionToken = getSessionToken(cookies);
 
@@ -14,6 +12,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
   }
 
   try {
+    const convex = getConvexHttpClient();
     // Read from Convex to get fresh user data (including updated status after approval)
     const user = await convex.query(api.auth.getUser, { sessionToken });
 

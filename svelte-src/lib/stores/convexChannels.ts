@@ -26,6 +26,15 @@ function createConvexChannelStore() {
   let unsubscribe: (() => void) | null = null;
   let _selectedChannelId: string | null = null;
 
+  function resolveSelectedChannelId(channels: Channel[]) {
+    if (_selectedChannelId && channels.some((channel) => channel.id === _selectedChannelId)) {
+      return _selectedChannelId;
+    }
+
+    _selectedChannelId = channels[0]?.id ?? null;
+    return _selectedChannelId;
+  }
+
   return {
     subscribe,
 
@@ -55,16 +64,12 @@ function createConvexChannelStore() {
         });
         console.log('[Convex Channels] Initial channels loaded:', initialChannels.length, 'channels');
 
-        // Preserve existing selection or select first channel
-        const shouldAutoSelect = !_selectedChannelId && initialChannels.length > 0;
-        if (shouldAutoSelect) {
-          _selectedChannelId = initialChannels[0].id;
-        }
+        const selectedChannelId = resolveSelectedChannelId(initialChannels);
 
         update(state => ({
           ...state,
           channels: initialChannels,
-          selectedChannelId: _selectedChannelId || state.selectedChannelId || initialChannels[0]?.id || null,
+          selectedChannelId,
           isLoading: false,
         }));
 
@@ -74,21 +79,14 @@ function createConvexChannelStore() {
           { sessionToken: currentSessionToken },
           (channels) => {
             console.log('[Convex Channels] Channels updated:', channels.length, 'channels');
-            
-            // Preserve current selection, only auto-select if nothing selected
-            const currentSelected = _selectedChannelId;
-            const newSelectedId = currentSelected || (channels[0]?.id ?? null);
-            
-            if (!currentSelected && channels.length > 0) {
-              _selectedChannelId = channels[0].id;
-            }
-            
-            console.log('[Convex Channels] Selected channel:', newSelectedId);
+            const selectedChannelId = resolveSelectedChannelId(channels);
+
+            console.log('[Convex Channels] Selected channel:', selectedChannelId);
             
             update(state => ({
               ...state,
               channels,
-              selectedChannelId: _selectedChannelId || state.selectedChannelId || newSelectedId,
+              selectedChannelId,
               isLoading: false,
             }));
           }

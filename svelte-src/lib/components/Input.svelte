@@ -12,6 +12,10 @@
   export function focus() {
     inputElement?.focus();
   }
+
+  export function scrollIntoView(options?: ScrollIntoViewOptions) {
+    inputElement?.scrollIntoView(options);
+  }
 </script>
 
 <div class="relative group">

@@ -146,23 +146,25 @@
           <!-- Username Input -->
           <div class="form-control" in:fly={{ x: -20, duration: 300, delay: 150 }}>
             <input 
+              id="auth-username"
               required 
               type="text" 
               bind:value={username}
               on:keydown={handleKeyDown}
             />
-            <label>Username</label>
+            <label for="auth-username">Username</label>
           </div>
 
           <!-- Password Input -->
           <div class="form-control" in:fly={{ x: -20, duration: 300, delay: 200 }}>
             <input 
+              id="auth-password"
               required 
               type="password" 
               bind:value={password}
               on:keydown={handleKeyDown}
             />
-            <label>Password</label>
+            <label for="auth-password">Password</label>
           </div>
 
           {#if mode === 'register'}
@@ -174,7 +176,7 @@
                 on:click={() => { mode = 'forgot'; error = ''; }}
                 class="text-xs text-white/40 hover:text-white/80 transition-colors"
               >
-                Forgot password?
+                Recover password
               </button>
             </div>
           {/if}
