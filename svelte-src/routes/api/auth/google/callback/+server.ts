@@ -61,7 +61,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
     const googleUser = await userInfoResponse.json();
 
-    // Check if user exists by Google ID or email
+    // Check SQL for existing user
     const existingUsers = (await sql`
       SELECT * FROM users 
       WHERE google_id = ${googleUser.id} OR username = ${googleUser.email}
@@ -112,19 +112,21 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
       VALUES (${sessionToken}, ${user.id}, ${expiresAt}, ${Date.now()})
     `;
     
-    // Sync to Convex
-    try {
-      await convex.mutation(api.auth.syncExternalUser, {
-        username: user.username,
-        externalId: user.google_id || '',
-        role: user.role,
-        status: user.status,
-        needsUsernameSetup: user.needs_username_setup || false,
-        sessionToken,
-        expiresAt
-      });
-    } catch (syncError) {
-      console.error('Convex sync failed:', syncError);
+    // Only sync new users to Convex - existing users keep their Convex status (which may be approved)
+    if (user.needs_username_setup) {
+      try {
+        await convex.mutation(api.auth.syncExternalUser, {
+          username: user.username,
+          externalId: user.google_id || '',
+          role: user.role,
+          status: user.status,
+          needsUsernameSetup: true,
+          sessionToken,
+          expiresAt
+        });
+      } catch (syncError) {
+        console.error('Convex sync failed:', syncError);
+      }
     }
     
     setSessionCookie(cookies, sessionToken);

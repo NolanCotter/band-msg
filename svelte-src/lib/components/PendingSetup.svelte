@@ -24,15 +24,24 @@
     username = $authStore.user?.username || '';
     displayName = $authStore.user?.display_name || '';
 
-    // Start polling for approval status
+    // Start polling for approval status - check every 2 seconds
     pollInterval = setInterval(async () => {
-      await authStore.refreshUser();
+      console.log('[PendingSetup] Checking for approval status...');
+      await authStore.checkAuth(); // Full auth check, not just refresh
       
-      // Check if user is now approved
-      const currentUser = $authStore.user;
-      if (currentUser && currentUser.status === 'approved') {
+      // Subscribe to get current value after checkAuth completes
+      let currentStatus: string | undefined;
+      const unsubscribe = authStore.subscribe(state => {
+        currentStatus = state.user?.status;
+      });
+      unsubscribe();
+      
+      console.log('[PendingSetup] Current status:', currentStatus);
+      
+      if (currentStatus === 'approved') {
         hasBeenApproved = true;
         stopPolling();
+        console.log('[PendingSetup] User approved! Redirecting...');
         // Redirect to home after a brief moment to show success
         setTimeout(() => {
           goto('/');

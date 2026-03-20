@@ -183,10 +183,10 @@
             type="button"
             on:click={handleSubmit}
             disabled={$authStore.isLoading}
-            class="submit-btn w-full"
+            class="submit-btn w-full flex items-center justify-center gap-2"
             in:scale={{ duration: 300, delay: 300, start: 0.9 }}
           >
-            <span class="submit-text">{mode === 'login' ? 'Sign in' : 'Create account'}</span>
+            <span class="submit-text whitespace-nowrap">{mode === 'login' ? 'Sign in' : 'Create account'}</span>
             <svg class="submit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="5" y1="12" x2="19" y2="12"/>
               <polyline points="12 5 19 12 12 19"/>
