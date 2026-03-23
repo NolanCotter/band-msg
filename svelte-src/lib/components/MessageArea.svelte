@@ -12,7 +12,6 @@
   import Calendar from './Calendar.svelte';
   import NotificationSettings from './NotificationSettings.svelte';
   import Avatar from './Avatar.svelte';
-  import Input from './Input.svelte';
   import GiphyPicker from './GiphyPicker.svelte';
   import CreateChannel from './CreateChannel.svelte';
   import ThreadPanel from './ThreadPanel.svelte';
@@ -54,7 +53,14 @@
   let mobileMovedTooMuch = false;
   let mobileLongPressTriggered = false;
   let isKeyboardVisible = false;
-  let messageInputEl: HTMLInputElement | HTMLTextAreaElement;
+  let messageInputEl: HTMLTextAreaElement | null = null;
+
+  function syncComposerHeight() {
+    if (!messageInputEl) return;
+
+    messageInputEl.style.height = '0px';
+    messageInputEl.style.height = `${Math.min(messageInputEl.scrollHeight, 160)}px`;
+  }
 
   function openThread(message: any) {
     threadMessage = message;
@@ -63,6 +69,7 @@
   
   onMount(() => {
     themeStore.init();
+    syncComposerHeight();
     
     // Handle visual viewport changes (keyboard opening/closing on mobile)
     if (typeof visualViewport !== 'undefined') {
@@ -163,6 +170,7 @@
           }, 5000);
         }
         messageInput = '';
+        syncComposerHeight();
         return;
       }
     }
@@ -180,6 +188,7 @@
       messageInput = '';
       showMentionDropdown = false;
       vibrateSuccess();
+      syncComposerHeight();
       messageStore.stopTyping($convexChannelStore.selectedChannelId);
     } else {
       console.error('[MessageArea] Failed to send:', result.error);
@@ -212,7 +221,7 @@
   }
 
   function handleInput(e: Event) {
-    const target = e.target as HTMLInputElement;
+    const target = e.target as HTMLTextAreaElement;
     const value = target.value;
     const cursorPos = target.selectionStart || 0;
 
@@ -235,11 +244,12 @@
     }
 
     handleTyping();
+    syncComposerHeight();
   }
 
   function insertMention(username: string) {
     const beforeMention = messageInput.slice(0, mentionStartIndex);
-    const afterMention = messageInput.slice(messageInput.selectionStart || mentionStartIndex);
+    const afterMention = messageInput.slice(messageInputEl?.selectionStart || mentionStartIndex);
     messageInput = beforeMention + '@' + username + ' ' + afterMention;
     showMentionDropdown = false;
     
@@ -251,6 +261,7 @@
         inputEl.focus();
         inputEl.setSelectionRange(newPos, newPos);
       }
+      syncComposerHeight();
     }, 0);
   }
 
@@ -432,12 +443,12 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div 
-  class="flex-1 flex flex-col min-w-0 min-h-0 message-area-container" 
+  class="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden message-area-container" 
   style="padding-top: env(safe-area-inset-top);"
   on:click={(e) => {
     // Dismiss keyboard and dropdowns when tapping message area
     const target = e.target as HTMLElement;
-    if (!target.closest('input, textarea, button, .mention-dropdown')) {
+    if (!target.closest('input, textarea, button, .mention-dropdown, .message-composer')) {
       // @ts-ignore
       if (document.activeElement) {
         // @ts-ignore
@@ -689,16 +700,39 @@
   <div 
     bind:this={messageContainer} 
     on:scroll={handleScroll} 
-    class="overflow-y-auto overflow-x-hidden py-3 message-area-messages flex-1" 
+    class="overflow-y-auto overflow-x-hidden py-3 message-area-messages flex-1 min-h-0" 
     style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;"
   >
-    {#each $messageStore.messages as message, i (message.id)}
-      {@const prev = i > 0 ? $messageStore.messages[i - 1] : null}
-      {@const showHeader = !prev || prev.author !== message.author || message.createdAt - prev.createdAt > 300000}
-      <MessageBubble {message} {showHeader} onOpenThread={openThread} />
-    {/each}
+    {#if $messageStore.isLoading}
+      <div class="min-h-full flex items-center justify-center px-6">
+        <div class="text-center">
+          <div class="text-sm font-medium text-white/70">Loading messages...</div>
+          <p class="mt-1 text-xs text-white/35">Pulling in the latest conversation.</p>
+        </div>
+      </div>
+    {:else if !$convexChannelStore.selectedChannelId}
+      <div class="min-h-full flex items-center justify-center px-6">
+        <div class="text-center">
+          <div class="text-sm font-medium text-white/70">Loading channels...</div>
+          <p class="mt-1 text-xs text-white/35">Getting your conversations ready.</p>
+        </div>
+      </div>
+    {:else if $messageStore.messages.length === 0}
+      <div class="min-h-full flex items-center justify-center px-6">
+        <div class="max-w-sm text-center">
+          <div class="text-sm font-medium text-white/75">No messages yet</div>
+          <p class="mt-1 text-xs text-white/35">Start the conversation from the composer below.</p>
+        </div>
+      </div>
+    {:else}
+      {#each $messageStore.messages as message, i (message.id)}
+        {@const prev = i > 0 ? $messageStore.messages[i - 1] : null}
+        {@const showHeader = !prev || prev.author !== message.author || message.createdAt - prev.createdAt > 300000}
+        <MessageBubble {message} {showHeader} onOpenThread={openThread} />
+      {/each}
 
-    <div class="h-4"></div>
+      <div class="h-4"></div>
+    {/if}
   </div>
 
   <!-- Typing indicator -->
@@ -724,7 +758,7 @@
   {/if}
 
   <!-- Input area -->
-  <div class="px-4 pb-3 md:pb-4 shrink-0">
+  <div class="message-composer px-4 pt-2 shrink-0 border-t border-white/10 bg-black/95 backdrop-blur-sm relative z-10" style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem);">
     <div class="relative flex items-end gap-2">
       <!-- GIF Button -->
       <button
@@ -736,11 +770,11 @@
         GIF
       </button>
 
-        <div class="flex-1 relative">
+      <div class="flex-1 min-w-0 relative">
         {#if showMentionDropdown && filteredMembers.length > 0}
           <!-- Position above keyboard on mobile -->
           <div 
-            class="absolute left-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[300] max-h-64 overflow-y-auto"
+            class="mention-dropdown absolute left-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[300] max-h-64 overflow-y-auto"
             style="bottom: calc(100% + 8px);"
           >
             {#each filteredMembers as member}
@@ -758,8 +792,7 @@
             {/each}
           </div>
         {/if}
-        <Input
-          type="text"
+        <textarea
           bind:this={messageInputEl}
           bind:value={messageInput}
           on:input={handleInput}
@@ -775,11 +808,15 @@
               }, 300);
             }
           }}
-          placeholder="Message the band... (type !report [message] to report an issue)"
+          rows="1"
+          disabled={!$convexChannelStore.selectedChannelId}
+          placeholder={$convexChannelStore.selectedChannelId ? "Message the band... (type !report [message] to report an issue)" : "Loading conversation..."}
           maxlength={2000}
           autocomplete="off"
-          class="message-input"
-        />
+          enterkeyhint="send"
+          spellcheck="true"
+          class="message-input block w-full min-h-[46px] max-h-40 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-[16px] leading-5 text-white placeholder:text-white/25 outline-none transition-all duration-200 resize-none overflow-y-auto focus:bg-white/10 focus:border-white/30 focus:ring-2 focus:ring-white/10 hover:border-white/20 disabled:opacity-60 disabled:cursor-not-allowed"
+        ></textarea>
       </div>
       <button
         type="button"

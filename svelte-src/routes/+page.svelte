@@ -29,7 +29,16 @@
   // Watch for channel changes ONLY (not store updates)
   $: {
     const channelId = $convexChannelStore.selectedChannelId;
-    if (channelId && channelId !== lastChannelId && $authStore.user?.status === 'approved' && $convexMessageStore.sessionToken) {
+    const shouldLoadSelectedChannel =
+      !!channelId &&
+      $authStore.user?.status === 'approved' &&
+      !!$convexMessageStore.sessionToken &&
+      (
+        channelId !== lastChannelId ||
+        ($convexMessageStore.messages.length === 0 && !$convexMessageStore.isLoading)
+      );
+
+    if (shouldLoadSelectedChannel && channelId) {
       lastChannelId = channelId;
       convexMessageStore.loadMessages(channelId);
       convexMessageStore.subscribeToTyping(channelId);
@@ -50,6 +59,12 @@
     console.log('[Page] Loading channels from Convex');
     await convexChannelStore.loadChannels();
     console.log('[Page] Channels loaded:', $convexChannelStore.channels.length, 'channels');
+
+    if ($convexChannelStore.selectedChannelId) {
+      await convexMessageStore.loadMessages($convexChannelStore.selectedChannelId);
+      convexMessageStore.subscribeToTyping($convexChannelStore.selectedChannelId);
+      lastChannelId = $convexChannelStore.selectedChannelId;
+    }
 
     await memberStore.loadMembers();
     console.log('[Page] Members loaded');
@@ -182,7 +197,7 @@
 {:else if $authStore.user?.status === 'pending'}
   <PendingSetup />
 {:else}
-  <div class="w-full h-screen flex overflow-hidden bg-black text-white antialiased">
+  <div class="app-shell flex overflow-hidden bg-black text-white antialiased">
     <!-- Channel Sidebar -->
     <ChannelSidebar />
 

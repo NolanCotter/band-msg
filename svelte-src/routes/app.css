@@ -306,10 +306,9 @@ body {
 	margin: 0;
 	padding: 0;
 	width: 100%;
-	height: 100%;
-	height: 100dvh;
-	position: fixed;
-	inset: 0;
+	min-height: 100%;
+	min-height: 100vh;
+	min-height: 100dvh;
 	overflow: hidden;
 	font-family: var(--font-sans);
 	background: #000000;
@@ -318,6 +317,25 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 	touch-action: manipulation;
 	-webkit-tap-highlight-color: transparent;
+	overscroll-behavior: none;
+}
+
+.h-screen {
+	height: 100vh !important;
+	height: 100dvh !important;
+}
+
+.min-h-screen {
+	min-height: 100vh !important;
+	min-height: 100dvh !important;
+}
+
+.app-shell {
+	width: 100%;
+	height: 100vh;
+	height: 100dvh;
+	max-height: 100dvh;
+	overflow: hidden;
 }
 
 *, *::before, *::after {

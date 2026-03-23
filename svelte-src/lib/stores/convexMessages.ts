@@ -40,6 +40,7 @@ function createConvexMessageStore() {
   let typingTimer: ReturnType<typeof setTimeout> | null = null;
   let currentTypingChannelId: string | null = null;
   let currentMessageChannelId: string | null = null;
+  let pendingMessageChannelId: string | null = null;
 
   return {
     subscribe,
@@ -60,7 +61,11 @@ function createConvexMessageStore() {
         return;
       }
 
-      currentMessageChannelId = channelId;
+      if (pendingMessageChannelId === channelId) {
+        return;
+      }
+
+      pendingMessageChannelId = channelId;
       update(state => ({ ...state, messages: [], isLoading: true }));
 
       console.log('[Convex] Loading messages for channel:', channelId, 'with session token:', currentSessionToken.substring(0, 10) + '...');
@@ -78,6 +83,7 @@ function createConvexMessageStore() {
           sessionToken: currentSessionToken
         });
         console.log('[Convex] Initial messages loaded:', initialMessages.length, 'messages');
+        currentMessageChannelId = channelId;
         update(state => ({ messages: initialMessages, isLoading: false, sessionToken: currentSessionToken, typingUsers: state.typingUsers }));
 
         // Then subscribe to real-time updates
@@ -91,12 +97,20 @@ function createConvexMessageStore() {
         );
       } catch (error) {
         console.error('[Convex] Error loading messages:', error);
+        if (currentMessageChannelId === channelId) {
+          currentMessageChannelId = null;
+        }
         update(state => ({ ...state, isLoading: false }));
+      } finally {
+        if (pendingMessageChannelId === channelId) {
+          pendingMessageChannelId = null;
+        }
       }
     },
 
     clearMessages() {
       currentMessageChannelId = null;
+      pendingMessageChannelId = null;
       if (unsubscribe) {
         unsubscribe();
         unsubscribe = null;
@@ -301,6 +315,7 @@ function createConvexMessageStore() {
       }
       currentTypingChannelId = null;
       currentMessageChannelId = null;
+      pendingMessageChannelId = null;
     }
   };
 }
