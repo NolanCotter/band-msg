@@ -1,9 +1,9 @@
 import { useControlledState } from "@react-stately/utils";
-import { HintText } from "@/svelte-src/lib/components/ui/base/input/hint-text";
-import type { InputBaseProps } from "@/svelte-src/lib/components/ui/base/input/input";
-import { InputBase, TextField } from "@/svelte-src/lib/components/ui/base/input/input";
-import { Label } from "@/svelte-src/lib/components/ui/base/input/label";
-import { AmexIcon, DiscoverIcon, MastercardIcon, UnionPayIcon, VisaIcon } from "@/svelte-src/lib/components/ui/foundations/payment-icons";
+import { HintText } from "./hint-text";
+import type { InputBaseProps } from "./input";
+import { InputBase, TextField } from "./input";
+import { Label } from "./label";
+import { AmexIcon, DiscoverIcon, MastercardIcon, UnionPayIcon, VisaIcon } from "../../foundations/payment-icons";
 
 const cardTypes = [
     {

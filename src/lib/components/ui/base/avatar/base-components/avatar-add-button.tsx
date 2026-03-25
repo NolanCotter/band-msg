@@ -1,6 +1,6 @@
 import { Plus } from "@untitledui/icons";
 import type { ButtonProps as AriaButtonProps } from "react-aria-components";
-import { Tooltip as AriaTooltip, TooltipTrigger as AriaTooltipTrigger } from "@/svelte-src/lib/components/ui/base/tooltip/tooltip";
+import { Tooltip as AriaTooltip, TooltipTrigger as AriaTooltipTrigger } from "../../tooltip/tooltip";
 import { cx } from "@/utils/cx";
 
 const sizes = {

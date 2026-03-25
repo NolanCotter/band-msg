@@ -1,8 +1,8 @@
 import { type HTMLAttributes, type ReactNode } from "react";
-import { HintText } from "@/svelte-src/lib/components/ui/base/input/hint-text";
-import type { InputBaseProps } from "@/svelte-src/lib/components/ui/base/input/input";
-import { TextField } from "@/svelte-src/lib/components/ui/base/input/input";
-import { Label } from "@/svelte-src/lib/components/ui/base/input/label";
+import { HintText } from "./hint-text";
+import type { InputBaseProps } from "./input";
+import { TextField } from "./input";
+import { Label } from "./label";
 import { cx, sortCx } from "@/utils/cx";
 
 interface InputPrefixProps extends HTMLAttributes<HTMLDivElement> {

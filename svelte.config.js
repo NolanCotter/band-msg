@@ -5,6 +5,9 @@ import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 const config = {
   preprocess: vitePreprocess(),
   kit: {
+    files: {
+      assets: "public"
+    },
     adapter: adapter({ runtime: "nodejs22.x" })
   }
 };

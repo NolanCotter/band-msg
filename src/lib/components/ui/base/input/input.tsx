@@ -2,9 +2,9 @@ import { type ComponentType, type HTMLAttributes, type ReactNode, type Ref, crea
 import { HelpCircle, InfoCircle } from "@untitledui/icons";
 import type { InputProps as AriaInputProps, TextFieldProps as AriaTextFieldProps } from "react-aria-components";
 import { Group as AriaGroup, Input as AriaInput, TextField as AriaTextField } from "react-aria-components";
-import { HintText } from "@/svelte-src/lib/components/ui/base/input/hint-text";
-import { Label } from "@/svelte-src/lib/components/ui/base/input/label";
-import { Tooltip, TooltipTrigger } from "@/svelte-src/lib/components/ui/base/tooltip/tooltip";
+import { HintText } from "./hint-text";
+import { Label } from "./label";
+import { Tooltip, TooltipTrigger } from "../tooltip/tooltip";
 import { cx, sortCx } from "@/utils/cx";
 
 export interface InputBaseProps extends TextFieldProps {

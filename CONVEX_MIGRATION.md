@@ -1,24 +1,18 @@
 # Convex Migration Status
 
-This file is historical context, not the source of truth for the current app architecture.
+Convex is in use, but the app is not fully migrated to it.
 
-## Current Truth
+## Current Status
 
-- The active SvelteKit app lives in `src/`
-- Neon/Postgres is still the main persistence layer for the active app surface
-- Convex is active in the repo, but the app is still hybrid rather than fully migrated
-- `svelte-src/` references in older notes reflect migration residue, not the current primary app tree
+- Active app tree: `src/`
+- Main backend for the active app surface: Neon/Postgres
+- Convex: additional backend used for some auth and migration-related flows
+- `svelte-src/`: leftover duplicate code, not the current app source of truth
 
-## What This Means
+## Practical Reading
 
-It is not accurate to describe the current app as:
+Do not describe the current app as:
 
-- "messages and threads are fully migrated to Convex"
-- "everything except auth is legacy SQL"
-- "`svelte-src/` is the current production app"
-
-The safer framing is:
-
-- SvelteKit + SQL still power most of the active app
-- Convex is integrated for newer backend flows and bridging work
-- The repo is mid-cleanup, not post-migration
+- fully migrated to Convex
+- mainly a Convex app with a little legacy SQL
+- rooted in `svelte-src/`

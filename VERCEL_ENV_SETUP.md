@@ -1,28 +1,36 @@
 # Vercel Environment Setup
 
-This project is a hybrid SvelteKit app. Set environment variables based on the parts of the app you are actually using.
+Set env vars based on the hybrid architecture that is actually running.
 
-## Core App
+## Core
 
 - `DATABASE_URL`
-- `AUTH_COOKIE_SECURE=true` in production
+- `AUTH_COOKIE_SECURE=true`
 
-## Convex Bridge / Auth Flows
+## Convex-Backed Flows
 
 - `CONVEX_URL`
 - `PUBLIC_CONVEX_URL`
 - `AUTH_BRIDGE_SECRET`
 - `AUTH_PASSWORD_RESET_ENABLED`
 
-If password reset is not intentionally enabled, keep `AUTH_PASSWORD_RESET_ENABLED=false`.
-
 ## Web Push
 
 - `VAPID_PUBLIC_KEY`
 - `VAPID_PRIVATE_KEY`
 
-## Notes
+## Optional Pusher Path
 
-- The active app tree is `src/`
-- `svelte-src/` is still in the repo but should not be treated as the primary deployment target
-- Pusher is not required for the core `src` app request path described in the README
+Only add Pusher vars if you are intentionally using that integration:
+
+- `PUSHER_APP_ID`
+- `PUSHER_KEY`
+- `PUSHER_SECRET`
+- `PUSHER_CLUSTER`
+- `VITE_PUSHER_KEY`
+- `VITE_PUSHER_CLUSTER`
+
+## Reminder
+
+- deploy the `src/` app
+- do not treat `svelte-src/` as the active app
