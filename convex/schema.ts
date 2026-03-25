@@ -29,6 +29,16 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
   }).index("by_token", ["token"]),
 
+  passwordResetTokens: defineTable({
+    userId: v.id("users"),
+    tokenHash: v.string(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    usedAt: v.optional(v.number()),
+  })
+    .index("by_token_hash", ["tokenHash"])
+    .index("by_user", ["userId"]),
+
   channels: defineTable({
     name: v.string(),
     description: v.optional(v.string()),

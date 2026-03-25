@@ -12,7 +12,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
   }
 
   try {
-    const convex = getConvexHttpClient();
+    const convex = await getConvexHttpClient();
     // Read from Convex to get fresh user data (including updated status after approval)
     const user = await convex.query(api.auth.getUser, { sessionToken });
 

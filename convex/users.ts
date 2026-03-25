@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { getUserByToken } from "./auth";
 
 export const updateProfile = mutation({
@@ -67,7 +67,7 @@ export const createReport = mutation({
   },
 });
 
-export const getReports = query({
+export const getReports = internalQuery({
   args: {
     sessionToken: v.string(),
   },
@@ -98,7 +98,7 @@ export const getReports = query({
   },
 });
 
-export const resolveReport = mutation({
+export const resolveReport = internalMutation({
   args: {
     sessionToken: v.string(),
     reportId: v.id("reports"),

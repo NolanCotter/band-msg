@@ -30,6 +30,10 @@ function getBearerSessionToken(request: Request): string | null {
 }
 
 export const handle = async ({ event, resolve }: any) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Hooks] start', event.request.method, event.url.pathname);
+  }
+
   const cookieSessionToken = getSessionToken(event.cookies);
   const headerSessionToken = getBearerSessionToken(event.request);
   const usingHeaderSession = !cookieSessionToken && !!headerSessionToken;
@@ -41,7 +45,7 @@ export const handle = async ({ event, resolve }: any) => {
   if (event.locals.sessionToken) {
     try {
       const { api } = await import('../convex/_generated/api');
-      const convex = getConvexHttpClient();
+      const convex = await getConvexHttpClient();
       
       const user = await convex.query(api.auth.getUser, { 
         sessionToken: event.locals.sessionToken 
@@ -105,6 +109,10 @@ export const handle = async ({ event, resolve }: any) => {
   }
 
   const response = await resolve(event);
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Hooks] resolved', event.request.method, event.url.pathname, response.status);
+  }
   
   // Security Headers
   response.headers.set("X-Frame-Options", "DENY");

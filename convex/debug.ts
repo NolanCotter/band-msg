@@ -1,9 +1,9 @@
-import { query, mutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getUserByToken } from "./auth";
 
 // Debug: Get all users and their status
-export const getAllUsersDebug = query({
+export const getAllUsersDebug = internalQuery({
   args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
     const admin = await getUserByToken(ctx, args.sessionToken);
@@ -25,7 +25,7 @@ export const getAllUsersDebug = query({
 });
 
 // Debug: Get all signup requests
-export const getAllSignupRequestsDebug = query({
+export const getAllSignupRequestsDebug = internalQuery({
   args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
     const admin = await getUserByToken(ctx, args.sessionToken);
@@ -48,7 +48,7 @@ export const getAllSignupRequestsDebug = query({
 });
 
 // Debug: Manually approve a user by username
-export const forceApproveUser = mutation({
+export const forceApproveUser = internalMutation({
   args: {
     sessionToken: v.string(),
     username: v.string(),

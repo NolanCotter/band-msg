@@ -36,6 +36,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+vite-dev*.log
+vite-dev.log
+build-security.log
+security-build.log
+src/check.log
+*.bak
 
 # env files (can opt-in for committing if needed)
 .env*

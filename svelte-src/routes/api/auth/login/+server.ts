@@ -40,7 +40,7 @@ const toJson = (body: unknown, status = 200) =>
 
 export const POST = async ({ request, cookies }: any) => {
   try {
-    const convex = getConvexHttpClient();
+    const convex = await getConvexHttpClient();
     const body = await request.json().catch(() => null);
     const username = typeof body?.username === "string" ? body.username : "";
     const password = typeof body?.password === "string" ? body.password : "";

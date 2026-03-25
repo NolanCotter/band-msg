@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { getUserByToken } from "./auth";
 
@@ -229,7 +229,7 @@ export const getThread = query({
 });
 
 // Helper query to get channel info
-export const getChannelInfo = query({
+export const getChannelInfo = internalQuery({
   args: { channelId: v.id("channels") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.channelId);
@@ -237,7 +237,7 @@ export const getChannelInfo = query({
 });
 
 // Helper query to get push subscriptions for a channel
-export const getPushSubscriptionsForChannel = query({
+export const getPushSubscriptionsForChannel = internalQuery({
   args: {
     channelId: v.id("channels"),
     excludeUserId: v.id("users"),

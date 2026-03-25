@@ -1,8 +1,19 @@
 import { v } from "convex/values";
-import { mutation, query, type QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
+
+const SESSION_INVALID_BEFORE_MS = 1774414350668;
+const AUTH_BRIDGE_SECRET =
+  process.env.AUTH_BRIDGE_SECRET ||
+  "rotate-this-auth-bridge-secret-2026-03-24-a7f48c2c14f34d2ab0c7b5b31d2f6e8c";
+
+function requireBridgeSecret(serverSecret: string) {
+  if (serverSecret !== AUTH_BRIDGE_SECRET) {
+    throw new Error("Unauthorized");
+  }
+}
 
 // Debug function to check session and user
-export const debugSession = query({
+export const debugSession = internalQuery({
   args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
     console.log('[debugSession] Checking session token:', args.sessionToken.substring(0, 10) + '...');
@@ -14,12 +25,22 @@ export const debugSession = query({
     
     console.log('[debugSession] Session found:', !!session);
     if (session) {
+      const blockedByCutoff = (session.createdAt ?? 0) < SESSION_INVALID_BEFORE_MS;
       console.log('[debugSession] Session details:', {
         userId: session.userId,
         expiresAt: session.expiresAt,
         expired: session.expiresAt < Date.now(),
-        createdAt: session.createdAt
+        createdAt: session.createdAt,
+        blockedByCutoff,
       });
+
+      if (session.expiresAt < Date.now() || blockedByCutoff) {
+        return {
+          sessionValid: false,
+          sessionExpired: session.expiresAt < Date.now(),
+          user: null,
+        };
+      }
       
       const user = await ctx.db.get(session.userId);
       console.log('[debugSession] User found:', !!user);
@@ -58,7 +79,11 @@ export async function getUserByToken(ctx: QueryCtx, token: string) {
     .withIndex("by_token", (q) => q.eq("token", token))
     .first();
 
-  if (!session || session.expiresAt < Date.now()) {
+  if (
+    !session ||
+    session.expiresAt < Date.now() ||
+    (session.createdAt ?? 0) < SESSION_INVALID_BEFORE_MS
+  ) {
     return null;
   }
 
@@ -106,7 +131,7 @@ export const getApprovedUsers = query({
 });
 
 // Admin: Get all users
-export const getAllUsers = query({
+export const getAllUsers = internalQuery({
   args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
     const admin = await getUserByToken(ctx, args.sessionToken);
@@ -129,7 +154,7 @@ export const getAllUsers = query({
 });
 
 // Admin: Get pending users
-export const getPendingUsers = query({
+export const getPendingUsers = internalQuery({
   args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
     const admin = await getUserByToken(ctx, args.sessionToken);
@@ -154,7 +179,7 @@ export const getPendingUsers = query({
 });
 
 // Admin: Approve user
-export const approveUser = mutation({
+export const approveUser = internalMutation({
   args: {
     sessionToken: v.string(),
     userId: v.id("users"),
@@ -193,7 +218,7 @@ export const approveUser = mutation({
 });
 
 // Admin: Reject user
-export const rejectUser = mutation({
+export const rejectUser = internalMutation({
   args: { 
     sessionToken: v.string(),
     userId: v.id("users"),
@@ -210,7 +235,7 @@ export const rejectUser = mutation({
 });
 
 // Admin: Promote user to admin
-export const promoteUser = mutation({
+export const promoteUser = internalMutation({
   args: { 
     sessionToken: v.string(),
     userId: v.id("users"),
@@ -227,7 +252,7 @@ export const promoteUser = mutation({
 });
 
 // Admin: Demote user to member
-export const demoteUser = mutation({
+export const demoteUser = internalMutation({
   args: { 
     sessionToken: v.string(),
     userId: v.id("users"),
@@ -244,7 +269,7 @@ export const demoteUser = mutation({
 });
 
 // Admin: Remove user completely
-export const removeUser = mutation({
+export const removeUser = internalMutation({
   args: { 
     sessionToken: v.string(),
     userId: v.id("users"),
@@ -283,8 +308,10 @@ export const register = mutation({
     username: v.string(),
     passwordHash: v.string(),
     passwordSalt: v.string(),
+    serverSecret: v.string(),
   },
   handler: async (ctx, args) => {
+    requireBridgeSecret(args.serverSecret);
     const username = args.username.trim().toLowerCase();
     
     // Check if username already exists
@@ -434,6 +461,144 @@ export const getLoginSalt = query({
   },
 });
 
+export const refreshSession = mutation({
+  args: {
+    sessionToken: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_token", (q) => q.eq("token", args.sessionToken))
+      .first();
+
+    if (
+      !session ||
+      session.expiresAt < Date.now() ||
+      (session.createdAt ?? 0) < SESSION_INVALID_BEFORE_MS
+    ) {
+      return { ok: false };
+    }
+
+    await ctx.db.patch(session._id, {
+      expiresAt: args.expiresAt,
+    });
+
+    return { ok: true };
+  },
+});
+
+export const removeSession = mutation({
+  args: {
+    sessionToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_token", (q) => q.eq("token", args.sessionToken))
+      .first();
+
+    if (session) {
+      await ctx.db.delete(session._id);
+    }
+
+    return { ok: true };
+  },
+});
+
+export const createPasswordResetToken = mutation({
+  args: {
+    username: v.string(),
+    tokenHash: v.string(),
+    expiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const username = args.username.trim().toLowerCase();
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .first();
+
+    if (!user) {
+      return { userFound: false };
+    }
+
+    const existingTokens = await ctx.db
+      .query("passwordResetTokens")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    for (const token of existingTokens) {
+      const isExpired = token.expiresAt < Date.now();
+      const isUsed = !!token.usedAt;
+      if (isExpired || isUsed) {
+        await ctx.db.delete(token._id);
+      } else {
+        await ctx.db.patch(token._id, {
+          usedAt: Date.now(),
+        });
+      }
+    }
+
+    await ctx.db.insert("passwordResetTokens", {
+      userId: user._id,
+      tokenHash: args.tokenHash,
+      expiresAt: args.expiresAt,
+      createdAt: Date.now(),
+    });
+
+    return {
+      userFound: true,
+      username: user.username,
+    };
+  },
+});
+
+export const resetPasswordWithToken = mutation({
+  args: {
+    tokenHash: v.string(),
+    passwordHash: v.string(),
+    passwordSalt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const resetToken = await ctx.db
+      .query("passwordResetTokens")
+      .withIndex("by_token_hash", (q) => q.eq("tokenHash", args.tokenHash))
+      .first();
+
+    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < Date.now()) {
+      throw new Error("This reset link is invalid or has expired");
+    }
+
+    const user = await ctx.db.get(resetToken.userId);
+    if (!user) {
+      throw new Error("This reset link is invalid or has expired");
+    }
+
+    await ctx.db.patch(user._id, {
+      passwordHash: args.passwordHash,
+      passwordSalt: args.passwordSalt,
+    });
+
+    await ctx.db.patch(resetToken._id, {
+      usedAt: Date.now(),
+    });
+
+    const sessions = await ctx.db
+      .query("sessions")
+      .collect();
+
+    for (const session of sessions) {
+      if (session.userId === user._id) {
+        await ctx.db.delete(session._id);
+      }
+    }
+
+    return { success: true };
+  },
+});
+
 // Update user presence status
 export const updatePresence = mutation({
   args: {
@@ -470,7 +635,7 @@ export const heartbeat = mutation({
 });
 
 // Admin: Manually approve user by username
-export const approveUserByUsername = mutation({
+export const approveUserByUsername = internalMutation({
   args: {
     sessionToken: v.string(),
     username: v.string(),
@@ -508,32 +673,43 @@ export const syncExternalUser = mutation({
     needsUsernameSetup: v.boolean(),
     sessionToken: v.string(),
     expiresAt: v.number(),
+    serverSecret: v.string(),
   },
   handler: async (ctx, args) => {
+    requireBridgeSecret(args.serverSecret);
     const username = args.username.trim().toLowerCase();
 
-    // Check if user exists by username
+    // Resolve by username first, then by bound external identity.
     let user = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", username))
       .first();
 
+    if (!user && args.externalId) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_google_id", (q) => q.eq("googleId", args.externalId))
+        .first();
+    }
+
     if (user) {
-      // Update existing user
+      if (user.googleId && args.externalId && user.googleId !== args.externalId) {
+        throw new Error("External identity mismatch");
+      }
+
+      // Never trust caller-supplied role/status for public sync operations.
       await ctx.db.patch(user._id, {
-        googleId: args.externalId,
-        role: args.role as any,
-        status: args.status as any,
-        needsUsernameSetup: args.needsUsernameSetup,
+        googleId: user.googleId || args.externalId,
+        needsUsernameSetup: user.needsUsernameSetup || args.needsUsernameSetup,
       });
     } else {
-      // Create new user
+      // New externally-synced accounts always start as pending members.
       const userId = await ctx.db.insert("users", {
         username,
         googleId: args.externalId,
-        role: args.role as any,
-        status: args.status as any,
-        needsUsernameSetup: args.needsUsernameSetup,
+        role: "member",
+        status: "pending",
+        needsUsernameSetup: true,
         presenceStatus: "offline",
         lastSeen: Date.now(),
         createdAt: Date.now(),
@@ -568,8 +744,70 @@ export const syncExternalUser = mutation({
   },
 });
 
+export const syncExternalSession = mutation({
+  args: {
+    username: v.string(),
+    externalId: v.string(),
+    sessionToken: v.string(),
+    expiresAt: v.number(),
+    serverSecret: v.string(),
+  },
+  handler: async (ctx, args) => {
+    requireBridgeSecret(args.serverSecret);
+    const username = args.username.trim().toLowerCase();
+
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", username))
+      .first();
+
+    if (!user && args.externalId) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_google_id", (q) => q.eq("googleId", args.externalId))
+        .first();
+    }
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.googleId && args.externalId && user.googleId !== args.externalId) {
+      throw new Error("External identity mismatch");
+    }
+
+    if (args.externalId && !user.googleId) {
+      await ctx.db.patch(user._id, {
+        googleId: args.externalId,
+      });
+    }
+
+    const existingSession = await ctx.db
+      .query("sessions")
+      .withIndex("by_token", (q) => q.eq("token", args.sessionToken))
+      .first();
+
+    if (!existingSession) {
+      await ctx.db.insert("sessions", {
+        token: args.sessionToken,
+        userId: user._id,
+        expiresAt: args.expiresAt,
+        createdAt: Date.now(),
+      });
+    }
+
+    return {
+      userId: user._id,
+      username: user.username,
+      role: user.role,
+      status: user.status,
+      needsUsernameSetup: user.needsUsernameSetup || false,
+    };
+  },
+});
+
 // Fix all admin users to have approved status (run once)
-export const fixAdminStatus = mutation({
+export const fixAdminStatus = internalMutation({
   args: {},
   handler: async (ctx) => {
     const allUsers = await ctx.db.query("users").collect();
@@ -593,7 +831,7 @@ export const fixAdminStatus = mutation({
 });
 
 // Make all users admin (emergency fix)
-export const makeAllUsersAdmin = mutation({
+export const makeAllUsersAdmin = internalMutation({
   args: {},
   handler: async (ctx) => {
     const allUsers = await ctx.db.query("users").collect();
@@ -617,7 +855,7 @@ export const makeAllUsersAdmin = mutation({
 });
 
 // Make only NolanC admin, everyone else member
-export const makeOnlyNolanCAdmin = mutation({
+export const makeOnlyNolanCAdmin = internalMutation({
   args: {},
   handler: async (ctx) => {
     const allUsers = await ctx.db.query("users").collect();
@@ -644,6 +882,164 @@ export const makeOnlyNolanCAdmin = mutation({
         oldRole: u.role, 
         newRole: u.username.toLowerCase() === 'nolanc' ? 'admin' : 'member'
       }))
+    };
+  },
+});
+
+export const purgeUsersByUsernameFragmentBatch = internalMutation({
+  args: {
+    sessionToken: v.string(),
+    fragment: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await getUserByToken(ctx, args.sessionToken);
+    if (!admin || admin.role !== "admin") {
+      throw new Error("Unauthorized");
+    }
+
+    const fragment = args.fragment.trim().toLowerCase();
+    if (fragment.length < 2) {
+      throw new Error("Fragment must be at least 2 characters");
+    }
+
+    const limit = Math.max(1, Math.min(args.limit ?? 200, 250));
+    const allUsers = await ctx.db.query("users").collect();
+    const matchingUsers = allUsers
+      .filter((user) => user.username.toLowerCase().includes(fragment))
+      .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+
+    const targets = matchingUsers.slice(0, limit);
+    const remainingUsers = Math.max(matchingUsers.length - targets.length, 0);
+
+    if (targets.length === 0) {
+      return {
+        deletedUsers: 0,
+        remainingUsers: 0,
+        deleted: {
+          signupRequests: 0,
+          sessions: 0,
+          passwordResetTokens: 0,
+          pushSubscriptions: 0,
+          reports: 0,
+          events: 0,
+          typing: 0,
+          channelMembers: 0,
+          reactions: 0,
+          messages: 0,
+          channels: 0,
+          users: 0,
+        },
+      };
+    }
+
+    const targetUserIds = new Set(targets.map((user) => user._id));
+    const targetUsernames = new Set(targets.map((user) => user.username.toLowerCase()));
+
+    const channels = await ctx.db.query("channels").collect();
+    const targetChannels = channels.filter((channel) => targetUserIds.has(channel.createdBy));
+    const targetChannelIds = new Set(targetChannels.map((channel) => channel._id));
+
+    const messages = await ctx.db.query("messages").collect();
+    const targetMessages = messages.filter(
+      (message) => targetUserIds.has(message.userId) || targetChannelIds.has(message.channelId)
+    );
+    const targetMessageIds = new Set(targetMessages.map((message) => message._id));
+
+    const reactions = await ctx.db.query("reactions").collect();
+    const targetReactions = reactions.filter(
+      (reaction) => targetUserIds.has(reaction.userId) || targetMessageIds.has(reaction.messageId)
+    );
+
+    const channelMembers = await ctx.db.query("channelMembers").collect();
+    const targetChannelMembers = channelMembers.filter(
+      (member) => targetUserIds.has(member.userId) || targetChannelIds.has(member.channelId)
+    );
+
+    const typingRows = await ctx.db.query("typing").collect();
+    const targetTypingRows = typingRows.filter(
+      (typing) => targetUserIds.has(typing.userId) || targetChannelIds.has(typing.channelId)
+    );
+
+    const pushSubscriptions = await ctx.db.query("pushSubscriptions").collect();
+    const targetPushSubscriptions = pushSubscriptions.filter((subscription) =>
+      targetUserIds.has(subscription.userId)
+    );
+
+    const passwordResetTokens = await ctx.db.query("passwordResetTokens").collect();
+    const targetPasswordResetTokens = passwordResetTokens.filter((token) =>
+      targetUserIds.has(token.userId)
+    );
+
+    const sessions = await ctx.db.query("sessions").collect();
+    const targetSessions = sessions.filter((session) => targetUserIds.has(session.userId));
+
+    const reports = await ctx.db.query("reports").collect();
+    const targetReports = reports.filter((report) => targetUserIds.has(report.userId));
+
+    const events = await ctx.db.query("events").collect();
+    const targetEvents = events.filter((event) => targetUserIds.has(event.createdBy));
+
+    const signupRequests = await ctx.db.query("signupRequests").collect();
+    const targetSignupRequests = signupRequests.filter((request) =>
+      targetUsernames.has(request.username.toLowerCase())
+    );
+
+    for (const reaction of targetReactions) {
+      await ctx.db.delete(reaction._id);
+    }
+    for (const typing of targetTypingRows) {
+      await ctx.db.delete(typing._id);
+    }
+    for (const member of targetChannelMembers) {
+      await ctx.db.delete(member._id);
+    }
+    for (const subscription of targetPushSubscriptions) {
+      await ctx.db.delete(subscription._id);
+    }
+    for (const token of targetPasswordResetTokens) {
+      await ctx.db.delete(token._id);
+    }
+    for (const session of targetSessions) {
+      await ctx.db.delete(session._id);
+    }
+    for (const report of targetReports) {
+      await ctx.db.delete(report._id);
+    }
+    for (const event of targetEvents) {
+      await ctx.db.delete(event._id);
+    }
+    for (const message of targetMessages) {
+      await ctx.db.delete(message._id);
+    }
+    for (const channel of targetChannels) {
+      await ctx.db.delete(channel._id);
+    }
+    for (const user of targets) {
+      await ctx.db.delete(user._id);
+    }
+    for (const request of targetSignupRequests) {
+      await ctx.db.delete(request._id);
+    }
+
+    return {
+      deletedUsers: targets.length,
+      remainingUsers,
+      usernames: targets.slice(0, 10).map((user) => user.username),
+      deleted: {
+        signupRequests: targetSignupRequests.length,
+        sessions: targetSessions.length,
+        passwordResetTokens: targetPasswordResetTokens.length,
+        pushSubscriptions: targetPushSubscriptions.length,
+        reports: targetReports.length,
+        events: targetEvents.length,
+        typing: targetTypingRows.length,
+        channelMembers: targetChannelMembers.length,
+        reactions: targetReactions.length,
+        messages: targetMessages.length,
+        channels: targetChannels.length,
+        users: targets.length,
+      },
     };
   },
 });

@@ -3,12 +3,11 @@ import type { RequestHandler } from './$types';
 import { getSqlClient } from '$lib/server/db';
 import crypto from 'node:crypto';
 
-const sql = getSqlClient();
-
 // TODO: Configure email service (SendGrid, AWS SES, etc.)
 // For now, this is a placeholder that logs the reset token
 export const POST: RequestHandler = async ({ request }) => {
   try {
+    const sql = getSqlClient();
     const { email } = await request.json();
 
     if (!email || typeof email !== 'string') {

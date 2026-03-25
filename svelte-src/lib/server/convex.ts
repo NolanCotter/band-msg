@@ -1,4 +1,3 @@
-import { ConvexHttpClient } from "convex/browser";
 import { ensureServerEnv } from "./env";
 
 export function getConvexUrl(): string {
@@ -19,7 +18,8 @@ export function getConvexUrl(): string {
   return url;
 }
 
-export function getConvexHttpClient(): ConvexHttpClient {
+export async function getConvexHttpClient() {
+  const { ConvexHttpClient } = await import("convex/browser");
   return new ConvexHttpClient(getConvexUrl());
 }
 

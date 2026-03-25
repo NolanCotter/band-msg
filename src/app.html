@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="A full-featured Discord-like chat platform for communities" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BandChat" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg-xml" href="/icons/icon-192.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+    <title>Band Chat</title>
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display:contents">%sveltekit.body%</div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations()
+          .then((registrations) => Promise.all(
+            registrations.map((registration) => {
+              const scriptUrl =
+                (registration.active && registration.active.scriptURL) ||
+                (registration.waiting && registration.waiting.scriptURL) ||
+                (registration.installing && registration.installing.scriptURL) ||
+                '';
+
+              if (scriptUrl.includes('/firebase-messaging-sw.js')) {
+                return registration.unregister();
+              }
+
+              return Promise.resolve(false);
+            })
+          ))
+          .then(() => navigator.serviceWorker.register('/sw.js'))
+          .catch(() => {});
+      }
+    </script>
+  </body>
+</html>

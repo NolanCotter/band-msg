@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 // Action to send push notifications via Firebase Cloud Messaging HTTP v1 API
 export const sendPushNotifications = action({
@@ -19,7 +19,7 @@ export const sendPushNotifications = action({
       console.log("[sendPushNotifications] Starting notification send for message:", args.messageId);
       
       // Get channel info
-      const channel = await ctx.runQuery(api.messages.getChannelInfo, {
+      const channel = await ctx.runQuery(internal.messages.getChannelInfo, {
         channelId: args.channelId,
       });
 
@@ -31,7 +31,7 @@ export const sendPushNotifications = action({
       console.log("[sendPushNotifications] Channel found:", channel.name);
 
       // Get all push subscriptions for users in this channel (except the author)
-      const subscriptions = await ctx.runQuery(api.messages.getPushSubscriptionsForChannel, {
+      const subscriptions = await ctx.runQuery(internal.messages.getPushSubscriptionsForChannel, {
         channelId: args.channelId,
         excludeUserId: args.authorId,
       });

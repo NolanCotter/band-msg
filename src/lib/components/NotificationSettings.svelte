@@ -1,0 +1,259 @@
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+  import { Drawer } from 'vaul-svelte';
+  import { notificationStore } from '../stores/notificationStore';
+  import { convexChannelStore } from '../stores/convexChannels';
+  import Spinner from './Spinner.svelte';
+  import { apiPost } from '../utils/api';
+  
+  export let onClose: () => void;
+  
+  let debugInfo: any = null;
+  let isIOSDevice = false;
+  let isStandaloneApp = false;
+  let supportsPush = false;
+  
+  onMount(async () => {
+    console.log('[NotificationSettings] Component mounted');
+    detectPushCapabilities();
+    await notificationStore.init();
+    await loadDebugInfo();
+  });
+
+  onDestroy(() => {
+    notificationStore.setError(null);
+  });
+  
+  async function loadDebugInfo() {
+    debugInfo = null;
+  }
+  
+  async function handleToggleNotifications() {
+    await notificationStore.toggleNotifications();
+    await loadDebugInfo(); // Reload debug info after toggle
+  }
+  
+  async function toggleChannelMute(channelId: string) {
+    await notificationStore.toggleChannelMute(channelId);
+  }
+
+  function detectPushCapabilities() {
+    if (typeof window === 'undefined') return;
+
+    isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    isStandaloneApp = window.matchMedia('(display-mode: standalone)').matches ||
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (navigator as any).standalone === true;
+    supportsPush = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+  
+  async function testNotification() {
+    if ($notificationStore.permission !== 'granted') {
+      notificationStore.setError('Please enable notifications first');
+      return;
+    }
+    
+    try {
+      const response = await apiPost('/api/push/test', {});
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        notificationStore.setError(typeof body.error === 'string' ? body.error : 'Failed to send test notification');
+        return;
+      }
+
+      notificationStore.setError(null);
+    } catch (err) {
+      console.error('Test notification error:', err);
+      notificationStore.setError('Failed to show test notification');
+    }
+  }
+</script>
+
+<!-- Unified Drawer for Mobile and Desktop -->
+<Drawer.Root open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+  <Drawer.Portal>
+    <Drawer.Overlay class="fixed inset-0 bg-black/80 z-[200]" />
+    <Drawer.Content class="fixed bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:bottom-auto md:right-auto z-[200] flex flex-col bg-black rounded-t-[20px] md:rounded-2xl max-h-[92vh] md:max-h-[85vh] md:w-full md:max-w-md outline-none" style="padding-bottom: env(safe-area-inset-bottom);">
+      <div class="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-white/10 my-3 md:hidden"></div>
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0 md:px-6 md:py-4">
+        <h2 class="text-lg font-bold text-white md:text-xl">Notifications</h2>
+        <button
+          type="button"
+          on:click={onClose}
+          class="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+          aria-label="Close"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-hide md:p-6">
+        {#if $notificationStore.error}
+          <div class="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm">
+            {$notificationStore.error}
+          </div>
+        {/if}
+
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+          <div>
+            <h3 class="text-sm font-semibold text-white">Device Status</h3>
+            <p class="mt-1 text-xs text-white/40">Quick check for whether this device is ready to receive push notifications.</p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div class="rounded-xl border border-white/8 bg-black/30 px-3 py-2">
+              <div class="text-[10px] uppercase tracking-[0.18em] text-white/35">Push</div>
+              <div class="mt-1 text-sm font-medium {supportsPush ? 'text-green-400' : 'text-red-400'}">
+                {supportsPush ? 'Supported' : 'Unavailable'}
+              </div>
+            </div>
+            <div class="rounded-xl border border-white/8 bg-black/30 px-3 py-2">
+              <div class="text-[10px] uppercase tracking-[0.18em] text-white/35">Install</div>
+              <div class="mt-1 text-sm font-medium {isStandaloneApp ? 'text-green-400' : 'text-white/70'}">
+                {isStandaloneApp ? 'App mode' : 'Browser tab'}
+              </div>
+            </div>
+            <div class="rounded-xl border border-white/8 bg-black/30 px-3 py-2">
+              <div class="text-[10px] uppercase tracking-[0.18em] text-white/35">Permission</div>
+              <div class="mt-1 text-sm font-medium {($notificationStore.permission === 'granted') ? 'text-green-400' : (($notificationStore.permission === 'denied') ? 'text-red-400' : 'text-white/70')}">
+                {$notificationStore.permission}
+              </div>
+            </div>
+          </div>
+
+          {#if isIOSDevice && !isStandaloneApp}
+            <div class="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90">
+              On iPhone and iPad, push notifications only work after you add Band Chat to your Home Screen and open it from there.
+            </div>
+          {/if}
+        </div>
+
+        <!-- Push Notifications Toggle -->
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <h3 class="text-sm font-semibold text-white mb-0.5">Push Notifications</h3>
+            <p class="text-xs text-white/35 leading-relaxed">
+              Get notified about new messages, even when the app is closed
+            </p>
+          </div>
+          <button
+            type="button"
+            on:click={handleToggleNotifications}
+            disabled={$notificationStore.isLoading || $notificationStore.permission === 'denied'}
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 shrink-0 {$notificationStore.isSubscribed ? 'bg-white' : 'bg-white/20'} disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+            aria-label="Toggle push notifications"
+          >
+            {#if $notificationStore.isLoading}
+              <span class="absolute inset-0 flex items-center justify-center">
+                <Spinner size="sm" />
+              </span>
+            {:else}
+              <span class="inline-block h-4 w-4 transform rounded-full bg-black transition-all duration-200 {$notificationStore.isSubscribed ? 'translate-x-6' : 'translate-x-1'}"></span>
+            {/if}
+          </button>
+        </div>
+
+        {#if $notificationStore.permission === 'denied'}
+          <div class="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10">
+            <p class="text-xs text-white/50 leading-relaxed">
+              Notifications are blocked. Enable them in your browser settings.
+            </p>
+          </div>
+        {/if}
+
+        {#if $notificationStore.isSubscribed}
+          <div class="pt-4 border-t border-white/8">
+            <button
+              type="button"
+              on:click={testNotification}
+              class="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-colors text-sm font-medium"
+            >
+              Send Real Test Push
+            </button>
+            <p class="mt-2 text-xs text-white/35">This sends a real push through the server to this device, so it’s useful for checking mobile delivery.</p>
+          </div>
+          
+          <!-- Channel-specific notifications -->
+          <div class="pt-4 border-t border-white/8">
+            <h4 class="text-sm font-semibold text-white mb-3">Channel Notifications</h4>
+            <p class="text-xs text-white/40 mb-3">Choose which channels send you notifications</p>
+            <div class="space-y-2">
+              {#each $convexChannelStore.channels as channel}
+                <div class="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                    {#if channel['isPrivate']}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/60 shrink-0">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    {:else}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/60 shrink-0">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    {/if}
+                    <span class="text-sm text-white font-medium truncate">{channel.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    on:click={() => toggleChannelMute(channel.id)}
+                    class="relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-200 shrink-0 hover:scale-105 active:scale-95 {$notificationStore.mutedChannelIds.has(channel.id) ? 'bg-white/20' : 'bg-white'}"
+                    aria-label="Toggle notifications for {channel.name}"
+                  >
+                    <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-black transition-all duration-200 {$notificationStore.mutedChannelIds.has(channel.id) ? 'translate-x-1' : 'translate-x-5'}"></span>
+                  </button>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
+        <!-- Info -->
+        <div class="pt-4 border-t border-white/8">
+          <h4 class="text-xs font-semibold text-white/50 mb-2">You'll be notified about:</h4>
+          <ul class="space-y-1.5 text-xs text-white/40">
+            <li class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>New messages in your channels</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Direct mentions and replies</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Important announcements</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Debug Info -->
+        {#if debugInfo}
+          <div class="pt-4 border-t border-white/8">
+            <h4 class="text-xs font-semibold text-white/50 mb-2">Debug Info:</h4>
+            <div class="text-xs text-white/40 space-y-1 font-mono">
+              <div>Subscribed: {debugInfo.currentUser.hasSubscription ? 'Yes' : 'No'}</div>
+              <div>Total Subscriptions: {debugInfo.totalSubscriptions}</div>
+              <div>Total Users: {debugInfo.totalApprovedUsers}</div>
+              {#if debugInfo.currentUser.subscription}
+                <div class="text-green-400">Token: {debugInfo.currentUser.subscription.endpoint}</div>
+              {/if}
+            </div>
+          </div>
+        {/if}
+      </div>
+    </Drawer.Content>
+  </Drawer.Portal>
+</Drawer.Root>

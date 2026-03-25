@@ -1,7 +1,7 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 
-export const createUser = mutation({
+export const createUser = internalMutation({
   args: {
     username: v.string(),
     email: v.optional(v.string()),
@@ -18,7 +18,7 @@ export const createUser = mutation({
   },
 });
 
-export const createSession = mutation({
+export const createSession = internalMutation({
   args: {
     userId: v.id("users"),
     token: v.string(),
@@ -29,7 +29,7 @@ export const createSession = mutation({
   },
 });
 
-export const createChannel = mutation({
+export const createChannel = internalMutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
@@ -42,7 +42,7 @@ export const createChannel = mutation({
   },
 });
 
-export const createChannelMember = mutation({
+export const createChannelMember = internalMutation({
   args: {
     channelId: v.id("channels"),
     userId: v.id("users"),
@@ -55,7 +55,7 @@ export const createChannelMember = mutation({
   },
 });
 
-export const createMessage = mutation({
+export const createMessage = internalMutation({
   args: {
     channelId: v.id("channels"),
     userId: v.id("users"),
@@ -68,7 +68,7 @@ export const createMessage = mutation({
   },
 });
 
-export const createReaction = mutation({
+export const createReaction = internalMutation({
   args: {
     messageId: v.id("messages"),
     userId: v.id("users"),

@@ -1,13 +1,14 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { getUserByToken } from "./auth";
 
 // Debug query to check notification setup
-export const debugNotificationSetup = query({
+export const debugNotificationSetup = internalQuery({
   args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
     const user = await getUserByToken(ctx, args.sessionToken);
     if (!user) return { error: "User not found" };
+    const isAdmin = user.role === "admin";
 
     // Get user's subscription
     const subscription = await ctx.db
@@ -38,11 +39,13 @@ export const debugNotificationSetup = query({
       },
       totalSubscriptions: allSubscriptions.length,
       totalApprovedUsers: allUsers.length,
-      allSubscriptions: allSubscriptions.map(s => ({
-        userId: s.userId,
-        endpoint: s.endpoint.substring(0, 50) + "...",
-        createdAt: s.createdAt,
-      })),
+      allSubscriptions: isAdmin
+        ? allSubscriptions.map(s => ({
+            userId: s.userId,
+            endpoint: s.endpoint.substring(0, 50) + "...",
+            createdAt: s.createdAt,
+          }))
+        : [],
     };
   },
 });

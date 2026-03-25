@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   }
 
   try {
-    const convex = getConvexHttpClient();
+    const convex = await getConvexHttpClient();
     const sql = getSqlClient();
 
     // Exchange code for tokens
