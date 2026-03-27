@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getSqlClient } from '$lib/server/db';
-import { lucia } from '$lib/server/auth';
+import { createSessionToken, setSessionCookie, expiresAtMs } from '$lib/server/auth';
 import crypto from 'node:crypto';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
@@ -139,15 +139,17 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
     // Create session
     console.log('Creating session...');
-    const session = await lucia.createSession(user.id, {});
-    const sessionCookie = lucia.createSessionCookie(session.id);
+    const sessionToken = createSessionToken();
+    const expiresAt = expiresAtMs();
     
-    console.log('Session created:', session.id);
+    await sql`
+      INSERT INTO sessions (token, user_id, expires_at, created_at)
+      VALUES (${sessionToken}, ${user.id}, ${expiresAt}, ${Date.now()})
+    `;
     
-    cookies.set(sessionCookie.name, sessionCookie.value, {
-      path: '.',
-      ...sessionCookie.attributes
-    });
+    console.log('Session created:', sessionToken.substring(0, 10) + '...');
+    
+    setSessionCookie(cookies, sessionToken);
 
     console.log('Session cookie set, redirecting to home');
     throw redirect(302, '/');
