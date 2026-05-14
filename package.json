@@ -30,7 +30,7 @@
     "pusher-js": "^8.4.0",
     "react-aria-components": "^1.16.0",
     "shadcn-svelte": "^1.2.1",
-    "svelte": "^5.39.6",
+    "svelte": "^5.55.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "tailwindcss-react-aria-components": "^2.0.1",
